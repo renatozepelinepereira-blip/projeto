@@ -30,13 +30,18 @@ document.getElementById('cliCnpj').addEventListener('input', (e) => {
 window.mudarAba = (cat) => { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.getElementById('btnTab' + cat.charAt(0).toUpperCase() + cat.slice(1)).classList.add('active'); document.getElementById('content_' + cat).classList.add('active'); };
 
 async function iniciar() {
+    const userSnap = await getDoc(doc(db, "usuarios", userId));
+    const planilhas = userSnap.exists() && userSnap.data().planilhas ? userSnap.data().planilhas : { sorvete: true, seco: false, balde: false, promo: false, padrao: false, venda: true };
+    
+    if (planilhas.venda === false && userId !== 'admin') {
+        window.location.href = 'transferencia.html';
+        return;
+    }
+
     const qClientes = query(collection(db, "clientes"), where("lojaId", "==", userId), where("tipo", "==", "venda"));
     const cliSnap = await getDocs(qClientes);
     let dlistaNomes = document.getElementById('listaNomesClientes'); let dlistaCnpj = document.getElementById('listaCnpjClientes');
     cliSnap.forEach(d => { clientesSalvos.push(d.data()); dlistaNomes.innerHTML += `<option value="${d.data().razao}">`; dlistaCnpj.innerHTML += `<option value="${d.data().cnpj}">`; });
-
-    const userSnap = await getDoc(doc(db, "usuarios", userId));
-    const planilhas = userSnap.exists() && userSnap.data().planilhas ? userSnap.data().planilhas : { sorvete: true, seco: false, balde: false, promo: false, padrao: false };
     
     let primeiraAba = null;
     if(planilhas.sorvete) { document.getElementById('btnTabSorvete').style.display = 'block'; primeiraAba = primeiraAba || 'sorvete'; }
@@ -118,7 +123,23 @@ window.gerarExcelPedido = async () => {
     try {
         const cnpjLimpo = cnpj.replace(/\D/g, ''); const idCliente = `${userId}_${cnpjLimpo}`;
         await setDoc(doc(db, "clientes", idCliente), { lojaId: userId, razao: razao, cnpj: cnpj, prazo: prazo, tipo: "venda" }, { merge: true });
-        await addDoc(collection(db, "historico"), { lojaId: userId, nomeLoja: nomeLoja, acao: "Gerou Pedido de Venda", destino: razao, dataHora: serverTimestamp() });
+        
+        // === CRIA O BACKUP LEVE DA PLANILHA ===
+        let itensSelecionados = produtosGlobais.filter(p => p.calcTotalUnidades > 0).map(p => ({
+            codigo: p.codigo, descricao: p.descricao, precoFinal: p.precoFinal, engradado: p.engradado,
+            calcQtdCx: p.calcQtdCx, calcQtdUn: p.calcQtdUn, calcTotalUnidades: p.calcTotalUnidades,
+            catReal: p.catReal, isPromo: p.isPromo
+        }));
+        
+        let dadosBackup = {
+            tipo: 'venda', razao: razao, cnpj: cnpj, prazo: prazo,
+            totalU: window.resumoGlobal.totalU, totalV: window.resumoGlobal.totalV,
+            descontos: { sorvete: window.resumoGlobal.dSorv, seco: window.resumoGlobal.dSeco, balde: window.resumoGlobal.dBald, promo: window.resumoGlobal.dProm },
+            itens: itensSelecionados
+        };
+
+        await addDoc(collection(db, "historico"), { lojaId: userId, nomeLoja: nomeLoja, acao: "Gerou Pedido de Venda", destino: razao, dataHora: serverTimestamp(), dadosPlanilha: JSON.stringify(dadosBackup) });
+        // ======================================
 
         const response = await fetch('./PEDIDO.xlsx');
         if(!response.ok) { alert("⚠️ Erro: 'PEDIDO.xlsx' não encontrado."); document.querySelector('.btn-gerar').innerText = "⬇️ GERAR PEDIDO EM EXCEL"; return; }
