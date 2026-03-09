@@ -27,40 +27,20 @@ const aplicaMascara = (e) => {
 document.getElementById('editCnpj').addEventListener('input', aplicaMascara);
 document.getElementById('editCliCnpj').addEventListener('input', aplicaMascara);
 
-// === FORMATADOR DE LOGIN TURBINADO ===
 function formatarNomeLogin(nomeRaw) {
     let nome = nomeRaw.toLowerCase();
-    
-    // 1. Remove acentos
     nome = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
-    
-    // 2. Remove TUDO o que estiver entre parênteses (ex: "(rio jardim)")
     nome = nome.replace(/\([^)]*\)/g, " ");
-
-    // 3. Remove barra e o estado no final (ex: /pr, /sp, /mg)
     nome = nome.replace(/\/[a-z]{2}\b/g, " "); 
-    
-    // 4. Remove palavras e siglas indesejadas
     nome = nome.replace(/\b(eskimo|eskimó|loja de fabrica|loja|fabrica|sorvetes|sorvete|de|atacadao|atacadão|cd)\b/g, " ");
-    
-    // 5. Remove caracteres especiais (traços, pontos, etc) deixando só letras e números
     nome = nome.replace(/[^a-z0-9\s]/g, " "); 
-    
-    // 6. Separa as palavras que sobraram
     let palavras = nome.split(/\s+/).filter(p => p.length > 0);
     const romanos = /^(i{1,3}|iv|v|vi{1,3}|ix|x)$/;
     let loginStr = "";
-    
     if (palavras.length > 0) {
         let ultima = palavras[palavras.length - 1];
-        // Se a última palavra for um número romano, separa com um ponto
-        if (romanos.test(ultima)) { 
-            let base = palavras.slice(0, -1).join(""); 
-            loginStr = base + "." + ultima; 
-        } 
-        else { 
-            loginStr = palavras.join(""); 
-        }
+        if (romanos.test(ultima)) { let base = palavras.slice(0, -1).join(""); loginStr = base + "." + ultima; } 
+        else { loginStr = palavras.join(""); }
     }
     return loginStr ? "filial." + loginStr : "";
 }
@@ -98,7 +78,8 @@ async function carregarDashboard() {
 async function carregarLojas() {
     const snap = await getDocs(collection(db, "usuarios"));
     const tbody = document.querySelector('#tabelaLojas tbody'); tbody.innerHTML = ''; usuariosData = {};
-    tbody.innerHTML += `<tr style="background:#e6f2ff;"><td><b>TABELA TF</b></td><td>Tabela de Transferência Base</td><td>-</td><td><button class="btn-small btn-preco" onclick="window.abrirPrecos('tf')">Editar Preços TF</button></td></tr>`;
+    tbody.innerHTML += `<tr style="background:#e6f2ff;"><td><b>TABELA TF</b></td><td>Tabela de Transferência Base</td><td style="color:#666;">-</td>
+        <td><button class="btn-small btn-preco" onclick="window.abrirPrecos('tf')">💲 Preços TF</button></td></tr>`;
     snap.forEach(d => {
         usuariosData[d.id] = d.data(); const u = d.data();
         if(d.id !== 'admin') {
@@ -109,12 +90,17 @@ async function carregarLojas() {
 }
 
 window.abrirNovoUsuario = () => { 
-    document.getElementById('modalEditar').style.display='flex'; document.getElementById('tituloForm').innerText = "Cadastro de Loja"; document.getElementById('editId').value="NOVO"; document.getElementById('editLogin').value=""; document.getElementById('editLogin').disabled=false; document.getElementById('editCnpj').value=""; document.getElementById('editNome').value=""; document.getElementById('chkAdmin').checked = false; document.getElementById('chkBalde').checked = false; document.getElementById('chkPromo').checked = false; document.getElementById('btnResetSenha').style.display = 'none'; document.getElementById('dicaSenhaMsg').style.display = 'block'; document.getElementById('alertaMigracao').style.display = 'none';
+    document.getElementById('modalEditar').style.display='flex'; document.getElementById('tituloForm').innerText = "Cadastro de Loja"; document.getElementById('editId').value="NOVO"; document.getElementById('editLogin').value=""; document.getElementById('editLogin').disabled=false; document.getElementById('editCnpj').value=""; document.getElementById('editNome').value=""; 
+    document.getElementById('chkAdmin').checked = false; document.getElementById('chkVenda').checked = true; // Venda padrão ativo
+    document.getElementById('chkBalde').checked = false; document.getElementById('chkPromo').checked = false; document.getElementById('btnResetSenha').style.display = 'none'; document.getElementById('dicaSenhaMsg').style.display = 'block'; document.getElementById('alertaMigracao').style.display = 'none';
 };
 
 window.editarLoja = (id) => { 
     const u = usuariosData[id]; const plan = u.planilhas || {};
-    document.getElementById('tituloForm').innerText = "Editar Loja"; document.getElementById('editId').value = id; document.getElementById('editLogin').value = id; document.getElementById('editLogin').disabled = false; document.getElementById('editNome').value = u.nomeLoja||""; document.getElementById('editCnpj').value = u.cnpj||""; document.getElementById('chkAdmin').checked = u.tipo === 'admin'; document.getElementById('chkBalde').checked = plan.balde||false; document.getElementById('chkPromo').checked = plan.promo||false; document.getElementById('btnResetSenha').style.display = 'block'; document.getElementById('dicaSenhaMsg').style.display = 'none'; document.getElementById('alertaMigracao').style.display = 'block'; document.getElementById('modalEditar').style.display = 'flex';
+    document.getElementById('tituloForm').innerText = "Editar Loja"; document.getElementById('editId').value = id; document.getElementById('editLogin').value = id; document.getElementById('editLogin').disabled = false; document.getElementById('editNome').value = u.nomeLoja||""; document.getElementById('editCnpj').value = u.cnpj||""; 
+    document.getElementById('chkAdmin').checked = u.tipo === 'admin'; 
+    document.getElementById('chkVenda').checked = plan.venda !== false; // Venda padrão ativo, a não ser que esteja como false
+    document.getElementById('chkBalde').checked = plan.balde||false; document.getElementById('chkPromo').checked = plan.promo||false; document.getElementById('btnResetSenha').style.display = 'block'; document.getElementById('dicaSenhaMsg').style.display = 'none'; document.getElementById('alertaMigracao').style.display = 'block'; document.getElementById('modalEditar').style.display = 'flex';
 };
 
 window.excluirLoja = async (id) => { if(confirm("Atenção: Excluir loja "+id+"? O histórico de preços dela será perdido!")){ await deleteDoc(doc(db, "usuarios", id)); carregarLojas(); carregarDashboard(); } };
@@ -128,7 +114,9 @@ document.getElementById('btnSalvarEdicao').onclick = async () => {
     const novoLogin = document.getElementById('editLogin').value.toLowerCase().trim(); const oldLogin = document.getElementById('editId').value;
     if(!novoLogin) return alert("O Login não pode estar vazio!");
     document.getElementById('btnSalvarEdicao').innerText = "A processar..."; const isNovo = (oldLogin === "NOVO");
-    let dados = { nomeLoja: document.getElementById('editNome').value, cnpj: document.getElementById('editCnpj').value, tipo: document.getElementById('chkAdmin').checked ? "admin" : "loja", planilhas: { sorvete: true, seco: true, balde: document.getElementById('chkBalde').checked, promo: document.getElementById('chkPromo').checked } };
+    let dados = { nomeLoja: document.getElementById('editNome').value, cnpj: document.getElementById('editCnpj').value, tipo: document.getElementById('chkAdmin').checked ? "admin" : "loja", 
+        planilhas: { venda: document.getElementById('chkVenda').checked, sorvete: true, seco: true, balde: document.getElementById('chkBalde').checked, promo: document.getElementById('chkPromo').checked } 
+    };
 
     if(isNovo) {
         dados.senha = 'eskimo'; await setDoc(doc(db, "usuarios", novoLogin), dados, { merge: true }); 
@@ -162,7 +150,10 @@ document.getElementById('btnUploadUsuarios').onclick = async () => {
                 if(nome) {
                     let login = (cleanRow['LOGIN'] || '').toString().toLowerCase().trim();
                     if (!login) { login = formatarNomeLogin(nome); }
-                    if (login) { await setDoc(doc(db, "usuarios", login), { senha: 'eskimo', nomeLoja: nome, cnpj: (cleanRow['CNPJ']||'').toString().trim(), tipo: 'loja', planilhas: { sorvete: true, seco: true, balde: false, promo: false } }, { merge: true }); count++; }
+                    if (login) { 
+                        // IMPORTAÇÃO EM MASSA: Venda sempre ativa por padrão
+                        await setDoc(doc(db, "usuarios", login), { senha: 'eskimo', nomeLoja: nome, cnpj: (cleanRow['CNPJ']||'').toString().trim(), tipo: 'loja', planilhas: { venda: true, sorvete: true, seco: true, balde: false, promo: false } }, { merge: true }); count++; 
+                    }
                 }
             }
             alert(`SUCESSO! ${count} lojas cadastradas/atualizadas na base.`); carregarLojas(); carregarDashboard();
@@ -310,9 +301,18 @@ window.restaurarBackup = async () => {
                 for (let docId in docs) { await setDoc(doc(db, col, docId), docs[docId], { merge: true }); totalRestaurado++; }
             }
             alert(`Restauração concluída com sucesso! ${totalRestaurado} registos recuperados.`); window.location.reload(); 
-        } catch (err) { console.error(err); alert("Erro ao ler o ficheiro de backup. Certifique-se que é um ficheiro .json válido e gerado pelo sistema."); }
+        } catch (err) { console.error(err); alert("Erro ao ler o ficheiro de backup. Certifique-se que é um ficheiro .json válido."); }
         btn.innerText = "⬆️ Restaurar Sistema"; btn.disabled = false;
     }; reader.readAsText(fileInput.files[0]);
 };
+
+document.getElementById('pesquisaLoja').addEventListener('input', function() {
+    let filtro = this.value.toLowerCase();
+    let linhas = document.querySelectorAll('#tabelaLojas tbody tr');
+    linhas.forEach(linha => {
+        let textoLinha = linha.textContent.toLowerCase();
+        if (textoLinha.includes(filtro)) { linha.style.display = ''; } else { linha.style.display = 'none'; }
+    });
+});
 
 carregarDashboard();
