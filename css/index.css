@@ -5,8 +5,6 @@ h1 { color: #e3000f; text-align: center; margin-bottom: 20px; font-size: 24px; }
 input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; }
 button { background: #e3000f; color: white; border: none; padding: 12px; border-radius: 6px; width: 100%; cursor: pointer; font-weight: bold; font-size: 16px; }
 button:hover { background: #b3000c; }
-button:disabled { background: #ccc; cursor: not-allowed; }
 #msg { color: red; text-align: center; margin-top: 10px; font-weight: bold; display: none; }
 .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; }
 .modal-content { background: white; padding: 30px; border-radius: 12px; width: 350px; text-align: center; border-top: 5px solid #28a745; }
-.modal-content p { color: #555; margin-bottom: 20px; font-size: 14px; }
