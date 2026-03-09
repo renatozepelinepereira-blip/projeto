@@ -40,6 +40,11 @@
             <div>
                 <div class="card" style="margin-bottom: 20px;">
                     <h2>Importar Planilhas (.xlsx ou .csv)</h2>
+                    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
+                        • Venda Loja: <b>nomedaloja.xlsx</b><br>
+                        • Venda Promoção: <b>nomedaloja_promo.xlsx</b><br>
+                        • Transferência (Para Todas): <b style="color:blue;">tf.xlsx</b>
+                    </p>
                     <input type="file" id="fileCsv" accept=".csv, .xlsx" multiple>
                     <button id="btnUpload" style="background: #28a745;">Subir Planilha para o Banco</button>
                 </div>
@@ -55,22 +60,22 @@
                 <div class="card modal" id="modalEditar">
                     <h2 id="tituloForm">Editar Usuário</h2>
                     <input type="hidden" id="editId">
-                    <input type="text" id="editLogin" placeholder="Login da loja" disabled>
+                    <input type="text" id="editLogin" placeholder="Login da loja (Ex: dourados)" disabled>
                     <input type="text" id="editNome" placeholder="Razão Social / Nome da Filial">
+                    <input type="text" id="editCnpj" placeholder="CNPJ da Loja" maxlength="18">
                     <input type="text" id="editSenha" placeholder="Senha">
                     
-                    <h3>Tabela de Preços e Acessos</h3>
+                    <h3>Acessos do Sistema</h3>
                     <div class="checkbox-group">
-                        <label style="background:#e3000f; color:white;"><input type="checkbox" id="chkPadrao"> USAR TABELA PADRÃO</label>
                         <label><input type="checkbox" id="chkAdmin"> É Admin</label>
                     </div>
 
-                    <h3>Abas Visíveis na Loja</h3>
+                    <h3>Abas Visíveis na Loja (Venda e Transferência)</h3>
                     <div class="checkbox-group">
                         <label><input type="checkbox" id="chkSorvete"> Sorvetes</label>
                         <label><input type="checkbox" id="chkSeco"> Secos</label>
                         <label><input type="checkbox" id="chkBalde"> Baldes</label>
-                        <label style="border: 1px solid #ffc107;"><input type="checkbox" id="chkPromo"> PROMOÇÃO</label>
+                        <label style="border: 1px solid #ffc107;"><input type="checkbox" id="chkPromo"> PROMOÇÃO (Só na Venda)</label>
                     </div>
 
                     <button id="btnSalvarEdicao">Salvar Configurações</button>
@@ -81,11 +86,8 @@
                     <h2 id="tituloPrecos">Editor de Preços</h2>
                     <button onclick="window.adicionarItemEditor()" style="background:#17a2b8; margin-bottom:15px;">+ Novo Produto</button>
                     <input type="hidden" id="editTabelaId">
-                    
                     <div id="listaEdicaoPrecos" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 20px;"></div>
-                    
-                    <button id="btnSalvarPrecos" style="background:#28a745;">💾 Salvar Somente Nesta Loja</button>
-                    <button id="btnSalvarTodas" style="background:#dc3545;">🌍 Aplicar para TODAS as Lojas</button>
+                    <button id="btnSalvarPrecos" style="background:#28a745;">💾 Salvar Somente Nesta Tabela</button>
                     <button onclick="document.getElementById('modalPrecos').style.display='none'" style="background:#666;">Cancelar</button>
                 </div>
             </div>
@@ -112,32 +114,49 @@
         let editorItens = [];
         let itensExcluidos = [];
 
+        // Máscara de CNPJ no form do Admin
+        document.getElementById('editCnpj').addEventListener('input', function (e) {
+            let x = e.target.value.replace(/\D/g, '');
+            if(x.length > 11) {
+                x = x.replace(/^(\d{2})(\d)/, '$1.$2');
+                x = x.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+                x = x.replace(/\.(\d{3})(\d)/, '.$1/$2');
+                x = x.replace(/(\d{4})(\d)/, '$1-$2');
+            }
+            e.target.value = x;
+        });
+
         async function carregarLojas() {
             const snap = await getDocs(collection(db, "usuarios"));
             const lista = document.getElementById('listaLojas');
             lista.innerHTML = '';
             usuariosData = {};
             
+            // Adiciona a Tabela TF fixa na lista para facilitar edição manual
+            lista.innerHTML += `<li style="background: #e6f2ff; border-left: 4px solid blue;">
+                <span><b>📦 TABELA TRANSFERÊNCIA (tf)</b></span>
+                <div><button class="btn-small btn-preco" onclick="window.abrirPrecos('tf')">💲 Preços TF</button></div>
+            </li>`;
+
             snap.forEach(d => {
                 usuariosData[d.id] = d.data();
                 const u = d.data();
-                lista.innerHTML += `<li>
-                    <span><b>${d.id}</b> - ${u.nomeLoja} ${u.planilhas?.padrao ? '<b style="color:orange; font-size:10px;">[PADRÃO]</b>' : ''}</span>
-                    <div>
-                        <button class="btn-small btn-preco" onclick="window.abrirPrecos('${d.id}')">💲 Preços</button>
-                        <button class="btn-small btn-edit" onclick="window.editar('${d.id}')">Editar</button>
-                        <button class="btn-small btn-del" onclick="window.excluir('${d.id}')">X</button>
-                    </div>
-                </li>`;
+                if(d.id !== 'admin') {
+                    lista.innerHTML += `<li>
+                        <span><b>${d.id}</b> - ${u.nomeLoja} <br><small style="color:#666;">CNPJ: ${u.cnpj || 'Não informado'}</small></span>
+                        <div>
+                            <button class="btn-small btn-preco" onclick="window.abrirPrecos('${d.id}')">💲 Preços</button>
+                            <button class="btn-small btn-edit" onclick="window.editar('${d.id}')">Editar</button>
+                            <button class="btn-small btn-del" onclick="window.excluir('${d.id}')">X</button>
+                        </div>
+                    </li>`;
+                }
             });
         }
 
-        window.abrirPrecos = async (userId) => {
+        window.abrirPrecos = async (tabelaId) => {
             document.getElementById('modalEditar').style.display = 'none';
-            const u = usuariosData[userId];
-            const tabelaId = (u.planilhas && u.planilhas.padrao) ? 'padrao' : userId;
-            
-            document.getElementById('tituloPrecos').innerText = `Editando: ${tabelaId.toUpperCase()}`;
+            document.getElementById('tituloPrecos').innerText = `Editando Tabela: ${tabelaId.toUpperCase()}`;
             document.getElementById('editTabelaId').value = tabelaId;
             document.getElementById('listaEdicaoPrecos').innerHTML = '<p>Carregando...</p>';
             document.getElementById('modalPrecos').style.display = 'block';
@@ -155,7 +174,6 @@
                         let pData = precosAtuais[cod];
                         let val = typeof pData === 'object' ? pData.preco : pData;
                         let vis = typeof pData === 'object' ? (pData.visivel !== false) : true;
-                        
                         editorItens.push({ cod: cod, desc: p.data().descricao, cat: p.data().categoria, eng: p.data().engradado, preco: val, visivel: vis });
                     }
                 });
@@ -178,82 +196,45 @@
             document.getElementById('listaEdicaoPrecos').innerHTML = html;
         }
 
-        window.removerItemEditor = (index) => {
-            itensExcluidos.push(editorItens[index].cod); 
-            editorItens.splice(index, 1);
-            renderEditor();
-        };
+        window.removerItemEditor = (index) => { itensExcluidos.push(editorItens[index].cod); editorItens.splice(index, 1); renderEditor(); };
 
         window.adicionarItemEditor = () => {
             const cod = prompt("Código do Produto:");
             if(!cod || editorItens.find(i => i.cod === cod)) return alert("Código inválido ou já existe.");
             const desc = prompt("Descrição (Nome):");
             const cat = prompt("Categoria (SORVETE, SECO ou BALDE):", "SORVETE");
-            const eng = parseInt(prompt("Quantidade no Engradado/Caixa:", "1")) || 1;
+            const eng = parseFloat(prompt("Quantidade no Engradado/Caixa:", "1")) || 1;
             const preco = parseFloat(prompt("Preço R$:", "0.00")) || 0;
-            
             editorItens.unshift({ cod, desc, cat, eng, preco, visivel: true });
             renderEditor();
         };
 
-        async function dispararSalvamento(paraTodas) {
+        document.getElementById('btnSalvarPrecos').onclick = async () => {
             const tabelaId = document.getElementById('editTabelaId').value;
-            let btnId = paraTodas ? 'btnSalvarTodas' : 'btnSalvarPrecos';
-            document.getElementById(btnId).innerText = "Salvando...";
+            document.getElementById('btnSalvarPrecos').innerText = "Salvando...";
 
-            let updates = {};
-            let batchProdutos = [];
-            
-            editorItens.forEach(i => {
-                if(i.preco > 0) {
-                    updates[i.cod] = { preco: i.preco, visivel: i.visivel };
-                    batchProdutos.push(i);
-                }
-            });
-            
+            let updates = {}; let batchProdutos = [];
+            editorItens.forEach(i => { if(i.preco > 0) { updates[i.cod] = { preco: i.preco, visivel: i.visivel }; batchProdutos.push(i); } });
             itensExcluidos.forEach(cod => { updates[cod] = deleteField(); });
 
             for(let item of batchProdutos) {
                 await setDoc(doc(db, "produtos", item.cod), { codigo: item.cod, descricao: item.desc, engradado: item.eng, categoria: item.cat }, { merge: true });
             }
 
-            if(paraTodas) {
-                if(!confirm("Tem certeza? Todos os usuários receberão essas alterações!")) {
-                    document.getElementById(btnId).innerText = "🌍 Aplicar para TODAS as Lojas";
-                    return;
-                }
-                const snap = await getDocs(collection(db, "usuarios"));
-                let alvo = ["padrao"];
-                snap.forEach(d => { if(d.data().tipo !== 'admin') alvo.push(d.id); });
-                
-                for(let u of alvo) {
-                    await setDoc(doc(db, "precos", u), updates, { merge: true });
-                }
-                alert("Aplicado para TODAS as lojas e para a tabela Padrão!");
-            } else {
-                await setDoc(doc(db, "precos", tabelaId), updates, { merge: true });
-                alert("Preços atualizados com sucesso!");
-            }
-
+            await setDoc(doc(db, "precos", tabelaId), updates, { merge: true });
+            alert("Preços atualizados com sucesso!");
             document.getElementById('modalPrecos').style.display = 'none';
-            document.getElementById(btnId).innerText = paraTodas ? "🌍 Aplicar para TODAS as Lojas" : "💾 Salvar Somente Nesta Loja";
-        }
-
-        document.getElementById('btnSalvarPrecos').onclick = () => dispararSalvamento(false);
-        document.getElementById('btnSalvarTodas').onclick = () => dispararSalvamento(true);
+            document.getElementById('btnSalvarPrecos').innerText = "💾 Salvar Somente Nesta Tabela";
+        };
 
         document.getElementById('btnUpload').onclick = async () => {
             const files = document.getElementById('fileCsv').files;
             if(files.length === 0) return alert("Selecione os arquivos!");
-            
             const btn = document.getElementById('btnUpload');
-            btn.innerText = "⏳ Processando... Aguarde";
-            btn.disabled = true;
+            btn.innerText = "⏳ Processando... Aguarde"; btn.disabled = true;
 
-            // Pequeno delay para a tela ter tempo de atualizar o botão antes de travar processando o Excel
             setTimeout(async () => {
                 let filesProcessed = 0;
-
                 for(let f of files) {
                     const lojaId = f.name.replace(/\.[^/.]+$/, "").toLowerCase().trim();
                     const reader = new FileReader();
@@ -261,28 +242,14 @@
                         const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
                         const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
                         let precos = {}; let count = 0;
-                        
                         for(let row of rawData) {
                             let cleanRow = {}; for(let key in row) cleanRow[key.toString().trim().toUpperCase()] = row[key];
                             let cod = cleanRow['CODIGO'] || cleanRow['CÓDIGO'];
                             let prod = cleanRow['PRODUTO'];
-                            let eng = parseInt(cleanRow['ENGRADADO']) || 1;
+                            let eng = parseFloat(cleanRow['ENGRADADO']) || 1; // Permite float
                             let cat = cleanRow['CATEGORIA'] ? String(cleanRow['CATEGORIA']).toUpperCase().trim() : 'SORVETE';
-                            
-                            // NOVA INTELIGÊNCIA DE LIMPEZA DE PREÇO
                             let precoVal = cleanRow['PRECO'] || cleanRow['PREÇO'] || 0;
-                            let preco = 0;
-
-                            if(typeof precoVal === 'number') {
-                                preco = precoVal;
-                            } else {
-                                let precoStr = String(precoVal).replace(/R\$/gi, '').replace(/\s/g, '');
-                                // Se tiver vírgula, assume padrão BR (arranca pontos de milhar e troca vírgula por ponto)
-                                if(precoStr.includes(',')) {
-                                    precoStr = precoStr.replace(/\./g, '').replace(',', '.');
-                                }
-                                preco = parseFloat(precoStr);
-                            }
+                            let preco = typeof precoVal === 'number' ? precoVal : parseFloat(String(precoVal).replace(/R\$/gi, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
 
                             if(cod && prod && preco > 0) {
                                 precos[cod.toString()] = { preco: preco, visivel: true }; 
@@ -292,31 +259,24 @@
                                 count++;
                             }
                         }
-                        
                         if(count > 0) {
                             await setDoc(doc(db, "precos", lojaId), precos);
                             alert(`SUCESSO! ${count} produtos salvos na tabela "${lojaId}".`);
-                        } else {
-                            alert(`⚠️ ERRO: Nenhum produto lido na planilha ${f.name}.\nCertifique-se que a PRIMEIRA LINHA tem as colunas CODIGO, PRODUTO e PRECO.`);
                         }
-
                         filesProcessed++;
-                        if(filesProcessed === files.length) {
-                            btn.innerText = "Subir Planilha para o Banco";
-                            btn.disabled = false;
-                        }
+                        if(filesProcessed === files.length) { btn.innerText = "Subir Planilha para o Banco"; btn.disabled = false; }
                     };
                     reader.readAsArrayBuffer(f);
                 }
-            }, 50); // Fim do setTimeout
+            }, 50);
         };
 
-        window.abrirNovoUsuario = () => { document.getElementById('modalEditar').style.display='block'; document.getElementById('editId').value="NOVO"; document.getElementById('editLogin').disabled=false; };
+        window.abrirNovoUsuario = () => { document.getElementById('modalEditar').style.display='block'; document.getElementById('editId').value="NOVO"; document.getElementById('editLogin').value=""; document.getElementById('editLogin').disabled=false; document.getElementById('editCnpj').value=""; document.getElementById('editNome').value=""; };
         window.editar = (id) => { 
             const u = usuariosData[id]; const plan = u.planilhas || {};
             document.getElementById('editId').value = id; document.getElementById('editLogin').value = id; document.getElementById('editLogin').disabled = true;
-            document.getElementById('editNome').value = u.nomeLoja||""; document.getElementById('editSenha').value = u.senha||"";
-            document.getElementById('chkAdmin').checked = u.tipo === 'admin'; document.getElementById('chkPadrao').checked = plan.padrao||false;
+            document.getElementById('editNome').value = u.nomeLoja||""; document.getElementById('editCnpj').value = u.cnpj||""; document.getElementById('editSenha').value = u.senha||"";
+            document.getElementById('chkAdmin').checked = u.tipo === 'admin'; 
             document.getElementById('chkSorvete').checked = plan.sorvete !== false; document.getElementById('chkSeco').checked = plan.seco||false;
             document.getElementById('chkBalde').checked = plan.balde||false; document.getElementById('chkPromo').checked = plan.promo||false;
             document.getElementById('modalEditar').style.display = 'block';
@@ -324,8 +284,8 @@
         window.excluir = async (id) => { if(confirm("Excluir usuário "+id+"?")){ await deleteDoc(doc(db, "usuarios", id)); carregarLojas();} };
         document.getElementById('btnSalvarEdicao').onclick = async () => {
             const login = document.getElementById('editLogin').value.toLowerCase().trim();
-            const dados = { senha: document.getElementById('editSenha').value, nomeLoja: document.getElementById('editNome').value, tipo: document.getElementById('chkAdmin').checked ? "admin" : "loja",
-                planilhas: { padrao: document.getElementById('chkPadrao').checked, sorvete: document.getElementById('chkSorvete').checked, seco: document.getElementById('chkSeco').checked, balde: document.getElementById('chkBalde').checked, promo: document.getElementById('chkPromo').checked } };
+            const dados = { senha: document.getElementById('editSenha').value, nomeLoja: document.getElementById('editNome').value, cnpj: document.getElementById('editCnpj').value, tipo: document.getElementById('chkAdmin').checked ? "admin" : "loja",
+                planilhas: { sorvete: document.getElementById('chkSorvete').checked, seco: document.getElementById('chkSeco').checked, balde: document.getElementById('chkBalde').checked, promo: document.getElementById('chkPromo').checked } };
             await setDoc(doc(db, "usuarios", login), dados, { merge: true }); document.getElementById('modalEditar').style.display = 'none'; carregarLojas();
         };
         carregarLojas();
