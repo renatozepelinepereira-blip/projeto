@@ -6,49 +6,84 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
-        body { background: #f8f9fa; padding: 20px; }
-        .container { max-width: 1100px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        body { background: #f8f9fa; padding: 20px; color: #333; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
         header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e3000f; padding-bottom: 15px; margin-bottom: 25px; }
-        h1, h2 { color: #e3000f; }
+        h1, h2, h3 { color: #e3000f; margin-bottom: 15px; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
         .card { border: 1px solid #eee; padding: 20px; border-radius: 8px; background: #fff; }
-        input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; }
-        button { background: #e3000f; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; }
+        input[type="text"], input[type="password"], input[type="file"] { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; }
+        button { background: #e3000f; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; }
         button:hover { background: #b3000c; }
-        .btn-sair { background: #444; width: auto; padding: 8px 15px; }
-        ul { list-style: none; margin-top: 15px; }
-        li { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .btn-small { width: auto; padding: 6px 12px; font-size: 12px; margin: 0 5px; }
+        .btn-edit { background: #007bff; } .btn-edit:hover { background: #0056b3; }
+        .btn-del { background: #dc3545; } .btn-del:hover { background: #c82333; }
+        ul { list-style: none; }
+        li { padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .checkbox-group { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        .checkbox-group label { display: flex; align-items: center; gap: 5px; cursor: pointer; background: #f4f4f4; padding: 8px 12px; border-radius: 6px; }
+        #modalEditar { display: none; background: #fff; border: 2px solid #e3000f; padding: 20px; border-radius: 8px; margin-top: 20px; }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>Painel Administrativo</h1>
-            <button onclick="localStorage.clear(); window.location.href='index.html'" class="btn-sair">Sair</button>
+            <button onclick="localStorage.clear(); window.location.href='index.html'" style="width:auto; background:#444;">Sair</button>
         </header>
 
         <div class="grid">
-            <div class="card">
-                <h2>Gerenciar Lojas</h2>
-                <input type="text" id="lojaId" placeholder="Login (ex: cd_dourados)">
-                <input type="text" id="lojaNome" placeholder="Nome da Filial">
-                <input type="password" id="lojaSenha" placeholder="Senha de Acesso">
-                <button id="btnSalvarLoja">Salvar Nova Loja</button>
-                <ul id="listaLojas"></ul>
+            <div>
+                <div class="card" style="margin-bottom: 20px;">
+                    <h2>Importar Preços (CSV)</h2>
+                    <p style="font-size: 13px; color: #666; margin-bottom: 10px;">O nome do arquivo .csv deve ser o Login da loja. Colunas obrigatórias: CODIGO, PRODUTO, ENGRADADO, PRECO, CATEGORIA.</p>
+                    <input type="file" id="fileCsv" accept=".csv" multiple>
+                    <button id="btnUpload" style="background: #28a745;">Processar e Salvar no Banco</button>
+                </div>
+
+                <div class="card">
+                    <h2>Usuários Cadastrados</h2>
+                    <button onclick="window.abrirNovoUsuario()" style="background: #17a2b8;">+ Novo Usuário</button>
+                    <ul id="listaLojas"></ul>
+                </div>
             </div>
 
-            <div class="card">
-                <h2>Importar Preços (CSV)</h2>
-                <p style="font-size: 13px; color: #666; margin-bottom: 10px;">O nome do arquivo .csv deve ser o Login da loja.</p>
-                <input type="file" id="fileCsv" accept=".csv" multiple>
-                <button id="btnUpload" style="background: #28a745;">Processar Arquivos</button>
+            <div>
+                <div class="card" id="modalEditar">
+                    <h2 id="tituloForm">Editar Usuário</h2>
+                    <input type="hidden" id="editId">
+                    
+                    <label>Login do Usuário:</label>
+                    <input type="text" id="editLogin" placeholder="Ex: cd_dourados" disabled>
+                    
+                    <label>Nome da Filial:</label>
+                    <input type="text" id="editNome" placeholder="Nome da Filial">
+                    
+                    <label>Senha:</label>
+                    <input type="text" id="editSenha" placeholder="Senha">
+                    
+                    <h3>Permissões do Sistema</h3>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" id="chkAdmin"> É Administrador</label>
+                    </div>
+
+                    <h3>Planilhas Visíveis para esta Loja</h3>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" id="chkSorvete"> Sorvetes</label>
+                        <label><input type="checkbox" id="chkSeco"> Secos</label>
+                        <label><input type="checkbox" id="chkBalde"> Baldes</label>
+                    </div>
+
+                    <button id="btnSalvarEdicao">Salvar Configurações</button>
+                    <button onclick="document.getElementById('modalEditar').style.display='none'" style="background:#666;">Cancelar</button>
+                </div>
             </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDocs, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8",
@@ -62,65 +97,140 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Bloqueio de segurança simples
-        if(localStorage.getItem('user') !== 'admin') { window.location.href = 'index.html'; }
+        if(localStorage.getItem('tipo') !== 'admin') { window.location.href = 'index.html'; }
 
-        // Carrega lojas cadastradas
+        let usuariosData = {};
+
+        // Carrega Lista
         async function carregarLojas() {
             const snap = await getDocs(collection(db, "usuarios"));
             const lista = document.getElementById('listaLojas');
             lista.innerHTML = '';
+            usuariosData = {};
+            
             snap.forEach(d => {
-                if(d.data().tipo !== 'admin') {
-                    lista.innerHTML += `<li>
-                        <span>${d.data().nomeLoja} (<b>${d.id}</b>)</span>
-                        <button onclick="window.excluirLoia('${d.id}')" style="width:auto; padding:5px 10px; background:#444;">X</button>
-                    </li>`;
-                }
+                usuariosData[d.id] = d.data();
+                const isAdmin = d.data().tipo === 'admin' ? '<span style="color:red; font-size:10px; border:1px solid red; padding:2px;">ADMIN</span>' : '';
+                lista.innerHTML += `<li>
+                    <span><b>${d.id}</b> - ${d.data().nomeLoja} ${isAdmin}</span>
+                    <div>
+                        <button class="btn-small btn-edit" onclick="window.editar('${d.id}')">Editar</button>
+                        <button class="btn-small btn-del" onclick="window.excluir('${d.id}')">X</button>
+                    </div>
+                </li>`;
             });
         }
-        window.excluirLoia = async (id) => { if(confirm("Excluir loja?")) { await deleteDoc(doc(db, "usuarios", id)); carregarLojas(); } };
-        carregarLojas();
 
-        // Salva Loja
-        document.getElementById('btnSalvarLoja').onclick = async () => {
-            const id = document.getElementById('lojaId').value.toLowerCase().trim();
-            await setDoc(doc(db, "usuarios", id), { 
-                senha: document.getElementById('lojaSenha').value, 
-                nomeLoja: document.getElementById('lojaNome').value, 
-                tipo: "loja" 
-            });
-            alert("Loja criada!"); carregarLojas();
+        window.abrirNovoUsuario = () => {
+            document.getElementById('tituloForm').innerText = "Novo Usuário";
+            document.getElementById('editId').value = "NOVO";
+            document.getElementById('editLogin').value = "";
+            document.getElementById('editLogin').disabled = false;
+            document.getElementById('editNome').value = "";
+            document.getElementById('editSenha').value = "";
+            document.getElementById('chkAdmin').checked = false;
+            document.getElementById('chkSorvete').checked = true;
+            document.getElementById('chkSeco').checked = false;
+            document.getElementById('chkBalde').checked = false;
+            document.getElementById('modalEditar').style.display = 'block';
         };
 
-        // Processa CSV
+        window.editar = (id) => {
+            const u = usuariosData[id];
+            document.getElementById('tituloForm').innerText = "Editar Usuário: " + id;
+            document.getElementById('editId').value = id;
+            document.getElementById('editLogin').value = id;
+            document.getElementById('editLogin').disabled = true; // Não deixa mudar o login
+            document.getElementById('editNome').value = u.nomeLoja || "";
+            document.getElementById('editSenha').value = u.senha || "";
+            document.getElementById('chkAdmin').checked = u.tipo === 'admin';
+            
+            const planilhas = u.planilhas || { sorvete: true, seco: false, balde: false };
+            document.getElementById('chkSorvete').checked = planilhas.sorvete;
+            document.getElementById('chkSeco').checked = planilhas.seco;
+            document.getElementById('chkBalde').checked = planilhas.balde;
+            
+            document.getElementById('modalEditar').style.display = 'block';
+        };
+
+        window.excluir = async (id) => { 
+            if(confirm("Excluir usuário " + id + "?")) { 
+                await deleteDoc(doc(db, "usuarios", id)); 
+                carregarLojas(); 
+            } 
+        };
+
+        // Salvar/Criar Usuário
+        document.getElementById('btnSalvarEdicao').onclick = async () => {
+            const idMode = document.getElementById('editId').value;
+            const login = document.getElementById('editLogin').value.toLowerCase().trim();
+            if(!login) return alert("O login é obrigatório!");
+
+            const dados = {
+                senha: document.getElementById('editSenha').value,
+                nomeLoja: document.getElementById('editNome').value,
+                tipo: document.getElementById('chkAdmin').checked ? "admin" : "loja",
+                planilhas: {
+                    sorvete: document.getElementById('chkSorvete').checked,
+                    seco: document.getElementById('chkSeco').checked,
+                    balde: document.getElementById('chkBalde').checked
+                }
+            };
+
+            await setDoc(doc(db, "usuarios", login), dados, { merge: true });
+            alert("Usuário salvo com sucesso!");
+            document.getElementById('modalEditar').style.display = 'none';
+            carregarLojas();
+        };
+
+        // Upload CSV Turbo (Limpa espaços em branco e lê categorias)
         document.getElementById('btnUpload').onclick = async () => {
             const files = document.getElementById('fileCsv').files;
             if(files.length === 0) return alert("Selecione os arquivos!");
+            
+            document.getElementById('btnUpload').innerText = "Processando... Aguarde";
             
             for(let f of files) {
                 const lojaId = f.name.replace(".csv", "").toLowerCase().trim();
                 const reader = new FileReader();
                 reader.onload = async (e) => {
                     const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
-                    const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                    const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+                    
                     let precos = {};
-                    for(let row of data) {
-                        if(row.CODIGO) {
-                            precos[row.CODIGO.toString()] = parseFloat(row.PRECO);
-                            // Atualiza catálogo mestre
-                            await setDoc(doc(db, "produtos", row.CODIGO.toString()), {
-                                codigo: row.CODIGO.toString(), descricao: row.PRODUTO, engradado: parseInt(row.ENGRADADO)||1
+                    let count = 0;
+
+                    for(let row of rawData) {
+                        // Limpa os cabeçalhos caso o Excel tenha colocado espaços (ex: " PRODUTO ")
+                        let cleanRow = {};
+                        for(let key in row) { cleanRow[key.toString().trim().toUpperCase()] = row[key]; }
+
+                        let cod = cleanRow['CODIGO'] || cleanRow['CÓDIGO'];
+                        let prod = cleanRow['PRODUTO'];
+                        let eng = parseInt(cleanRow['ENGRADADO']) || 1;
+                        let precoStr = cleanRow['PRECO'] || cleanRow['PREÇO'];
+                        let preco = parseFloat(String(precoStr).replace(',', '.')); // Aceita vírgula ou ponto
+                        let cat = cleanRow['CATEGORIA'] ? String(cleanRow['CATEGORIA']).toUpperCase().trim() : 'SORVETE';
+
+                        if(cod && prod && !isNaN(preco)) {
+                            precos[cod.toString()] = preco;
+                            // Salva no catálogo mestre
+                            await setDoc(doc(db, "produtos", cod.toString()), {
+                                codigo: cod.toString(), descricao: prod, engradado: eng, categoria: cat
                             }, { merge: true });
+                            count++;
                         }
                     }
-                    // Salva tabela de preços da loja específica
+                    // Salva a tabela da loja
                     await setDoc(doc(db, "precos", lojaId), precos);
+                    alert(`Arquivo ${f.name}: ${count} produtos processados!`);
+                    document.getElementById('btnUpload').innerText = "Processar e Salvar no Banco";
                 };
                 reader.readAsArrayBuffer(f);
             }
-            alert("Processamento concluído!");
         };
+
+        carregarLojas();
     </script>
 </body>
 </html>
