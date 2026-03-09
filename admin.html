@@ -89,6 +89,7 @@
             <button onclick="mudarSecao('lojas')" id="nav-lojas"><i>🏪</i> <span>Gestão de Lojas</span></button>
             <button onclick="mudarSecao('precos')" id="nav-precos"><i>💲</i> <span>Tabelas de Preços</span></button>
             <button onclick="mudarSecao('clientes')" id="nav-clientes"><i>👥</i> <span>Base de Clientes</span></button>
+            <button onclick="mudarSecao('backup')" id="nav-backup"><i>💾</i> <span>Backup do Sistema</span></button>
             <button onclick="localStorage.clear(); window.location.href='index.html'" class="logout-btn"><i>🚪</i> <span>Sair do Sistema</span></button>
         </div>
     </div>
@@ -129,7 +130,7 @@
                     <h3 style="margin-bottom: 10px;">Cadastro em Massa (Planilha)</h3>
                     <p style="font-size: 13px; color: #555; margin-bottom: 10px; line-height: 1.5;">
                         Suba um Excel apenas com as colunas: <b>NOME, CNPJ</b><br>
-                        <i style="color:#e3000f; font-size:12px;">*O sistema gerará o login automaticamente (ex: filial.pirapora) e a senha padrão <b>eskimo</b>.</i>
+                        <i style="color:#e3000f; font-size:12px;">*O sistema gerará o login automaticamente e a senha padrão <b>eskimo</b>.</i>
                     </p>
                     <input type="file" id="fileUsuarios" accept=".csv, .xlsx">
                     <button id="btnUploadUsuarios" class="btn-secundario" style="width: 100%;">⚡ Importar Lojas</button>
@@ -173,6 +174,31 @@
                         <thead><tr><th>Tipo</th><th>Razão Social / Nome</th><th>CNPJ</th><th>Prazo</th><th>Loja Cadastrante</th><th>Ações</th></tr></thead>
                         <tbody></tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="sec-backup" class="secao">
+            <h2 class="section-title">Backup e Segurança</h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="card-panel">
+                    <h3 style="color: #28a745; margin-bottom: 15px;">Exportar Backup (Download)</h3>
+                    <p style="font-size: 14px; color: #555; margin-bottom: 15px; line-height: 1.5;">
+                        Cria um ficheiro <b>.json</b> com uma cópia completa e exata da sua base de dados atual.<br><br>
+                        Inclui todas as Lojas, Tabelas de Preço, Base de Clientes e o Histórico de Atividades. Guarde este ficheiro num local seguro.
+                    </p>
+                    <button id="btnGerarBackup" class="btn-sucesso" style="width: 100%; padding: 15px; font-size: 16px;" onclick="window.gerarBackup()">⬇️ Fazer Download do Backup</button>
+                </div>
+
+                <div class="card-panel">
+                    <h3 style="color: #e3000f; margin-bottom: 15px;">Restaurar Backup (Upload)</h3>
+                    <p style="font-size: 14px; color: #555; margin-bottom: 15px; line-height: 1.5;">
+                        Selecione um ficheiro de backup (.json) gerado anteriormente para restaurar o sistema.<br><br>
+                        ⚠️ <b>ATENÇÃO:</b> A restauração irá sobrescrever os seus dados atuais com os dados contidos no ficheiro.
+                    </p>
+                    <input type="file" id="fileBackup" accept=".json">
+                    <button id="btnRestaurarBackup" class="btn-perigo" style="width: 100%; padding: 15px; font-size: 16px; margin-top:0;" onclick="window.restaurarBackup()">⬆️ Restaurar Sistema</button>
                 </div>
             </div>
         </div>
@@ -283,18 +309,14 @@
         document.getElementById('editCnpj').addEventListener('input', aplicaMascara);
         document.getElementById('editCliCnpj').addEventListener('input', aplicaMascara);
 
-        // === FUNÇÃO DE FORMATAÇÃO INTELIGENTE DE LOGIN ===
         function formatarNomeLogin(nomeRaw) {
             let nome = nomeRaw.toLowerCase();
-            nome = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Tira acento
-            nome = nome.replace(/\/[a-z]{2}\b/g, ""); // Tira estados (/mg, /sp, etc)
-            
-            // Tira palavras lixo
+            nome = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
+            nome = nome.replace(/\/[a-z]{2}\b/g, ""); 
             nome = nome.replace(/\b(eskimo|eskimó|loja de fabrica|loja|fabrica|sorvetes|sorvete|de)\b/g, " ");
             nome = nome.replace(/[-–]/g, " "); 
             
             let palavras = nome.split(/\s+/).filter(p => p.length > 0);
-            
             const romanos = /^(i{1,3}|iv|v|vi{1,3}|ix|x)$/;
             let loginStr = "";
             
@@ -310,21 +332,18 @@
             return loginStr ? "filial." + loginStr : "";
         }
 
-        // Aplica a formatação inteligente ao digitar no input
         document.getElementById('editNome').addEventListener('input', (e) => {
             if(document.getElementById('editId').value === "NOVO") {
                 document.getElementById('editLogin').value = formatarNomeLogin(e.target.value);
             }
         });
 
-        // === BOTÃO: APAGAR TODAS AS LOJAS (CÃO DE GUARDA) ===
         window.apagarTodasLojas = async () => {
             if(!confirm("⚠️ ATENÇÃO EXTREMA: Isto vai apagar TODAS as lojas e tabelas de preços da base de dados (exceto o Admin)! Tem certeza que deseja prosseguir?")) return;
             if(!confirm("Atenção: Esta ação NÃO PODE ser desfeita. Deseja mesmo limpar tudo?")) return;
 
             const btn = document.getElementById('btnApagarTudo');
-            btn.innerText = "⏳ A limpar...";
-            btn.disabled = true;
+            btn.innerText = "⏳ A limpar..."; btn.disabled = true;
 
             try {
                 const snap = await getDocs(collection(db, "usuarios"));
@@ -332,20 +351,15 @@
                 for(let d of snap.docs) {
                     if(d.id !== 'admin') {
                         await deleteDoc(doc(db, "usuarios", d.id));
-                        await deleteDoc(doc(db, "precos", d.id)); // Opcionalmente limpa a tabela de preços dessa loja
+                        await deleteDoc(doc(db, "precos", d.id)); 
                         count++;
                     }
                 }
                 alert(`Limpeza concluída! ${count} lojas e seus preços foram apagados com sucesso.`);
-            } catch (error) {
-                console.error(error);
-                alert("Erro ao tentar limpar o banco.");
-            }
+            } catch (error) { console.error(error); alert("Erro ao tentar limpar o banco."); }
 
-            btn.innerText = "🗑️ Limpar Banco de Lojas";
-            btn.disabled = false;
-            carregarLojas();
-            carregarDashboard();
+            btn.innerText = "🗑️ Limpar Banco de Lojas"; btn.disabled = false;
+            carregarLojas(); carregarDashboard();
         };
 
         // === DASHBOARD ===
@@ -364,7 +378,12 @@
 
             snapHist.forEach(d => {
                 let data = d.data();
-                let dataStr = data.dataHora ? data.dataHora.toDate().toLocaleString('pt-BR') : 'Data Indisponível';
+                // Proteção para datas que vêm do Backup (podem perder o protótipo toDate)
+                let dataStr = 'Data Indisponível';
+                if(data.dataHora) {
+                    if(typeof data.dataHora.toDate === 'function') dataStr = data.dataHora.toDate().toLocaleString('pt-BR');
+                    else if(data.dataHora.seconds) dataStr = new Date(data.dataHora.seconds * 1000).toLocaleString('pt-BR');
+                }
                 tbody.innerHTML += `<tr><td>${dataStr}</td><td><b>${data.nomeLoja || data.lojaId}</b></td><td style="color: ${data.acao.includes('Venda') ? 'green' : 'blue'}; font-weight:bold;">${data.acao}</td><td>${data.destino || '-'}</td></tr>`;
             });
         }
@@ -493,7 +512,7 @@
             carregarDashboard();
         };
 
-        // === IMPORTAÇÃO DE LOJAS EM MASSA COM GERAÇÃO INTELIGENTE DE LOGIN ===
+        // === IMPORTAÇÃO DE LOJAS EM MASSA ===
         document.getElementById('btnUploadUsuarios').onclick = async () => {
             const fileInput = document.getElementById('fileUsuarios'); if(fileInput.files.length === 0) return alert("Selecione a planilha de lojas!");
             const btn = document.getElementById('btnUploadUsuarios'); btn.innerText = "⏳ Criando Lojas..."; btn.disabled = true;
@@ -504,32 +523,21 @@
                     let count = 0;
                     for(let row of rawData) {
                         let cleanRow = {}; for(let key in row) cleanRow[key.toString().trim().toUpperCase()] = row[key];
-                        
                         let nome = (cleanRow['NOME'] || cleanRow['RAZÃO SOCIAL'] || '').toString().trim();
-                        
                         if(nome) {
                             let login = (cleanRow['LOGIN'] || '').toString().toLowerCase().trim();
-                            
-                            if (!login) {
-                                login = formatarNomeLogin(nome); // Chama a nova função inteligente
-                            }
+                            if (!login) { login = formatarNomeLogin(nome); }
 
                             if (login) {
                                 await setDoc(doc(db, "usuarios", login), { 
-                                    senha: 'eskimo', 
-                                    nomeLoja: nome, 
-                                    cnpj: (cleanRow['CNPJ']||'').toString().trim(), 
-                                    tipo: 'loja',
-                                    planilhas: { sorvete: true, seco: true, balde: false, promo: false }
-                                }, { merge: true });
-                                count++;
+                                    senha: 'eskimo', nomeLoja: nome, cnpj: (cleanRow['CNPJ']||'').toString().trim(), tipo: 'loja', planilhas: { sorvete: true, seco: true, balde: false, promo: false }
+                                }, { merge: true }); count++;
                             }
                         }
                     }
                     alert(`SUCESSO! ${count} lojas cadastradas/atualizadas na base.`); carregarLojas(); carregarDashboard();
                 } catch (err) { alert("Erro ao processar planilha."); }
-                btn.innerText = "⚡ Importar Lojas"; btn.disabled = false;
-                fileInput.value = "";
+                btn.innerText = "⚡ Importar Lojas"; btn.disabled = false; fileInput.value = "";
             }; reader.readAsArrayBuffer(fileInput.files[0]);
         };
 
@@ -606,7 +614,7 @@
             alert("Preços atualizados com sucesso!"); window.fecharModal('modalPrecos'); document.getElementById('btnSalvarPrecos').innerText = "💾 Salvar Alterações Manuais";
         };
 
-        // === UPLOAD ESPECÍFICO DENTRO DO MODAL DE PREÇOS ===
+        // === UPLOAD ESPECÍFICO ===
         document.getElementById('btnUploadModal').onclick = async () => {
             const fileInput = document.getElementById('fileCsvModal'); if(fileInput.files.length === 0) return alert("Selecione uma planilha!");
             const tabelaId = document.getElementById('editTabelaId').value; const btn = document.getElementById('btnUploadModal');
@@ -634,7 +642,7 @@
             }; reader.readAsArrayBuffer(fileInput.files[0]);
         };
 
-        // === IMPORTAÇÃO GERAL (VÁRIAS TABELAS PELO NOME DO FICHEIRO) ===
+        // === IMPORTAÇÃO GERAL ===
         document.getElementById('btnUpload').onclick = async () => {
             const files = document.getElementById('fileCsv').files; if(files.length === 0) return alert("Selecione os arquivos de preço!");
             const btn = document.getElementById('btnUpload'); btn.innerText = "⏳ Processando... Aguarde"; btn.disabled = true;
@@ -660,6 +668,66 @@
                     }; reader.readAsArrayBuffer(f);
                 }
             }, 50);
+        };
+
+        // === BACKUP DO SISTEMA ===
+        window.gerarBackup = async () => {
+            const btn = document.getElementById('btnGerarBackup');
+            btn.innerText = "⏳ A gerar ficheiro de backup..."; btn.disabled = true;
+            try {
+                const collectionsToBackup = ['usuarios', 'produtos', 'precos', 'clientes', 'historico'];
+                let backupData = {};
+                
+                for (let col of collectionsToBackup) {
+                    const snap = await getDocs(collection(db, col));
+                    backupData[col] = {};
+                    snap.forEach(doc => { backupData[col][doc.id] = doc.data(); });
+                }
+                
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                const dataAtual = new Date().toISOString().replace(/[:.]/g, '-');
+                downloadAnchorNode.setAttribute("download", "backup_eskimo_" + dataAtual + ".json");
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+                
+            } catch (e) { console.error(e); alert("Erro ao gerar backup."); }
+            btn.innerText = "⬇️ Fazer Download do Backup"; btn.disabled = false;
+        };
+
+        window.restaurarBackup = async () => {
+            const fileInput = document.getElementById('fileBackup');
+            if(fileInput.files.length === 0) return alert("Selecione um ficheiro de backup (.json)!");
+            
+            if(!confirm("⚠️ ATENÇÃO EXTREMA: A restauração irá SOBRESCREVER os dados atuais do sistema com os dados do arquivo. Tem a certeza absoluta?")) return;
+            
+            const btn = document.getElementById('btnRestaurarBackup');
+            btn.innerText = "⏳ A restaurar o sistema..."; btn.disabled = true;
+            
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const backupData = JSON.parse(e.target.result);
+                    let totalRestaurado = 0;
+                    
+                    for (let col in backupData) {
+                        const docs = backupData[col];
+                        for (let docId in docs) {
+                            await setDoc(doc(db, col, docId), docs[docId], { merge: true });
+                            totalRestaurado++;
+                        }
+                    }
+                    
+                    alert(`Restauração concluída com sucesso! ${totalRestaurado} registos recuperados.`);
+                    window.location.reload(); 
+                } catch (err) {
+                    console.error(err); alert("Erro ao ler o ficheiro de backup. Certifique-se que é um ficheiro .json válido e gerado pelo sistema.");
+                }
+                btn.innerText = "⬆️ Restaurar Sistema"; btn.disabled = false;
+            };
+            reader.readAsText(fileInput.files[0]);
         };
 
         // INÍCIO
