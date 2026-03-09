@@ -67,7 +67,10 @@
 
                 <div class="card-panel">
                     <h3 style="margin-bottom: 15px;">Lista de Lojas Cadastradas</h3>
-                    <div style="max-height: 600px; overflow-y: auto;">
+                    
+                    <input type="text" id="pesquisaLoja" placeholder="🔍 Pesquisar por nome, login ou CNPJ..." style="margin-bottom: 15px; border-color: #0056b3; background: #f8fbff;">
+                    
+                    <div style="max-height: 550px; overflow-y: auto;">
                         <table id="tabelaLojas">
                             <thead><tr><th>Login</th><th>Razão Social / Filial</th><th>CNPJ</th><th>Ações de Gestão</th></tr></thead>
                             <tbody></tbody>
@@ -138,10 +141,16 @@
             <span class="dica-login" id="dicaSenhaMsg">A senha padrão será "eskimo". O usuário será forçado a trocar no 1º login.</span>
             <span class="alerta-migracao" id="alertaMigracao">⚠️ Alterar o login transferirá automaticamente todos os preços e clientes para o novo nome!</span>
             <label>CNPJ da Loja (Opcional):</label> <input type="text" id="editCnpj" placeholder="00.000.000/0000-00" maxlength="18">
+            
             <h3 style="font-size: 14px; margin-top: 10px;">Acessos do Sistema</h3>
-            <div class="checkbox-group"><label><input type="checkbox" id="chkAdmin"> Dar Permissão de Administrador</label></div>
+            <div class="checkbox-group">
+                <label><input type="checkbox" id="chkAdmin"> Dar Permissão de Administrador</label>
+                <label style="border: 1px solid #28a745;"><input type="checkbox" id="chkVenda"> Liberar Módulo de Venda</label>
+            </div>
+            
             <h3 style="font-size: 14px; margin-top: 10px;">Abas Extras (Sorvete e Seco já são padrão)</h3>
             <div class="checkbox-group"><label><input type="checkbox" id="chkBalde"> Liberar Baldes</label><label style="border: 1px solid #ffc107;"><input type="checkbox" id="chkPromo"> Liberar PROMOÇÃO</label></div>
+            
             <button id="btnResetSenha" onclick="window.resetarSenha()" style="background:#ffc107; color:#000; border:none; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; width:100%; margin-bottom:15px; display:none;">🔑 Resetar Senha para 'eskimo'</button>
             <button id="btnSalvarEdicao" class="btn-primario">Salvar Loja</button>
             <button onclick="window.fecharModal('modalEditar')" class="btn-primario" style="background:#666; margin-top:10px;">Cancelar</button>
@@ -153,15 +162,14 @@
             <h2 id="tituloPrecos" style="color: #e3000f; margin-bottom: 10px;">Editor de Preços</h2>
             <input type="hidden" id="editTabelaId">
             <div class="upload-interno-box">
-                <h3>Carregar Planilha Específica para: <span id="txtNomeTabelaAtual"></span></h3>
-                <p>O nome do ficheiro será ignorado. Os dados substituirão os preços apenas desta loja aberta.</p>
-                <input type="file" id="fileCsvModal" accept=".csv, .xlsx">
-                <button id="btnUploadModal" class="btn-primario" style="background:#0056b3; margin-top: 5px;">⬆️ Importar Tabela Aqui</button>
+                <h3 style="font-size: 15px; margin-bottom: 5px; color:#0056b3;">Carregar Planilha Específica para: <span id="txtNomeTabelaAtual"></span></h3>
+                <p style="font-size: 12px; color: #555; margin-bottom: 10px;">O nome do ficheiro será ignorado. Os dados substituirão os preços apenas desta loja aberta.</p>
+                <div style="display: flex; gap: 10px;">
+                    <input type="file" id="fileCsvModal" accept=".csv, .xlsx" style="margin-bottom:0;">
+                    <button id="btnUploadModal" class="btn-secundario" style="white-space: nowrap;">⬆️ Importar</button>
+                </div>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="font-size: 16px; color: #333;">Preços Cadastrados</h3>
-                <button onclick="window.adicionarItemEditor()" class="btn-secundario" style="background:#28a745; margin:0;">+ Novo Produto Manual</button>
-            </div>
+            <button onclick="window.adicionarItemEditor()" class="btn-secundario" style="background:#28a745; margin-bottom:15px;">+ Novo Produto Manual</button>
             <div id="listaEdicaoPrecos" style="max-height: 350px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 20px; border-radius: 6px;"></div>
             <button id="btnSalvarPrecos" class="btn-sucesso">💾 Salvar Alterações Manuais</button>
             <button onclick="window.fecharModal('modalPrecos')" class="btn-primario" style="background:#666; margin-top:10px;">Fechar</button>
