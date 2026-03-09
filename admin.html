@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Matriz - Eskimó</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        body { background: #f8f9fa; padding: 20px; }
+        .container { max-width: 1100px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e3000f; padding-bottom: 15px; margin-bottom: 25px; }
+        h1, h2 { color: #e3000f; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .card { border: 1px solid #eee; padding: 20px; border-radius: 8px; background: #fff; }
+        input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; }
+        button { background: #e3000f; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; }
+        button:hover { background: #b3000c; }
+        .btn-sair { background: #444; width: auto; padding: 8px 15px; }
+        ul { list-style: none; margin-top: 15px; }
+        li { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Painel Administrativo</h1>
+            <button onclick="localStorage.clear(); window.location.href='index.html'" class="btn-sair">Sair</button>
+        </header>
+
+        <div class="grid">
+            <div class="card">
+                <h2>Gerenciar Lojas</h2>
+                <input type="text" id="lojaId" placeholder="Login (ex: cd_dourados)">
+                <input type="text" id="lojaNome" placeholder="Nome da Filial">
+                <input type="password" id="lojaSenha" placeholder="Senha de Acesso">
+                <button id="btnSalvarLoja">Salvar Nova Loja</button>
+                <ul id="listaLojas"></ul>
+            </div>
+
+            <div class="card">
+                <h2>Importar Preços (CSV)</h2>
+                <p style="font-size: 13px; color: #666; margin-bottom: 10px;">O nome do arquivo .csv deve ser o Login da loja.</p>
+                <input type="file" id="fileCsv" accept=".csv" multiple>
+                <button id="btnUpload" style="background: #28a745;">Processar Arquivos</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDocs, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8",
+            authDomain: "sistema-pedidos-3f2c2.firebaseapp.com",
+            projectId: "sistema-pedidos-3f2c2",
+            storageBucket: "sistema-pedidos-3f2c2.firebasestorage.app",
+            messagingSenderId: "669786014126",
+            appId: "1:669786014126:web:d0da498633a145d56a883f"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Bloqueio de segurança simples
+        if(localStorage.getItem('user') !== 'admin') { window.location.href = 'index.html'; }
+
+        // Carrega lojas cadastradas
+        async function carregarLojas() {
+            const snap = await getDocs(collection(db, "usuarios"));
+            const lista = document.getElementById('listaLojas');
+            lista.innerHTML = '';
+            snap.forEach(d => {
+                if(d.data().tipo !== 'admin') {
+                    lista.innerHTML += `<li>
+                        <span>${d.data().nomeLoja} (<b>${d.id}</b>)</span>
+                        <button onclick="window.excluirLoia('${d.id}')" style="width:auto; padding:5px 10px; background:#444;">X</button>
+                    </li>`;
+                }
+            });
+        }
+        window.excluirLoia = async (id) => { if(confirm("Excluir loja?")) { await deleteDoc(doc(db, "usuarios", id)); carregarLojas(); } };
+        carregarLojas();
+
+        // Salva Loja
+        document.getElementById('btnSalvarLoja').onclick = async () => {
+            const id = document.getElementById('lojaId').value.toLowerCase().trim();
+            await setDoc(doc(db, "usuarios", id), { 
+                senha: document.getElementById('lojaSenha').value, 
+                nomeLoja: document.getElementById('lojaNome').value, 
+                tipo: "loja" 
+            });
+            alert("Loja criada!"); carregarLojas();
+        };
+
+        // Processa CSV
+        document.getElementById('btnUpload').onclick = async () => {
+            const files = document.getElementById('fileCsv').files;
+            if(files.length === 0) return alert("Selecione os arquivos!");
+            
+            for(let f of files) {
+                const lojaId = f.name.replace(".csv", "").toLowerCase().trim();
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+                    const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                    let precos = {};
+                    for(let row of data) {
+                        if(row.CODIGO) {
+                            precos[row.CODIGO.toString()] = parseFloat(row.PRECO);
+                            // Atualiza catálogo mestre
+                            await setDoc(doc(db, "produtos", row.CODIGO.toString()), {
+                                codigo: row.CODIGO.toString(), descricao: row.PRODUTO, engradado: parseInt(row.ENGRADADO)||1
+                            }, { merge: true });
+                        }
+                    }
+                    // Salva tabela de preços da loja específica
+                    await setDoc(doc(db, "precos", lojaId), precos);
+                };
+                reader.readAsArrayBuffer(f);
+            }
+            alert("Processamento concluído!");
+        };
+    </script>
+</body>
+</html>
