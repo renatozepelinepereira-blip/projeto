@@ -55,6 +55,7 @@
         
         .upload-interno-box { background: #f0f8ff; padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px dashed #0056b3; }
         .dica-login { font-size: 12px; color: #28a745; margin-top: -12px; margin-bottom: 10px; display: block; }
+        .alerta-migracao { font-size: 12px; color: #e3000f; margin-top: -12px; margin-bottom: 10px; display: none; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -101,7 +102,7 @@
                     <h3>Cadastro em Massa (Planilha)</h3>
                     <p style="font-size: 13px; color: #555; margin-bottom: 10px; line-height: 1.5;">
                         Crie uma planilha Excel apenas com as colunas: <b>NOME, CNPJ</b><br>
-                        <i style="color:#e3000f; font-size:12px;">*O sistema gerará o login automaticamente (ex: filial.tubarao) e a senha padrão <b>eskimo</b>.</i>
+                        <i style="color:#e3000f; font-size:12px;">*O sistema gerará o login automaticamente e a senha padrão <b>eskimo</b>.</i>
                     </p>
                     <input type="file" id="fileUsuarios" accept=".csv, .xlsx">
                     <button id="btnUploadUsuarios" class="btn-secundario" style="width: 100%;">⚡ Importar Planilha de Lojas</button>
@@ -160,8 +161,9 @@
             <input type="text" id="editNome" placeholder="Ex: Eskimó Tubarão">
             
             <label>Login de Acesso:</label> 
-            <input type="text" id="editLogin" placeholder="Gerado automaticamente..." disabled>
+            <input type="text" id="editLogin" placeholder="Nome de usuário...">
             <span class="dica-login" id="dicaSenhaMsg">A senha padrão será "eskimo". O usuário será forçado a trocar no 1º login.</span>
+            <span class="alerta-migracao" id="alertaMigracao">⚠️ Alterar o login transferirá automaticamente todos os preços e clientes para o novo nome!</span>
             
             <label>CNPJ da Loja (Opcional):</label> 
             <input type="text" id="editCnpj" placeholder="00.000.000/0000-00" maxlength="18">
@@ -220,8 +222,9 @@
     </div>
 
     <script type="module">
+        // Adicionei o 'where' nas importações para a migração dos clientes
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc, deleteField, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc, deleteField, query, orderBy, limit, where } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
         const firebaseConfig = { apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8", authDomain: "sistema-pedidos-3f2c2.firebaseapp.com", projectId: "sistema-pedidos-3f2c2", storageBucket: "sistema-pedidos-3f2c2.firebasestorage.app", messagingSenderId: "669786014126", appId: "1:669786014126:web:d0da498633a145d56a883f" };
         const db = getFirestore(initializeApp(firebaseConfig));
@@ -257,9 +260,9 @@
         document.getElementById('editNome').addEventListener('input', (e) => {
             if(document.getElementById('editId').value === "NOVO") {
                 let nome = e.target.value.toLowerCase();
-                nome = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Tira acento
-                nome = nome.replace(/eskimo/g, "").replace(/eskimó/g, "").replace(/sorvetes?/g, "").replace(/loja/g, "").trim(); // Remove palavras
-                nome = nome.replace(/[^a-z0-9]/g, ""); // Tira os espaços para o login ficar colado
+                nome = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
+                nome = nome.replace(/eskimo/g, "").replace(/eskimó/g, "").replace(/sorvetes?/g, "").replace(/loja/g, "").trim(); 
+                nome = nome.replace(/[^a-z0-9]/g, ""); 
                 if(nome.length > 0) {
                     document.getElementById('editLogin').value = "filial." + nome;
                 } else {
@@ -317,7 +320,7 @@
             document.getElementById('tituloForm').innerText = "Cadastro de Loja";
             document.getElementById('editId').value="NOVO"; 
             document.getElementById('editLogin').value=""; 
-            document.getElementById('editLogin').disabled=true; // Bloqueado pois é auto-gerado
+            document.getElementById('editLogin').disabled=false; // Liberado
             document.getElementById('editCnpj').value=""; 
             document.getElementById('editNome').value=""; 
             document.getElementById('chkAdmin').checked = false;
@@ -325,6 +328,7 @@
             document.getElementById('chkPromo').checked = false;
             document.getElementById('btnResetSenha').style.display = 'none';
             document.getElementById('dicaSenhaMsg').style.display = 'block';
+            document.getElementById('alertaMigracao').style.display = 'none';
         };
 
         window.editarLoja = (id) => { 
@@ -332,7 +336,7 @@
             document.getElementById('tituloForm').innerText = "Editar Loja";
             document.getElementById('editId').value = id; 
             document.getElementById('editLogin').value = id; 
-            document.getElementById('editLogin').disabled = true; 
+            document.getElementById('editLogin').disabled = false; // AGORA É EDITÁVEL PARA MIGRAÇÃO
             document.getElementById('editNome').value = u.nomeLoja||""; 
             document.getElementById('editCnpj').value = u.cnpj||""; 
             document.getElementById('chkAdmin').checked = u.tipo === 'admin'; 
@@ -340,10 +344,11 @@
             document.getElementById('chkPromo').checked = plan.promo||false;
             document.getElementById('btnResetSenha').style.display = 'block';
             document.getElementById('dicaSenhaMsg').style.display = 'none';
+            document.getElementById('alertaMigracao').style.display = 'block'; // Aviso de migração
             document.getElementById('modalEditar').style.display = 'flex';
         };
 
-        window.excluirLoja = async (id) => { if(confirm("Atenção: Excluir loja "+id+"?")){ await deleteDoc(doc(db, "usuarios", id)); carregarLojas(); carregarDashboard(); } };
+        window.excluirLoja = async (id) => { if(confirm("Atenção: Excluir loja "+id+"? O histórico de preços dela será perdido!")){ await deleteDoc(doc(db, "usuarios", id)); carregarLojas(); carregarDashboard(); } };
         
         window.resetarSenha = async () => {
             const id = document.getElementById('editId').value;
@@ -354,11 +359,15 @@
             }
         };
 
+        // === BOTÃO SALVAR LOJA (COM INTELIGÊNCIA DE MIGRAÇÃO DE DADOS) ===
         document.getElementById('btnSalvarEdicao').onclick = async () => {
-            const login = document.getElementById('editLogin').value.toLowerCase().trim();
-            if(!login) return alert("O Login não pôde ser gerado. Digite um nome de loja válido.");
+            const novoLogin = document.getElementById('editLogin').value.toLowerCase().trim();
+            const oldLogin = document.getElementById('editId').value;
             
-            const isNovo = document.getElementById('editId').value === "NOVO";
+            if(!novoLogin) return alert("O Login não pode estar vazio!");
+            
+            document.getElementById('btnSalvarEdicao').innerText = "A processar...";
+            const isNovo = (oldLogin === "NOVO");
             
             let dados = { 
                 nomeLoja: document.getElementById('editNome').value, 
@@ -367,10 +376,51 @@
                 planilhas: { sorvete: true, seco: true, balde: document.getElementById('chkBalde').checked, promo: document.getElementById('chkPromo').checked } 
             };
 
-            if(isNovo) dados.senha = 'eskimo';
+            if(isNovo) {
+                dados.senha = 'eskimo';
+                await setDoc(doc(db, "usuarios", novoLogin), dados, { merge: true }); 
+            } else {
+                // SE O LOGIN FOI ALTERADO NA EDIÇÃO (MIGRAÇÃO DE DADOS)
+                if (oldLogin !== novoLogin) {
+                    const userRefOld = doc(db, "usuarios", oldLogin);
+                    const userSnapOld = await getDoc(userRefOld);
+                    
+                    if (userSnapOld.exists()) {
+                        // Mantém a senha que a loja já tinha escolhido
+                        dados.senha = userSnapOld.data().senha;
+                        
+                        // 1. Cria o novo cadastro
+                        await setDoc(doc(db, "usuarios", novoLogin), dados, { merge: true });
+                        
+                        // 2. Migra a Tabela de Preços (Se existir)
+                        const precoRefOld = doc(db, "precos", oldLogin);
+                        const precoSnapOld = await getDoc(precoRefOld);
+                        if (precoSnapOld.exists()) {
+                            await setDoc(doc(db, "precos", novoLogin), precoSnapOld.data());
+                            await deleteDoc(precoRefOld);
+                        }
+                        
+                        // 3. Migra os Clientes do CRM
+                        const qClientes = query(collection(db, "clientes"), where("lojaId", "==", oldLogin));
+                        const cliSnapOld = await getDocs(qClientes);
+                        for (let cli of cliSnapOld.docs) {
+                            await setDoc(doc(db, "clientes", cli.id), { lojaId: novoLogin }, { merge: true });
+                        }
 
-            await setDoc(doc(db, "usuarios", login), dados, { merge: true }); 
-            window.fecharModal('modalEditar'); carregarLojas(); carregarDashboard();
+                        // 4. Apaga o usuário antigo
+                        await deleteDoc(userRefOld);
+                        alert(`Login alterado com sucesso! A loja ${oldLogin} agora chama-se ${novoLogin}. Todos os preços e clientes foram migrados.`);
+                    }
+                } else {
+                    // Edição Normal (Sem mudar o Login)
+                    await setDoc(doc(db, "usuarios", oldLogin), dados, { merge: true }); 
+                }
+            }
+            
+            document.getElementById('btnSalvarEdicao').innerText = "Salvar Loja";
+            window.fecharModal('modalEditar'); 
+            carregarLojas(); 
+            carregarDashboard();
         };
 
         // === IMPORTAÇÃO DE LOJAS EM MASSA COM GERAÇÃO INTELIGENTE DE LOGIN ===
