@@ -11,7 +11,7 @@
         header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e3000f; padding-bottom: 15px; margin-bottom: 25px; }
         h1, h2, h3 { color: #e3000f; margin-bottom: 15px; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-        .card { border: 1px solid #eee; padding: 20px; border-radius: 8px; background: #fff; }
+        .card { border: 1px solid #eee; padding: 20px; border-radius: 8px; background: #fff; margin-bottom: 20px; }
         input[type="text"], input[type="password"], input[type="file"], input[type="number"] { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; }
         button { background: #e3000f; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; }
         button:hover { background: #b3000c; }
@@ -38,20 +38,29 @@
 
         <div class="grid">
             <div>
-                <div class="card" style="margin-bottom: 20px;">
-                    <h2>Importar Planilhas (.xlsx ou .csv)</h2>
+                <div class="card">
+                    <h2>Importar Tabelas de Preço (.xlsx)</h2>
                     <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
                         • Venda Loja: <b>nomedaloja.xlsx</b><br>
                         • Venda Promoção: <b>nomedaloja_promo.xlsx</b><br>
                         • Transferência (Para Todas): <b style="color:blue;">tf.xlsx</b>
                     </p>
                     <input type="file" id="fileCsv" accept=".csv, .xlsx" multiple>
-                    <button id="btnUpload" style="background: #28a745;">Subir Planilha para o Banco</button>
+                    <button id="btnUpload" style="background: #28a745;">Subir Tabela para o Banco</button>
+                </div>
+
+                <div class="card">
+                    <h2>Cadastro em Massa (Lojas)</h2>
+                    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
+                        Suba uma planilha com as colunas: <b>LOGIN, SENHA, NOME, CNPJ</b> (E colunas de abas: SORVETE, SECO, BALDE, PROMO escritas com 'SIM').
+                    </p>
+                    <input type="file" id="fileUsuarios" accept=".csv, .xlsx">
+                    <button id="btnUploadUsuarios" style="background: #17a2b8;">Importar Planilha de Lojas</button>
                 </div>
 
                 <div class="card">
                     <h2>Usuários Cadastrados</h2>
-                    <button onclick="window.abrirNovoUsuario()" style="background: #17a2b8;">+ Novo Usuário</button>
+                    <button onclick="window.abrirNovoUsuario()" style="background: #17a2b8;">+ Novo Usuário Manual</button>
                     <ul id="listaLojas"></ul>
                 </div>
             </div>
@@ -224,9 +233,10 @@
             document.getElementById('btnSalvarPrecos').innerText = "💾 Salvar Somente Nesta Tabela";
         };
 
+        // === IMPORTAÇÃO DE TABELA DE PREÇOS ===
         document.getElementById('btnUpload').onclick = async () => {
             const files = document.getElementById('fileCsv').files;
-            if(files.length === 0) return alert("Selecione os arquivos!");
+            if(files.length === 0) return alert("Selecione os arquivos de preço!");
             const btn = document.getElementById('btnUpload');
             btn.innerText = "⏳ Processando... Aguarde"; btn.disabled = true;
 
@@ -243,7 +253,7 @@
                             let cleanRow = {}; for(let key in row) cleanRow[key.toString().trim().toUpperCase()] = row[key];
                             let cod = cleanRow['CODIGO'] || cleanRow['CÓDIGO'];
                             let prod = cleanRow['PRODUTO'];
-                            let eng = parseFloat(cleanRow['ENGRADADO']) || 1; // Aceita decimais
+                            let eng = parseFloat(cleanRow['ENGRADADO']) || 1;
                             let cat = cleanRow['CATEGORIA'] ? String(cleanRow['CATEGORIA']).toUpperCase().trim() : 'SORVETE';
                             let precoVal = cleanRow['PRECO'] || cleanRow['PREÇO'] || 0;
                             let preco = typeof precoVal === 'number' ? precoVal : parseFloat(String(precoVal).replace(/R\$/gi, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
@@ -261,11 +271,74 @@
                             alert(`SUCESSO! ${count} produtos salvos na tabela "${lojaId}".`);
                         }
                         filesProcessed++;
-                        if(filesProcessed === files.length) { btn.innerText = "Subir Planilha para o Banco"; btn.disabled = false; }
+                        if(filesProcessed === files.length) { btn.innerText = "Subir Tabela para o Banco"; btn.disabled = false; }
                     };
                     reader.readAsArrayBuffer(f);
                 }
             }, 50);
+        };
+
+        // === IMPORTAÇÃO DE USUÁRIOS/LOJAS EM MASSA ===
+        document.getElementById('btnUploadUsuarios').onclick = async () => {
+            const fileInput = document.getElementById('fileUsuarios');
+            if(fileInput.files.length === 0) return alert("Selecione a planilha de usuários!");
+
+            const btn = document.getElementById('btnUploadUsuarios');
+            btn.innerText = "⏳ Criando Lojas..."; btn.disabled = true;
+
+            const f = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+                    const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+                    let count = 0;
+
+                    for(let row of rawData) {
+                        let cleanRow = {};
+                        for(let key in row) cleanRow[key.toString().trim().toUpperCase()] = row[key];
+
+                        let login = (cleanRow['LOGIN'] || '').toString().toLowerCase().trim();
+                        let senha = (cleanRow['SENHA'] || '').toString().trim();
+                        let nome = (cleanRow['NOME'] || cleanRow['RAZÃO SOCIAL'] || '').toString().trim();
+
+                        // Só cria se tiver os dados essenciais
+                        if(login && senha && nome) {
+                            let cnpj = (cleanRow['CNPJ'] || '').toString().trim();
+                            let tipo = (cleanRow['TIPO'] || '').toString().toLowerCase() === 'admin' ? 'admin' : 'loja';
+
+                            // Identifica se digitou SIM nas planilhas, caso não, adota o padrão (Sorvete Sim, Resto Nao)
+                            let sSorvete = (cleanRow['SORVETE'] || '').toString().toUpperCase().trim();
+                            let sSeco = (cleanRow['SECO'] || '').toString().toUpperCase().trim();
+                            let sBalde = (cleanRow['BALDE'] || '').toString().toUpperCase().trim();
+                            let sPromo = (cleanRow['PROMO'] || '').toString().toUpperCase().trim();
+
+                            const dadosLoja = {
+                                senha: senha,
+                                nomeLoja: nome,
+                                cnpj: cnpj,
+                                tipo: tipo,
+                                planilhas: {
+                                    sorvete: sSorvete !== 'NAO' && sSorvete !== 'NÃO' && sSorvete !== 'FALSE' && sSorvete !== '0',
+                                    seco: sSeco === 'SIM' || sSeco === 'TRUE' || sSeco === '1',
+                                    balde: sBalde === 'SIM' || sBalde === 'TRUE' || sBalde === '1',
+                                    promo: sPromo === 'SIM' || sPromo === 'TRUE' || sPromo === '1'
+                                }
+                            };
+
+                            await setDoc(doc(db, "usuarios", login), dadosLoja, { merge: true });
+                            count++;
+                        }
+                    }
+                    alert(`SUCESSO! ${count} lojas cadastradas/atualizadas no sistema.`);
+                    carregarLojas();
+                } catch (error) {
+                    console.error("Erro na importação de usuários:", error);
+                    alert("Ocorreu um erro ao processar a planilha de usuários. Verifique os nomes das colunas.");
+                }
+                btn.innerText = "Importar Planilha de Lojas"; btn.disabled = false;
+            };
+            reader.readAsArrayBuffer(f);
         };
 
         window.abrirNovoUsuario = () => { document.getElementById('modalEditar').style.display='block'; document.getElementById('editId').value="NOVO"; document.getElementById('editLogin').value=""; document.getElementById('editLogin').disabled=false; document.getElementById('editCnpj').value=""; document.getElementById('editNome').value=""; };
