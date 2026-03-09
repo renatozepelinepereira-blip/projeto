@@ -429,5 +429,15 @@ document.getElementById('pesquisaLoja').addEventListener('input', function() {
         if (textoLinha.includes(filtro)) { linha.style.display = ''; } else { linha.style.display = 'none'; }
     });
 });
+// === PESQUISA DO LOG ADMIN ===
+document.getElementById('pesquisaLogAdmin').addEventListener('input', function() {
+    let filtro = this.value.toLowerCase();
+    let linhas = document.querySelectorAll('#tabelaHistorico tbody tr');
+    linhas.forEach(linha => {
+        if (linha.querySelector('td[colspan]')) return; // Ignora linha de carregamento
+        let textoLinha = linha.textContent.toLowerCase();
+        linha.style.display = textoLinha.includes(filtro) ? '' : 'none';
+    });
+});
 
 carregarDashboard();
