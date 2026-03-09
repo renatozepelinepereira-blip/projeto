@@ -12,23 +12,30 @@
         header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e3000f; padding-bottom: 15px; margin-bottom: 20px; }
         h1, h2 { color: #e3000f; }
         
-        /* Ajustado para 4 colunas para caber o Prazo */
-        .client-box { background: #f4f4f4; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 15px; border-left: 4px solid #e3000f; }
+        /* Ajustado de volta para 3 colunas, pois o desconto saiu daqui */
+        .client-box { background: #f4f4f4; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 15px; border-left: 4px solid #e3000f; }
         .client-box input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px; }
         
-        .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; flex-wrap: wrap; }
+        .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 15px; flex-wrap: wrap; }
         .tab-btn { background: none; border: none; padding: 10px 20px; cursor: pointer; color: #666; font-size: 16px; display: none; }
         .tab-btn.active { color: #e3000f; border-bottom: 3px solid #e3000f; font-weight: bold; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        
+        /* Barra de Desconto Individual */
+        .discount-bar { background: #fff; padding: 10px 15px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px; display: inline-block; border-left: 4px solid #e3000f; font-size: 14px; }
+        .discount-bar input { width: 80px; padding: 5px; margin-left: 10px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-weight: bold; }
+
         table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         th { background: #e3000f; color: white; padding: 12px; text-align: left; }
         td { padding: 8px; border-bottom: 1px solid #eee; vertical-align: middle; }
         td input[type="number"] { width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 4px; }
+        
         .resumo-box { background: #fff; border: 2px solid #e3000f; padding: 20px; border-radius: 8px; margin-top: 20px; }
-        .resumo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; text-align: center; margin-bottom: 15px; }
+        /* Grid atualizado para 5 colunas para caber todas as categorias separadas */
+        .resumo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; text-align: center; margin-bottom: 15px; }
         .resumo-item { background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #eee; }
-        .resumo-item span { display: block; font-size: 20px; font-weight: bold; color: #e3000f; }
+        .resumo-item span { display: block; font-size: 18px; font-weight: bold; color: #e3000f; margin-top: 5px; }
         .total-final { font-size: 24px; text-align: right; border-top: 2px dashed #ccc; padding-top: 15px; margin-top: 10px; }
         button { background: #444; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
         .btn-gerar { background: #28a745; width: 100%; padding: 15px; font-size: 18px; font-weight: bold; margin-top: 20px; border-radius: 8px; }
@@ -46,7 +53,6 @@
             <div><label><b>Razão Social do Cliente</b></label><input type="text" id="cliRazao" placeholder="Nome da empresa"></div>
             <div><label><b>CNPJ</b></label><input type="text" id="cliCnpj" placeholder="00.000.000/0000-00"></div>
             <div><label><b>Prazo</b></label><input type="text" id="cliPrazo" placeholder="Ex: 15 dias"></div>
-            <div><label><b>Desconto (%)</b></label><input type="number" id="cliDesc" value="0" min="0" max="100" oninput="window.calcularTudo()"></div>
         </div>
 
         <div class="tabs" id="tabContainer">
@@ -56,21 +62,37 @@
             <button class="tab-btn" id="btnTabPromo" onclick="window.mudarAba('promo')" style="color:#e0a800;">⭐ PROMOÇÕES</button>
         </div>
 
-        <div id="content_sorvete" class="tab-content"><table id="tbl_sorvete"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
-        <div id="content_seco" class="tab-content"><table id="tbl_seco"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
-        <div id="content_balde" class="tab-content"><table id="tbl_balde"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
-        <div id="content_promo" class="tab-content"><table id="tbl_promo"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço Promo</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+        <div id="content_sorvete" class="tab-content">
+            <div class="discount-bar"><label>Desconto nesta aba (%):</label><input type="number" id="desc_sorvete" value="0" min="0" max="100" oninput="window.calcularTudo()"></div>
+            <table id="tbl_sorvete"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
+        </div>
+        
+        <div id="content_seco" class="tab-content">
+            <div class="discount-bar"><label>Desconto nesta aba (%):</label><input type="number" id="desc_seco" value="0" min="0" max="100" oninput="window.calcularTudo()"></div>
+            <table id="tbl_seco"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
+        </div>
+        
+        <div id="content_balde" class="tab-content">
+            <div class="discount-bar"><label>Desconto nesta aba (%):</label><input type="number" id="desc_balde" value="0" min="0" max="100" oninput="window.calcularTudo()"></div>
+            <table id="tbl_balde"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
+        </div>
+        
+        <div id="content_promo" class="tab-content">
+            <div class="discount-bar" style="border-color:#ffc107;"><label>Desconto nesta aba (%):</label><input type="number" id="desc_promo" value="0" min="0" max="100" oninput="window.calcularTudo()"></div>
+            <table id="tbl_promo"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço Promo</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
+        </div>
 
         <div class="resumo-box">
-            <h2>Resumo do Pedido</h2>
+            <h2>Resumo do Pedido (Valores Líquidos)</h2>
             <div class="resumo-grid">
-                <div class="resumo-item">Itens Normais<span id="resQtdNormal">0 un</span><b id="resValNormal">R$ 0,00</b></div>
-                <div class="resumo-item" style="border-color:#ffc107;">Promoções<span id="resQtdPromo">0 un</span><b id="resValPromo">R$ 0,00</b></div>
-                <div class="resumo-item" style="background: #ffe6e6;">Total Unidades<span id="resQtdTotal">0 un</span></div>
+                <div class="resumo-item">Sorvetes<div style="font-size:12px; color:#666;" id="resQtdSorvete">0 un</div><span id="resValSorvete">R$ 0,00</span></div>
+                <div class="resumo-item">Secos<div style="font-size:12px; color:#666;" id="resQtdSeco">0 un</div><span id="resValSeco">R$ 0,00</span></div>
+                <div class="resumo-item">Baldes<div style="font-size:12px; color:#666;" id="resQtdBalde">0 un</div><span id="resValBalde">R$ 0,00</span></div>
+                <div class="resumo-item" style="border-color:#ffc107;">Promoções<div style="font-size:12px; color:#666;" id="resQtdPromo">0 un</div><span style="color:#e0a800;" id="resValPromo">R$ 0,00</span></div>
+                <div class="resumo-item" style="background: #ffe6e6;">Total Unidades<span id="resQtdTotal" style="color:#333; margin-top:15px;">0 un</span></div>
             </div>
             <div class="total-final">
-                <div style="font-size: 16px; color: #666;">Total sem Desconto (Normais): <s id="valSemDesc">R$ 0,00</s></div>
-                <div style="color: #28a745;"><b>Valor Final c/ Desconto + Promos: <span id="valComDesc">R$ 0,00</span></b></div>
+                <div style="color: #28a745;"><b>TOTAL GERAL DO PEDIDO: <span id="valComDesc">R$ 0,00</span></b></div>
             </div>
             
             <button class="btn-gerar" onclick="window.gerarExcelPedido()">⬇️ GERAR PEDIDO EM EXCEL</button>
@@ -95,6 +117,15 @@
         document.getElementById('txtLoja').innerText = localStorage.getItem('nome') || userId;
         
         let produtosGlobais = [];
+        
+        // Objeto global para guardar os valores calculados que irão para o Excel
+        window.resumoGlobal = {
+            sorvete: { u: 0, vLiq: 0, desc: 0 },
+            seco:    { u: 0, vLiq: 0, desc: 0 },
+            balde:   { u: 0, vLiq: 0, desc: 0 },
+            promo:   { u: 0, vLiq: 0, desc: 0 },
+            totalU: 0, totalV: 0
+        };
 
         window.mudarAba = (cat) => {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -161,41 +192,80 @@
         }
 
         window.calcularTudo = () => {
-            let desc = parseFloat(document.getElementById('cliDesc').value) || 0;
-            let resumo = { normalU:0, normalV:0, promoU:0, promoV:0 };
+            // Captura os descontos individuais
+            let dSorv = parseFloat(document.getElementById('desc_sorvete').value) || 0;
+            let dSeco = parseFloat(document.getElementById('desc_seco').value) || 0;
+            let dBald = parseFloat(document.getElementById('desc_balde').value) || 0;
+            let dProm = parseFloat(document.getElementById('desc_promo').value) || 0;
+
+            let resumo = {
+                sorvete: { u: 0, vBruto: 0, vLiq: 0, desc: dSorv },
+                seco:    { u: 0, vBruto: 0, vLiq: 0, desc: dSeco },
+                balde:   { u: 0, vBruto: 0, vLiq: 0, desc: dBald },
+                promo:   { u: 0, vBruto: 0, vLiq: 0, desc: dProm }
+            };
 
             produtosGlobais.forEach((p, i) => {
                 let inputEng = document.getElementById(`eng_${i}`);
                 if(!inputEng) return;
+                
                 let qtd = ((parseInt(inputEng.value)||0) * p.engradado) + (parseInt(document.getElementById(`uni_${i}`).value)||0);
                 let sub = qtd * p.precoFinal;
 
                 document.getElementById(`sub_${i}`).innerText = `R$ ${sub.toFixed(2)}`;
-                p.calcQtdCx = parseInt(inputEng.value)||0; p.calcQtdUn = parseInt(document.getElementById(`uni_${i}`).value)||0;
-                p.calcTotalUnidades = qtd; p.calcSubtotal = sub;
+                
+                p.calcQtdCx = parseInt(inputEng.value)||0; 
+                p.calcQtdUn = parseInt(document.getElementById(`uni_${i}`).value)||0;
+                p.calcTotalUnidades = qtd; 
+                p.calcSubtotal = sub;
 
-                if(p.isPromo) { resumo.promoU += qtd; resumo.promoV += sub; } else { resumo.normalU += qtd; resumo.normalV += sub; }
+                let cat = p.isPromo ? 'promo' : p.catReal;
+                if(!['sorvete', 'seco', 'balde', 'promo'].includes(cat)) cat = 'sorvete';
+                
+                resumo[cat].u += qtd;
+                resumo[cat].vBruto += sub;
             });
 
-            document.getElementById('resQtdNormal').innerText = resumo.normalU + " un"; document.getElementById('resValNormal').innerText = "R$ " + resumo.normalV.toFixed(2);
-            document.getElementById('resQtdPromo').innerText = resumo.promoU + " un"; document.getElementById('resValPromo').innerText = "R$ " + resumo.promoV.toFixed(2);
-            document.getElementById('resQtdTotal').innerText = (resumo.normalU + resumo.promoU) + " un";
-            document.getElementById('valSemDesc').innerText = "R$ " + resumo.normalV.toFixed(2);
+            // Aplica os descontos matemáticos por categoria
+            resumo.sorvete.vLiq = resumo.sorvete.vBruto - (resumo.sorvete.vBruto * (dSorv / 100));
+            resumo.seco.vLiq = resumo.seco.vBruto - (resumo.seco.vBruto * (dSeco / 100));
+            resumo.balde.vLiq = resumo.balde.vBruto - (resumo.balde.vBruto * (dBald / 100));
+            resumo.promo.vLiq = resumo.promo.vBruto - (resumo.promo.vBruto * (dProm / 100));
+
+            // Atualiza os painéis na tela
+            document.getElementById('resQtdSorvete').innerText = resumo.sorvete.u + " un";
+            document.getElementById('resValSorvete').innerText = "R$ " + resumo.sorvete.vLiq.toFixed(2);
             
-            let valFinal = (resumo.normalV - (resumo.normalV * (desc/100))) + resumo.promoV; 
+            document.getElementById('resQtdSeco').innerText = resumo.seco.u + " un";
+            document.getElementById('resValSeco').innerText = "R$ " + resumo.seco.vLiq.toFixed(2);
+            
+            document.getElementById('resQtdBalde').innerText = resumo.balde.u + " un";
+            document.getElementById('resValBalde').innerText = "R$ " + resumo.balde.vLiq.toFixed(2);
+            
+            document.getElementById('resQtdPromo').innerText = resumo.promo.u + " un";
+            document.getElementById('resValPromo').innerText = "R$ " + resumo.promo.vLiq.toFixed(2);
+            
+            let totalUn = resumo.sorvete.u + resumo.seco.u + resumo.balde.u + resumo.promo.u;
+            let valFinal = resumo.sorvete.vLiq + resumo.seco.vLiq + resumo.balde.vLiq + resumo.promo.vLiq;
+            
+            document.getElementById('resQtdTotal').innerText = totalUn + " un";
             document.getElementById('valComDesc').innerText = "R$ " + valFinal.toFixed(2);
+
+            // Salva na memória global para o Excel ler
+            resumo.totalU = totalUn;
+            resumo.totalV = valFinal;
+            window.resumoGlobal = resumo;
         };
 
         window.gerarExcelPedido = async () => {
             const razao = document.getElementById('cliRazao').value || "Cliente Não Informado";
             const cnpj = document.getElementById('cliCnpj').value || "Sem CNPJ";
             const prazo = document.getElementById('cliPrazo').value || "À vista";
-            const desc = parseFloat(document.getElementById('cliDesc').value) || 0;
 
             document.querySelector('.btn-gerar').innerText = "⏳ GERANDO PEDIDO... AGUARDE";
 
             try {
-                const response = await fetch('PEDIDO.xlsx');
+                const response = await fetch('./PEDIDO.xlsx');
                 if(!response.ok) {
                     alert("⚠️ Erro: O arquivo modelo 'PEDIDO.xlsx' não foi encontrado. Suba ele na raiz do Cloudflare!");
                     document.querySelector('.btn-gerar').innerText = "⬇️ GERAR PEDIDO EM EXCEL";
@@ -205,16 +275,7 @@
                 const wb = new ExcelJS.Workbook();
                 await wb.xlsx.load(buffer);
 
-                // Cálculo dos TOTAIS DO PEDIDO INTEIRO para o cabeçalho
-                let qtdTotalPedido = 0;
-                let valTotalPedido = 0;
-                produtosGlobais.forEach(p => {
-                    if(p.calcTotalUnidades > 0) {
-                        qtdTotalPedido += p.calcTotalUnidades;
-                        valTotalPedido += p.isPromo ? p.calcSubtotal : (p.calcSubtotal - (p.calcSubtotal * (desc/100)));
-                    }
-                });
-
+                // A função agora recebe qual categoria está imprimindo para colocar o desconto correto
                 const preencherAba = (nomeAba, tipoCategoria) => {
                     const sheet = wb.getWorksheet(nomeAba);
                     if(!sheet) return; 
@@ -222,16 +283,17 @@
                     let selecionados = produtosGlobais.filter(p => (tipoCategoria === 'promo' ? p.isPromo : (p.catReal === tipoCategoria && !p.isPromo)) && p.calcTotalUnidades > 0);
                     if(selecionados.length === 0) return;
 
-                    // CABEÇALHO CONFORME SOLICITADO
+                    // CABEÇALHO DA PLANILHA
                     sheet.getCell('E6').value = razao;       
                     sheet.getCell('J6').value = cnpj;        
-                    sheet.getCell('F7').value = qtdTotalPedido; 
-                    sheet.getCell('L7').value = valTotalPedido; 
-                    sheet.getCell('D8').value = desc + "%";  
+                    sheet.getCell('F7').value = window.resumoGlobal.totalU; // Total Global de Peças
+                    sheet.getCell('L7').value = window.resumoGlobal.totalV; // Total Global Financeiro
+                    
+                    // Coloca o desconto específico DESTA aba na célula D8
+                    sheet.getCell('D8').value = window.resumoGlobal[tipoCategoria].desc + "%";  
                     sheet.getCell('F8').value = prazo;
 
-                    // Inicia os produtos na linha 11 (Ajuste este número se precisar)
-                    let linhaAtual = 10; 
+                    let linhaAtual = 11; 
                     let metade = Math.ceil(selecionados.length / 2);
 
                     for(let i = 0; i < metade; i++) {
@@ -253,7 +315,6 @@
                             sheet.getCell(`L${linhaAtual}`).value = dir.descricao;
                             sheet.getCell(`M${linhaAtual}`).value = dir.precoFinal; 
                         }
-
                         linhaAtual++;
                     }
                 };
@@ -261,13 +322,14 @@
                 preencherAba("ROMANEIO SORVETE", "sorvete");
                 preencherAba("ROMANEIO SECO", "seco");
                 preencherAba("ROMANEIO BALDE", "balde");
+                // preencherAba("ROMANEIO PROMO", "promo"); // Descomente se for criar uma aba específica para promos no Excel
 
                 const outBuffer = await wb.xlsx.writeBuffer();
                 saveAs(new Blob([outBuffer]), `PEDIDO_${razao.replace(/\s+/g, '_').toUpperCase()}.xlsx`);
                 
             } catch (error) {
                 console.error("Erro ao gerar Excel:", error);
-                alert("Ocorreu um erro ao processar a planilha. Verifique se o PEDIDO.xlsx está no Cloudflare.");
+                alert("Ocorreu um erro ao processar a planilha. Verifique se o PEDIDO.xlsx está no Cloudflare e não possui validações infinitas.");
             }
 
             document.querySelector('.btn-gerar').innerText = "⬇️ GERAR PEDIDO EM EXCEL";
