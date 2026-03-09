@@ -3,95 +3,210 @@
 <head>
     <meta charset="UTF-8">
     <title>Pedidos - Eskimó</title>
-    <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        body { background: #f8f9fa; padding: 20px; color: #333; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e3000f; padding-bottom: 15px; margin-bottom: 20px; }
+        h1, h2, h3 { color: #e3000f; }
+        
+        /* Dados do Cliente */
+        .client-box { background: #f4f4f4; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 15px; border-left: 4px solid #e3000f; }
+        .client-box input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px; }
+        
+        /* Abas Dinâmicas */
+        .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; }
+        .tab-btn { background: none; border: none; padding: 10px 20px; cursor: pointer; color: #666; font-size: 16px; display: none; }
+        .tab-btn.active { color: #e3000f; border-bottom: 3px solid #e3000f; font-weight: bold; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        /* Tabela */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th { background: #e3000f; color: white; padding: 12px; text-align: left; }
+        td { padding: 8px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        td input[type="number"] { width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 4px; }
+        
+        /* Resumo Final */
+        .resumo-box { background: #fff; border: 2px solid #e3000f; padding: 20px; border-radius: 8px; margin-top: 20px; }
+        .resumo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; text-align: center; margin-bottom: 15px; }
+        .resumo-item { background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #eee; }
+        .resumo-item span { display: block; font-size: 20px; font-weight: bold; color: #e3000f; }
+        .total-final { font-size: 24px; text-align: right; border-top: 2px dashed #ccc; padding-top: 15px; margin-top: 10px; }
+        button { background: #444; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+    </style>
 </head>
 <body>
     <div class="container">
-        <header style="display:flex; justify-content:space-between; align-items:center;">
-            <h1><span id="txtLoja"></span></h1>
-            <button onclick="localStorage.clear(); window.location.href='index.html'" class="btn-sair">Sair</button>
+        <header>
+            <h1>Filial: <span id="txtLoja"></span></h1>
+            <button onclick="localStorage.clear(); window.location.href='index.html'">Sair do Sistema</button>
         </header>
 
-        <div class="tabs">
-            <button class="tab-btn active" id="btnPed">Pedido</button>
-            <button class="tab-btn" id="btnProm">Minhas Promoções</button>
+        <div class="client-box">
+            <div>
+                <label><b>Razão Social do Cliente</b></label>
+                <input type="text" id="cliRazao" placeholder="Nome da empresa">
+            </div>
+            <div>
+                <label><b>CNPJ</b></label>
+                <input type="text" id="cliCnpj" placeholder="00.000.000/0000-00">
+            </div>
+            <div>
+                <label><b>Desconto (%)</b></label>
+                <input type="number" id="cliDesc" value="0" min="0" max="100" oninput="window.calcularTudo()">
+            </div>
         </div>
 
-        <div id="divPed">
-            <input type="text" id="cli" placeholder="Razão Social Cliente">
-            <table id="tbl">
-                <thead><tr><th>Cód</th><th>Produto</th><th>Preço</th><th>Eng.</th><th>Uni.</th><th>Total</th></tr></thead>
-                <tbody id="corpo"></tbody>
-            </table>
-            <h2 style="text-align:right; margin-top:15px;">Total: R$ <span id="valTotal">0.00</span></h2>
-            <button id="btnExcel" style="width:auto; float:right;">Gerar Excel</button>
+        <div class="tabs" id="tabContainer">
+            <button class="tab-btn" id="btnTabSorvete" onclick="window.mudarAba('sorvete')">🍨 Sorvetes</button>
+            <button class="tab-btn" id="btnTabSeco" onclick="window.mudarAba('seco')">📦 Secos</button>
+            <button class="tab-btn" id="btnTabBalde" onclick="window.mudarAba('balde')">🪣 Baldes</button>
         </div>
 
-        <div id="divProm" style="display:none; max-width:400px; margin:auto;">
-            <div class="card">
-                <h3>Cadastrar Promoção</h3>
-                <input type="text" id="pCod" placeholder="Código">
-                <input type="text" id="pNom" placeholder="Nome">
-                <input type="number" id="pPre" placeholder="Preço">
-                <button id="btnSaveProm">Salvar Localmente</button>
+        <div id="content_sorvete" class="tab-content"><table id="tbl_sorvete"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+        <div id="content_seco" class="tab-content"><table id="tbl_seco"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+        <div id="content_balde" class="tab-content"><table id="tbl_balde"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+
+        <div class="resumo-box">
+            <h2>Resumo do Pedido</h2>
+            <div class="resumo-grid">
+                <div class="resumo-item">Sorvetes<span id="resQtdSorvete">0 un</span><b id="resValSorvete">R$ 0,00</b></div>
+                <div class="resumo-item">Secos<span id="resQtdSeco">0 un</span><b id="resValSeco">R$ 0,00</b></div>
+                <div class="resumo-item">Baldes<span id="resQtdBalde">0 un</span><b id="resValBalde">R$ 0,00</b></div>
+                <div class="resumo-item" style="background: #ffe6e6;">Total Unidades<span id="resQtdTotal">0 un</span></div>
+            </div>
+            <div class="total-final">
+                <div style="font-size: 16px; color: #666;">Total sem Desconto: <s id="valSemDesc">R$ 0,00</s></div>
+                <div style="color: #28a745;"><b>Valor Final c/ Desconto: <span id="valComDesc">R$ 0,00</span></b></div>
             </div>
         </div>
     </div>
 
     <script type="module">
-        import { db } from "./js/config.js";
-        import { doc, getDoc, getDocs, collection, setDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+        import { getFirestore, doc, getDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
-        const user = localStorage.getItem('user');
-        document.getElementById('txtLoja').innerText = localStorage.getItem('nome');
+        const firebaseConfig = {
+            apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8",
+            authDomain: "sistema-pedidos-3f2c2.firebaseapp.com",
+            projectId: "sistema-pedidos-3f2c2",
+            storageBucket: "sistema-pedidos-3f2c2.firebasestorage.app",
+            messagingSenderId: "669786014126",
+            appId: "1:669786014126:web:d0da498633a145d56a883f"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const userId = localStorage.getItem('user');
+        document.getElementById('txtLoja').innerText = localStorage.getItem('nome') || userId;
         
-        let prods = [];
-        async function carregar() {
-            const pSnap = await getDoc(doc(db, "precos", user));
-            const meusPrecos = pSnap.exists() ? pSnap.data() : {};
-            const mSnap = await getDocs(collection(db, "produtos"));
-            const tbody = document.getElementById('corpo');
-            tbody.innerHTML = ''; prods = [];
+        let produtosGlobais = [];
 
-            mSnap.forEach(d => {
+        window.mudarAba = (cat) => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('btnTab' + cat.charAt(0).toUpperCase() + cat.slice(1)).classList.add('active');
+            document.getElementById('content_' + cat).classList.add('active');
+        };
+
+        async function iniciar() {
+            // 1. Pega as permissões de planilhas do usuário
+            const userSnap = await getDoc(doc(db, "usuarios", userId));
+            const planilhas = userSnap.exists() && userSnap.data().planilhas ? userSnap.data().planilhas : { sorvete: true, seco: false, balde: false };
+            
+            // Ativa os botões das abas permitidas
+            let primeiraAba = null;
+            if(planilhas.sorvete) { document.getElementById('btnTabSorvete').style.display = 'block'; primeiraAba = primeiraAba || 'sorvete'; }
+            if(planilhas.seco) { document.getElementById('btnTabSeco').style.display = 'block'; primeiraAba = primeiraAba || 'seco'; }
+            if(planilhas.balde) { document.getElementById('btnTabBalde').style.display = 'block'; primeiraAba = primeiraAba || 'balde'; }
+            
+            if(primeiraAba) window.mudarAba(primeiraAba);
+
+            // 2. Pega os preços e produtos
+            const precosSnap = await getDoc(doc(db, "precos", userId));
+            const meusPrecos = precosSnap.exists() ? precosSnap.data() : {};
+            const prodSnap = await getDocs(collection(db, "produtos"));
+
+            prodSnap.forEach(d => {
                 const item = d.data();
-                if(meusPrecos[item.codigo] || item.loja === user) {
-                    const preco = meusPrecos[item.codigo] || item.preco;
-                    prods.push({...item, preco: preco});
-                    const i = prods.length - 1;
-                    tbody.innerHTML += `<tr>
-                        <td>${item.codigo}</td><td>${item.descricao}</td><td>R$ ${preco.toFixed(2)}</td>
-                        <td><input type="number" id="e_${i}" value="0" oninput="window.calc()" style="width:60px;"></td>
-                        <td><input type="number" id="u_${i}" value="0" oninput="window.calc()" style="width:60px;"></td>
-                        <td id="t_${i}">0.00</td>
+                if(meusPrecos[item.codigo]) {
+                    produtosGlobais.push({
+                        ...item,
+                        precoFinal: meusPrecos[item.codigo],
+                        catNormalizada: (item.categoria || 'SORVETE').toLowerCase().trim()
+                    });
+                }
+            });
+
+            renderizarTabelas();
+        }
+
+        function renderizarTabelas() {
+            produtosGlobais.forEach((p, i) => {
+                // Se a categoria no banco não for uma das 3, joga para sorvete por segurança
+                let cat = p.catNormalizada;
+                if(cat !== 'sorvete' && cat !== 'seco' && cat !== 'balde') cat = 'sorvete';
+                
+                const tbody = document.querySelector(`#tbl_${cat} tbody`);
+                if(tbody) {
+                    tbody.innerHTML += `<tr id="tr_${i}">
+                        <td>${p.codigo}</td><td>${p.descricao}</td><td>${p.engradado}</td><td>R$ ${p.precoFinal.toFixed(2)}</td>
+                        <td><input type="number" id="eng_${i}" value="0" min="0" oninput="window.calcularTudo()"></td>
+                        <td><input type="number" id="uni_${i}" value="0" min="0" oninput="window.calcularTudo()"></td>
+                        <td id="sub_${i}" style="font-weight:bold;">R$ 0.00</td>
                     </tr>`;
                 }
             });
         }
-        window.calc = () => {
-            let total = 0;
-            prods.forEach((p, i) => {
-                const q = (parseInt(document.getElementById(`e_${i}`).value)||0) * (p.engradado||1) + (parseInt(document.getElementById(`u_${i}`).value)||0);
-                const sub = q * p.preco;
-                document.getElementById(`t_${i}`).innerText = sub.toFixed(2);
-                total += sub;
-            });
-            document.getElementById('valTotal').innerText = total.toFixed(2);
-        };
-        carregar();
 
-        document.getElementById('btnPed').onclick = () => { document.getElementById('divPed').style.display='block'; document.getElementById('divProm').style.display='none'; carregar(); };
-        document.getElementById('btnProm').onclick = () => { document.getElementById('divPed').style.display='none'; document.getElementById('divProm').style.display='block'; };
+        window.calcularTudo = () => {
+            let descStr = document.getElementById('cliDesc').value;
+            let descontoPercentual = parseFloat(descStr) || 0;
+            if(descontoPercentual < 0) descontoPercentual = 0;
+            if(descontoPercentual > 100) descontoPercentual = 100;
 
-        document.getElementById('btnSaveProm').onclick = async () => {
-            await setDoc(doc(db, "produtos", document.getElementById('pCod').value), { 
-                codigo: document.getElementById('pCod').value, descricao: document.getElementById('pNom').value, 
-                preco: parseFloat(document.getElementById('pPre').value), engradado: 1, loja: user 
+            let resumo = { sorvete: {u:0, v:0}, seco: {u:0, v:0}, balde: {u:0, v:0} };
+            let valTotalSemDesc = 0;
+
+            produtosGlobais.forEach((p, i) => {
+                let inputEng = document.getElementById(`eng_${i}`);
+                if(!inputEng) return; // Produto não renderizado porque a aba não existe
+
+                let qtdEng = parseInt(inputEng.value) || 0;
+                let qtdUni = parseInt(document.getElementById(`uni_${i}`).value) || 0;
+                
+                let totalUnidades = (qtdEng * p.engradado) + qtdUni;
+                let subtotal = totalUnidades * p.precoFinal;
+
+                document.getElementById(`sub_${i}`).innerText = `R$ ${subtotal.toFixed(2)}`;
+
+                let cat = p.catNormalizada;
+                if(cat !== 'sorvete' && cat !== 'seco' && cat !== 'balde') cat = 'sorvete';
+
+                resumo[cat].u += totalUnidades;
+                resumo[cat].v += subtotal;
+                valTotalSemDesc += subtotal;
             });
-            alert("Promoção salva!");
+
+            // Atualiza tela de Resumo
+            document.getElementById('resQtdSorvete').innerText = resumo.sorvete.u + " un";
+            document.getElementById('resValSorvete').innerText = "R$ " + resumo.sorvete.v.toFixed(2);
+            document.getElementById('resQtdSeco').innerText = resumo.seco.u + " un";
+            document.getElementById('resValSeco').innerText = "R$ " + resumo.seco.v.toFixed(2);
+            document.getElementById('resQtdBalde').innerText = resumo.balde.u + " un";
+            document.getElementById('resValBalde').innerText = "R$ " + resumo.balde.v.toFixed(2);
+            
+            document.getElementById('resQtdTotal').innerText = (resumo.sorvete.u + resumo.seco.u + resumo.balde.u) + " un";
+            
+            document.getElementById('valSemDesc').innerText = "R$ " + valTotalSemDesc.toFixed(2);
+            
+            let valFinal = valTotalSemDesc - (valTotalSemDesc * (descontoPercentual / 100));
+            document.getElementById('valComDesc').innerText = "R$ " + valFinal.toFixed(2);
         };
+
+        iniciar();
     </script>
 </body>
 </html>
