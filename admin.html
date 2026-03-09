@@ -2,262 +2,450 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Transferência - Eskimó</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin - Eskimó</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
-        body { background: #f8f9fa; padding: 20px; color: #333; }
-        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 12px; border-top: 5px solid #0056b3; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0056b3; padding-bottom: 15px; margin-bottom: 20px; }
-        .header-left { display: flex; align-items: center; gap: 15px; }
-        .menu-btn { background: none; border: none; font-size: 28px; cursor: pointer; color: #0056b3; }
-        h1 { color: #0056b3; font-size: 22px; } 
-        .sidebar { position: fixed; left: -250px; top: 0; width: 250px; height: 100%; background: #fff; box-shadow: 2px 0 5px rgba(0,0,0,0.2); transition: 0.3s; z-index: 1000; display: flex; flex-direction: column; padding-top: 20px; }
-        .sidebar.open { left: 0; }
-        .sidebar h2 { text-align: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; color: #e3000f; }
-        .sidebar a { padding: 15px 20px; text-decoration: none; color: #333; font-weight: bold; border-bottom: 1px solid #eee; display: block; }
-        .sidebar a:hover { background: #f4f4f4; color: #0056b3; }
-        .sidebar a.active { background: #0056b3; color: white; }
-        .sidebar .close-btn { position: absolute; top: 10px; right: 15px; font-size: 24px; background: none; border: none; cursor: pointer; color: #666; }
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none; }
-        .overlay.show { display: block; }
-        .client-box { background: #e6f2ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: 2fr 1fr; gap: 15px; border-left: 4px solid #0056b3; }
-        .client-box input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px; font-size: 14px; }
-        .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 15px; flex-wrap: wrap; }
-        .tab-btn { background: none; border: none; padding: 10px 20px; cursor: pointer; color: #666; font-size: 15px; display: none; }
-        .tab-btn.active { color: #0056b3; border-bottom: 3px solid #0056b3; font-weight: bold; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th { background: #0056b3; color: white; padding: 10px; text-align: left; font-size: 14px; }
-        td { padding: 8px; border-bottom: 1px solid #eee; vertical-align: middle; font-size: 14px; transition: background-color 0.3s; }
-        td input[type="number"] { width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-        .linha-destaque { background-color: #fff4cc !important; }
-        .resumo-box { background: #fff; border: 2px solid #0056b3; padding: 15px; border-radius: 8px; margin-top: 20px; }
-        .resumo-box h2 { font-size: 18px; margin-bottom: 15px; }
-        .resumo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; text-align: center; margin-bottom: 15px; }
-        .resumo-item { background: #f9f9f9; padding: 12px; border-radius: 6px; border: 1px solid #eee; display: flex; flex-direction: column; justify-content: center; }
-        .resumo-item span { display: block; font-size: 18px; font-weight: bold; color: #0056b3; margin-top: 5px; } 
-        button.action-btn { background: #0056b3; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; transition: 0.2s; }
-        button.action-btn:hover { background: #004494; }
+        body { background: #f4f6f9; color: #333; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* MENU LATERAL (SIDEBAR) */
+        .sidebar { width: 260px; background: #2c3e50; color: white; display: flex; flex-direction: column; transition: 0.3s; }
+        .sidebar-header { padding: 20px; text-align: center; background: #e3000f; border-bottom: 2px solid #b3000c; }
+        .sidebar-header h2 { font-size: 20px; }
+        .nav-links { display: flex; flex-direction: column; padding: 10px 0; flex-grow: 1; }
+        .nav-links button { background: none; border: none; color: #adb5bd; padding: 15px 20px; text-align: left; font-size: 16px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 10px; width: 100%; }
+        .nav-links button:hover, .nav-links button.active { background: #34495e; color: white; border-left: 4px solid #e3000f; }
+        .logout-btn { background: #c0392b !important; color: white !important; margin-top: auto; }
+        .logout-btn:hover { background: #a93226 !important; }
+
+        /* ÁREA DE CONTEÚDO */
+        .main-content { flex-grow: 1; padding: 30px; overflow-y: auto; }
+        .section-title { font-size: 24px; margin-bottom: 20px; color: #2c3e50; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+        .secao { display: none; animation: fadeIn 0.3s; }
+        .secao.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* CARDS DO DASHBOARD */
+        .dash-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+        .card-stat { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid #e3000f; }
+        .card-stat h3 { color: #666; font-size: 14px; margin-bottom: 10px; text-transform: uppercase; }
+        .card-stat .valor { font-size: 32px; font-weight: bold; color: #2c3e50; }
+
+        /* PAINEIS GERAIS */
+        .card-panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        input[type="text"], input[type="password"], input[type="file"], input[type="number"], select { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; }
+        .btn-primario { background: #e3000f; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.2s; }
+        .btn-primario:hover { background: #b3000c; }
+        .btn-secundario { background: #17a2b8; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-secundario:hover { background: #138496; }
+        .btn-sucesso { background: #28a745; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
+        
+        /* TABELAS */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        th { background: #f8f9fa; color: #333; padding: 12px; text-align: left; border-bottom: 2px solid #ddd; }
+        td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; color: white; }
+        .bg-venda { background: #28a745; } .bg-tf { background: #0056b3; }
+
+        /* BOTOES PEQUENOS */
+        .btn-small { padding: 6px 10px; font-size: 12px; border: none; border-radius: 4px; cursor: pointer; color: white; margin-right: 5px; }
+        .btn-edit { background: #007bff; } .btn-edit:hover { background: #0056b3; }
+        .btn-preco { background: #ffc107; color: #000; } .btn-preco:hover { background: #e0a800; }
+        .btn-del { background: #dc3545; } .btn-del:hover { background: #c82333; }
+
+        /* MODAIS */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 500px; max-width: 90%; max-height: 90vh; overflow-y: auto; }
+        .checkbox-group { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        .checkbox-group label { display: flex; align-items: center; gap: 5px; cursor: pointer; background: #f4f4f4; padding: 8px 12px; border-radius: 6px; }
     </style>
 </head>
 <body>
-    <div id="sidebar" class="sidebar">
-        <button class="close-btn" onclick="window.toggleMenu()">×</button>
-        <h2>Menu Eskimó</h2>
-        <a href="loja.html">🛒 Venda</a>
-        <a href="transferencia.html" class="active">🔄 Transferência</a>
-        <a href="#" onclick="localStorage.clear(); window.location.href='index.html'" style="color: #dc3545; margin-top: auto; border-top: 1px solid #eee;">🚪 Sair</a>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>Eskimó Admin</h2>
+        </div>
+        <div class="nav-links">
+            <button onclick="mudarSecao('dashboard')" class="active" id="nav-dashboard">📊 Dashboard</button>
+            <button onclick="mudarSecao('lojas')" id="nav-lojas">🏪 Gestão de Lojas</button>
+            <button onclick="mudarSecao('precos')" id="nav-precos">💲 Tabelas de Preços</button>
+            <button onclick="mudarSecao('clientes')" id="nav-clientes">👥 Base de Clientes (CRM)</button>
+            <button onclick="localStorage.clear(); window.location.href='index.html'" class="logout-btn">🚪 Sair do Sistema</button>
+        </div>
     </div>
-    <div id="overlay" class="overlay" onclick="window.toggleMenu()"></div>
 
-    <div class="container">
-        <header>
-            <div class="header-left">
-                <button class="menu-btn" onclick="window.toggleMenu()">☰</button>
-                <h1>Filial Base: <span id="txtLoja"></span> - <span style="color:#666; font-size:18px;">Módulo Transferência</span></h1>
+    <div class="main-content">
+        
+        <div id="sec-dashboard" class="secao active">
+            <h2 class="section-title">Visão Geral do Sistema</h2>
+            <div class="dash-cards">
+                <div class="card-stat"><h3>Lojas Ativas</h3><div class="valor" id="dashTotLojas">0</div></div>
+                <div class="card-stat"><h3>Clientes/Destinos</h3><div class="valor" id="dashTotClientes">0</div></div>
+                <div class="card-stat"><h3>Planilhas Geradas</h3><div class="valor" id="dashTotAcoes">0</div></div>
             </div>
-        </header>
 
-        <datalist id="listaLojasDestino"></datalist>
-        <datalist id="listaCnpjDestino"></datalist>
-
-        <div class="client-box">
-            <div><label style="font-size:13px; color:#555;"><b>Filial de Entrada (Destino)</b></label><input type="text" id="cliRazao" list="listaLojasDestino" placeholder="Comece a digitar o nome da Filial..." autocomplete="off"></div>
-            <div><label style="font-size:13px; color:#555;"><b>CNPJ da Filial de Entrada</b></label><input type="text" id="cliCnpj" list="listaCnpjDestino" placeholder="00.000.000/0000-00" maxlength="18" autocomplete="off"></div>
+            <div class="card-panel">
+                <h3>Últimas Atividades (Log do Sistema)</h3>
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table id="tabelaHistorico">
+                        <thead><tr><th>Data / Hora</th><th>Loja/Filial</th><th>Ação Realizada</th><th>Destino (Cliente/Filial)</th></tr></thead>
+                        <tbody><tr><td colspan="4" style="text-align:center;">A carregar histórico...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
-        <div class="tabs" id="tabContainer">
-            <button class="tab-btn" id="btnTabSorvete" onclick="window.mudarAba('sorvete')">🍨 Sorvetes</button>
-            <button class="tab-btn" id="btnTabSeco" onclick="window.mudarAba('seco')">📦 Secos</button>
-            <button class="tab-btn" id="btnTabBalde" onclick="window.mudarAba('balde')">🪣 Baldes</button>
+        <div id="sec-lojas" class="secao">
+            <h2 class="section-title">Lojas e Utilizadores</h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="card-panel">
+                    <h3>Cadastro em Massa (Planilha)</h3>
+                    <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Colunas necessárias: <b>LOGIN, SENHA, NOME, CNPJ</b> (opcional: SORVETE, SECO, BALDE, PROMO = 'SIM')</p>
+                    <input type="file" id="fileUsuarios" accept=".csv, .xlsx">
+                    <button id="btnUploadUsuarios" class="btn-secundario" style="width: 100%;">Importar Planilha de Lojas</button>
+                </div>
+
+                <div class="card-panel">
+                    <h3 style="margin-bottom: 10px;">Lojas Cadastradas</h3>
+                    <button onclick="abrirNovoUsuario()" class="btn-primario" style="margin-bottom: 15px;">+ Criar Loja Manualmente</button>
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        <table id="tabelaLojas">
+                            <thead><tr><th>Login</th><th>Nome / CNPJ</th><th>Ações</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div id="content_sorvete" class="tab-content"><table id="tbl_sorvete"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço TF</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
-        <div id="content_seco" class="tab-content"><table id="tbl_seco"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço TF</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
-        <div id="content_balde" class="tab-content"><table id="tbl_balde"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço TF</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
-
-        <div class="resumo-box">
-            <h2>Resumo da Transferência</h2>
-            <div class="resumo-grid">
-                <div class="resumo-item"><div style="font-size:12px; color:#666;">Total de Engradados</div><span id="resTotalEngradados">0 cx</span></div>
-                <div class="resumo-item"><div style="font-size:12px; color:#666;">Total de Unidades Soltas</div><span id="resTotalUnidades">0 un</span></div>
-                <div class="resumo-item" style="background: #e6f2ff;"><div style="font-size:12px; color:#666;">Valor Total</div><span id="resValorTotal" style="color:#000;">R$ 0,00</span></div>
+        <div id="sec-precos" class="secao">
+            <h2 class="section-title">Importação de Tabelas de Preço</h2>
+            
+            <div class="card-panel" style="max-width: 600px;">
+                <h3>Atualização de Preços via Planilha</h3>
+                <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
+                    Os nomes dos arquivos devem ser exatos:<br>
+                    • Venda Padrão: <b>nomedaloja.xlsx</b><br>
+                    • Venda Promoção: <b>nomedaloja_promo.xlsx</b><br>
+                    • Transferência: <b>tf.xlsx</b>
+                </p>
+                <input type="file" id="fileCsv" accept=".csv, .xlsx" multiple>
+                <button id="btnUpload" class="btn-sucesso">Subir Tabelas para o Banco</button>
             </div>
-            <button class="action-btn" onclick="window.gerarExcelTransferencia()">⬇️ GERAR PLANILHA DE TRANSFERÊNCIA</button>
+        </div>
+
+        <div id="sec-clientes" class="secao">
+            <h2 class="section-title">Base de Clientes (CRM)</h2>
+            <div class="card-panel">
+                <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Estes são os clientes que os lojistas registaram ao gerar planilhas.</p>
+                <div style="max-height: 500px; overflow-y: auto;">
+                    <table id="tabelaClientes">
+                        <thead><tr><th>Tipo</th><th>Razão Social / Nome</th><th>CNPJ</th><th>Prazo</th><th>Loja Cadastrante</th><th>Ações</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="modal-overlay" id="modalEditar">
+        <div class="modal-content">
+            <h2 id="tituloForm" style="margin-bottom: 15px; color: #e3000f;">Editar Usuário</h2>
+            <input type="hidden" id="editId">
+            <label>Login de Acesso:</label> <input type="text" id="editLogin" placeholder="Ex: dourados" disabled>
+            <label>Razão Social da Loja:</label> <input type="text" id="editNome" placeholder="Eskimó Dourados">
+            <label>CNPJ da Loja (Opcional):</label> <input type="text" id="editCnpj" placeholder="00.000.000/0000-00" maxlength="18">
+            <label>Senha de Acesso:</label> <input type="text" id="editSenha" placeholder="Senha">
+            
+            <h3 style="font-size: 14px; margin-top: 10px;">Acessos do Sistema</h3>
+            <div class="checkbox-group"><label><input type="checkbox" id="chkAdmin"> Dar Permissão de Admin</label></div>
+
+            <h3 style="font-size: 14px; margin-top: 10px;">Abas Visíveis (Venda / Transferência)</h3>
+            <div class="checkbox-group">
+                <label><input type="checkbox" id="chkSorvete"> Sorvetes</label>
+                <label><input type="checkbox" id="chkSeco"> Secos</label>
+                <label><input type="checkbox" id="chkBalde"> Baldes</label>
+                <label style="border: 1px solid #ffc107;"><input type="checkbox" id="chkPromo"> PROMOÇÃO</label>
+            </div>
+
+            <button id="btnSalvarEdicao" class="btn-primario">Salvar Configurações</button>
+            <button onclick="fecharModal('modalEditar')" class="btn-primario" style="background:#666; margin-top:10px;">Cancelar</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalPrecos">
+        <div class="modal-content" style="width: 800px;">
+            <h2 id="tituloPrecos" style="color: #e3000f; margin-bottom: 10px;">Editor de Preços</h2>
+            <button onclick="adicionarItemEditor()" class="btn-secundario" style="margin-bottom:15px;">+ Novo Produto Manual</button>
+            <input type="hidden" id="editTabelaId">
+            <div id="listaEdicaoPrecos" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 20px;"></div>
+            <button id="btnSalvarPrecos" class="btn-sucesso">💾 Salvar Alterações na Tabela</button>
+            <button onclick="fecharModal('modalPrecos')" class="btn-primario" style="background:#666; margin-top:10px;">Cancelar</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalEditarCliente">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 15px; color: #e3000f;">Editar Cliente</h2>
+            <input type="hidden" id="editCliId">
+            <label>Razão Social:</label> <input type="text" id="editCliRazao">
+            <label>CNPJ / CPF:</label> <input type="text" id="editCliCnpj" maxlength="18">
+            <label>Prazo de Pagamento (Venda):</label> <input type="text" id="editCliPrazo">
+            <label>Tipo (venda ou transferencia):</label> 
+            <select id="editCliTipo">
+                <option value="venda">Venda</option>
+                <option value="transferencia">Transferência</option>
+            </select>
+            <button id="btnSalvarCliente" class="btn-primario">Salvar Cliente</button>
+            <button onclick="fecharModal('modalEditarCliente')" class="btn-primario" style="background:#666; margin-top:10px;">Cancelar</button>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, getDocs, collection, query, where, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc, deleteField, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
         const firebaseConfig = { apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8", authDomain: "sistema-pedidos-3f2c2.firebaseapp.com", projectId: "sistema-pedidos-3f2c2", storageBucket: "sistema-pedidos-3f2c2.firebasestorage.app", messagingSenderId: "669786014126", appId: "1:669786014126:web:d0da498633a145d56a883f" };
         const db = getFirestore(initializeApp(firebaseConfig));
-        const userId = localStorage.getItem('user');
-        const nomeLoja = localStorage.getItem('nome') || userId;
-        if(!userId) window.location.href = 'index.html';
-        document.getElementById('txtLoja').innerText = nomeLoja;
-        
-        let produtosGlobais = [];
-        let filiaisSalvas = [];
-        window.lojaCnpj = "Não Cadastrado"; 
+        if(localStorage.getItem('tipo') !== 'admin') window.location.href = 'index.html';
 
-        window.toggleMenu = () => { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('show'); };
+        let usuariosData = {};
+        let editorItens = []; let itensExcluidos = [];
+        let clientesData = {};
 
-        // Autocomplete de Filiais e Clientes Extra de Transferência
-        document.getElementById('cliRazao').addEventListener('input', (e) => {
-            const encontrado = filiaisSalvas.find(c => c.razao.toUpperCase() === e.target.value.toUpperCase());
-            if(encontrado) document.getElementById('cliCnpj').value = encontrado.cnpj;
-        });
-        document.getElementById('cliCnpj').addEventListener('input', function (e) {
+        // === CONTROLE DE NAVEGAÇÃO (TABS) ===
+        window.mudarSecao = (secaoId) => {
+            document.querySelectorAll('.secao').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-links button').forEach(el => el.classList.remove('active'));
+            document.getElementById('sec-' + secaoId).classList.add('active');
+            document.getElementById('nav-' + secaoId).classList.add('active');
+            
+            if(secaoId === 'dashboard') carregarDashboard();
+            if(secaoId === 'lojas') carregarLojas();
+            if(secaoId === 'clientes') carregarClientes();
+        };
+
+        window.fecharModal = (id) => { document.getElementById(id).style.display = 'none'; };
+
+        // === MÁSCARAS DE CNPJ ===
+        const aplicaMascara = (e) => {
             let x = e.target.value.replace(/\D/g, '');
-            if (x.length <= 11) { x = x.replace(/(\d{3})(\d)/, '$1.$2'); x = x.replace(/(\d{3})(\d)/, '$1.$2'); x = x.replace(/(\d{3})(\d{1,2})$/, '$1-$2'); } 
-            else { x = x.replace(/^(\d{2})(\d)/, '$1.$2'); x = x.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3'); x = x.replace(/\.(\d{3})(\d)/, '.$1/$2'); x = x.replace(/(\d{4})(\d)/, '$1-$2'); }
+            if(x.length > 11) { x = x.replace(/^(\d{2})(\d)/, '$1.$2'); x = x.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3'); x = x.replace(/\.(\d{3})(\d)/, '.$1/$2'); x = x.replace(/(\d{4})(\d)/, '$1-$2'); }
             e.target.value = x;
-            const encontrado = filiaisSalvas.find(c => c.cnpj === x);
-            if(encontrado) document.getElementById('cliRazao').value = encontrado.razao;
-        });
+        };
+        document.getElementById('editCnpj').addEventListener('input', aplicaMascara);
+        document.getElementById('editCliCnpj').addEventListener('input', aplicaMascara);
 
-        window.mudarAba = (cat) => { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.getElementById('btnTab' + cat.charAt(0).toUpperCase() + cat.slice(1)).classList.add('active'); document.getElementById('content_' + cat).classList.add('active'); };
+        // === FUNÇÕES DO DASHBOARD ===
+        async function carregarDashboard() {
+            const [snapLojas, snapCli, snapHist] = await Promise.all([
+                getDocs(collection(db, "usuarios")), getDocs(collection(db, "clientes")), getDocs(query(collection(db, "historico"), orderBy("dataHora", "desc"), limit(30)))
+            ]);
 
-        async function iniciar() {
-            // Busca o próprio usuário para achar o CNPJ da Base
-            const userSnap = await getDoc(doc(db, "usuarios", userId));
-            if (userSnap.exists()) window.lojaCnpj = userSnap.data().cnpj || "CNPJ NÃO CADASTRADO";
+            document.getElementById('dashTotLojas').innerText = (snapLojas.size > 0 ? snapLojas.size - 1 : 0); // Desconta o admin
+            document.getElementById('dashTotClientes').innerText = snapCli.size;
+            document.getElementById('dashTotAcoes').innerText = snapHist.size;
 
-            // Busca TODOS os usuários (lojas) para servir de Autocomplete
-            const allUsers = await getDocs(collection(db, "usuarios"));
-            let dlistaNomes = document.getElementById('listaLojasDestino');
-            let dlistaCnpj = document.getElementById('listaCnpjDestino');
+            let tbody = document.querySelector('#tabelaHistorico tbody');
+            tbody.innerHTML = '';
+            if(snapHist.size === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum registo encontrado.</td></tr>'; return; }
+
+            snapHist.forEach(d => {
+                let data = d.data();
+                let dataStr = data.dataHora ? data.dataHora.toDate().toLocaleString('pt-BR') : 'Data Indisponível';
+                tbody.innerHTML += `<tr>
+                    <td>${dataStr}</td>
+                    <td><b>${data.nomeLoja || data.lojaId}</b></td>
+                    <td style="color: ${data.acao.includes('Venda') ? 'green' : 'blue'}; font-weight:bold;">${data.acao}</td>
+                    <td>${data.destino || '-'}</td>
+                </tr>`;
+            });
+        }
+
+        // === FUNÇÕES DE LOJAS ===
+        async function carregarLojas() {
+            const snap = await getDocs(collection(db, "usuarios"));
+            const tbody = document.querySelector('#tabelaLojas tbody');
+            tbody.innerHTML = ''; usuariosData = {};
             
-            allUsers.forEach(u => {
-                if(u.id !== 'admin' && u.id !== userId) { // Não lista ele mesmo
-                    let fData = { razao: u.data().nomeLoja, cnpj: u.data().cnpj || '' };
-                    filiaisSalvas.push(fData);
-                    dlistaNomes.innerHTML += `<option value="${fData.razao}">`;
-                    if(fData.cnpj) dlistaCnpj.innerHTML += `<option value="${fData.cnpj}">`;
-                }
-            });
+            // Fixa Transferência
+            tbody.innerHTML += `<tr style="background:#e6f2ff;">
+                <td><b>TABELA TF</b></td><td>Tabela de Transferência Base</td>
+                <td><button class="btn-small btn-preco" onclick="window.abrirPrecos('tf')">Editar Preços TF</button></td>
+            </tr>`;
 
-            // Busca clientes de transferência manuais que a pessoa salvou
-            const qClientesManuais = query(collection(db, "clientes"), where("lojaId", "==", userId), where("tipo", "==", "transferencia"));
-            const manuaisSnap = await getDocs(qClientesManuais);
-            manuaisSnap.forEach(d => { 
-                filiaisSalvas.push(d.data()); 
-                dlistaNomes.innerHTML += `<option value="${d.data().razao}">`;
-                dlistaCnpj.innerHTML += `<option value="${d.data().cnpj}">`;
-            });
-
-            const planilhas = userSnap.exists() && userSnap.data().planilhas ? userSnap.data().planilhas : { sorvete: true, seco: false, balde: false };
-            let primeiraAba = null;
-            if(planilhas.sorvete) { document.getElementById('btnTabSorvete').style.display = 'block'; primeiraAba = primeiraAba || 'sorvete'; }
-            if(planilhas.seco) { document.getElementById('btnTabSeco').style.display = 'block'; primeiraAba = primeiraAba || 'seco'; }
-            if(planilhas.balde) { document.getElementById('btnTabBalde').style.display = 'block'; primeiraAba = primeiraAba || 'balde'; }
-            if(primeiraAba) window.mudarAba(primeiraAba);
-
-            const [precoTfSnap, prodSnap] = await Promise.all([ getDoc(doc(db, "precos", "tf")), getDocs(collection(db, "produtos")) ]);
-            const precosTF = precoTfSnap.exists() ? precoTfSnap.data() : {};
-
-            prodSnap.forEach(d => {
-                const item = d.data(); const objTf = precosTF[item.codigo];
-                if (objTf !== undefined) {
-                    if((typeof objTf === 'object' ? (objTf.visivel !== false) : true)) produtosGlobais.push({ ...item, precoFinal: typeof objTf === 'object' ? objTf.preco : objTf, catReal: (item.categoria || 'sorvete').toLowerCase().trim() });
-                }
-            });
-            renderizarTabelas();
-        }
-
-        function renderizarTabelas() {
-            produtosGlobais.forEach((p, i) => {
-                let cat = p.catReal; if(!['sorvete', 'seco', 'balde'].includes(cat)) cat = 'sorvete';
-                const tbody = document.querySelector(`#tbl_${cat} tbody`);
-                if(tbody) {
-                    tbody.innerHTML += `<tr id="tr_${i}"><td>${p.codigo}</td><td>${p.descricao}</td><td>${p.engradado}</td><td>R$ ${p.precoFinal.toFixed(2)}</td>
-                        <td><input type="number" id="eng_${i}" value="0" min="0" step="0.5" oninput="window.calcularTudo()"></td>
-                        <td><input type="number" id="uni_${i}" value="0" min="0" step="1" oninput="window.calcularTudo()"></td><td id="sub_${i}" style="font-weight:bold;">R$ 0.00</td></tr>`;
+            snap.forEach(d => {
+                usuariosData[d.id] = d.data(); const u = d.data();
+                if(d.id !== 'admin') {
+                    tbody.innerHTML += `<tr>
+                        <td>${d.id}</td>
+                        <td>${u.nomeLoja} <br><small style="color:#666;">CNPJ: ${u.cnpj||'-'}</small></td>
+                        <td>
+                            <button class="btn-small btn-preco" onclick="window.abrirPrecos('${d.id}')">Preços</button>
+                            <button class="btn-small btn-edit" onclick="window.editarLoja('${d.id}')">Editar</button>
+                            <button class="btn-small btn-del" onclick="window.excluirLoja('${d.id}')">X</button>
+                        </td>
+                    </tr>`;
                 }
             });
         }
 
-        window.calcularTudo = () => {
-            let totalCaixas = 0; let totalPecas = 0; let valorTotal = 0;
-
-            produtosGlobais.forEach((p, i) => {
-                let inputEng = document.getElementById(`eng_${i}`); let inputUni = document.getElementById(`uni_${i}`);
-                if(!inputEng || !inputUni) return;
-                
-                let cx = parseFloat(inputEng.value) || 0; let un = parseFloat(inputUni.value) || 0;
-                if ((cx * 10) % 5 !== 0) { alert(`⚠️ ERRO NO ENGRADADO: Apenas múltiplos de meio em meio (Ex: 0.5, 1, 1.5).`); inputEng.value = ""; cx = 0; }
-                if (un % 1 !== 0) { alert(`⚠️ ERRO NA UNIDADE: Apenas valores inteiros.`); inputUni.value = ""; un = 0; }
-
-                let qtdTotalPecas = (cx * p.engradado) + un; let sub = qtdTotalPecas * p.precoFinal;
-                document.getElementById(`sub_${i}`).innerText = `R$ ${sub.toFixed(2)}`;
-                
-                p.calcQtdCx = cx; p.calcQtdUn = un; p.calcTotalUnidades = qtdTotalPecas; p.calcSubtotal = sub;
-                totalCaixas += cx; totalPecas += qtdTotalPecas; valorTotal += sub;
-
-                let tr = document.getElementById(`tr_${i}`); if (tr) { if (qtdTotalPecas > 0) tr.classList.add('linha-destaque'); else tr.classList.remove('linha-destaque'); }
-            });
-
-            document.getElementById('resTotalEngradados').innerText = totalCaixas + " cx"; document.getElementById('resTotalUnidades').innerText = totalPecas + " un"; document.getElementById('resValorTotal').innerText = "R$ " + valorTotal.toFixed(2);
-            window.resumoTransferencia = { totalCaixas, totalPecas, valorTotal };
+        window.abrirNovoUsuario = () => { document.getElementById('modalEditar').style.display='flex'; document.getElementById('editId').value="NOVO"; document.getElementById('editLogin').value=""; document.getElementById('editLogin').disabled=false; document.getElementById('editCnpj').value=""; document.getElementById('editNome').value=""; document.getElementById('editSenha').value=""; };
+        window.editarLoja = (id) => { 
+            const u = usuariosData[id]; const plan = u.planilhas || {};
+            document.getElementById('editId').value = id; document.getElementById('editLogin').value = id; document.getElementById('editLogin').disabled = true; document.getElementById('editNome').value = u.nomeLoja||""; document.getElementById('editCnpj').value = u.cnpj||""; document.getElementById('editSenha').value = u.senha||"";
+            document.getElementById('chkAdmin').checked = u.tipo === 'admin'; 
+            document.getElementById('chkSorvete').checked = plan.sorvete !== false; document.getElementById('chkSeco').checked = plan.seco||false; document.getElementById('chkBalde').checked = plan.balde||false; document.getElementById('chkPromo').checked = plan.promo||false;
+            document.getElementById('modalEditar').style.display = 'flex';
+        };
+        window.excluirLoja = async (id) => { if(confirm("Atenção: Excluir loja "+id+"?")){ await deleteDoc(doc(db, "usuarios", id)); carregarLojas(); carregarDashboard(); } };
+        
+        document.getElementById('btnSalvarEdicao').onclick = async () => {
+            const login = document.getElementById('editLogin').value.toLowerCase().trim();
+            if(!login) return alert("Login não pode estar vazio!");
+            const dados = { senha: document.getElementById('editSenha').value, nomeLoja: document.getElementById('editNome').value, cnpj: document.getElementById('editCnpj').value, tipo: document.getElementById('chkAdmin').checked ? "admin" : "loja",
+                planilhas: { sorvete: document.getElementById('chkSorvete').checked, seco: document.getElementById('chkSeco').checked, balde: document.getElementById('chkBalde').checked, promo: document.getElementById('chkPromo').checked } };
+            await setDoc(doc(db, "usuarios", login), dados, { merge: true }); window.fecharModal('modalEditar'); carregarLojas(); carregarDashboard();
         };
 
-        window.gerarExcelTransferencia = async () => {
-            const razaoDestino = document.getElementById('cliRazao').value.trim();
-            const cnpjDestino = document.getElementById('cliCnpj').value.trim();
-            const cnpjOrigem = window.lojaCnpj || "CNPJ NÃO CADASTRADO";
-            const btn = document.querySelector('button.action-btn');
-            
-            if(!razaoDestino || !cnpjDestino) return alert("⚠️ ATENÇÃO: Os campos Filial de Entrada e CNPJ da Filial não podem ficar em branco!");
+        // === FUNÇÕES DE CLIENTES (CRM) ===
+        async function carregarClientes() {
+            const snap = await getDocs(collection(db, "clientes"));
+            const tbody = document.querySelector('#tabelaClientes tbody');
+            tbody.innerHTML = ''; clientesData = {};
 
-            btn.innerText = "⏳ SALVANDO DADOS E GERANDO... AGUARDE";
+            snap.forEach(d => {
+                clientesData[d.id] = d.data(); const c = d.data();
+                let badge = c.tipo === 'venda' ? '<span class="badge bg-venda">VENDA</span>' : '<span class="badge bg-tf">TRANSFERÊNCIA</span>';
+                tbody.innerHTML += `<tr>
+                    <td>${badge}</td><td><b>${c.razao}</b></td><td>${c.cnpj||'-'}</td><td>${c.prazo||'-'}</td><td>${c.lojaId}</td>
+                    <td>
+                        <button class="btn-small btn-edit" onclick="window.editarCliente('${d.id}')">Editar</button>
+                        <button class="btn-small btn-del" onclick="window.excluirCliente('${d.id}')">X</button>
+                    </td>
+                </tr>`;
+            });
+        }
+        window.editarCliente = (id) => {
+            const c = clientesData[id]; document.getElementById('editCliId').value = id;
+            document.getElementById('editCliRazao').value = c.razao||""; document.getElementById('editCliCnpj').value = c.cnpj||""; document.getElementById('editCliPrazo').value = c.prazo||""; document.getElementById('editCliTipo').value = c.tipo||"venda";
+            document.getElementById('modalEditarCliente').style.display = 'flex';
+        };
+        window.excluirCliente = async (id) => { if(confirm("Excluir este cliente da base?")){ await deleteDoc(doc(db, "clientes", id)); carregarClientes(); carregarDashboard(); } };
+        document.getElementById('btnSalvarCliente').onclick = async () => {
+            const id = document.getElementById('editCliId').value;
+            const dados = { razao: document.getElementById('editCliRazao').value, cnpj: document.getElementById('editCliCnpj').value, prazo: document.getElementById('editCliPrazo').value, tipo: document.getElementById('editCliTipo').value };
+            await setDoc(doc(db, "clientes", id), dados, { merge: true }); window.fecharModal('modalEditarCliente'); carregarClientes();
+        };
 
+        // === FUNÇÕES DE PREÇOS ===
+        window.abrirPrecos = async (tabelaId) => {
+            document.getElementById('tituloPrecos').innerText = `Editando Tabela: ${tabelaId.toUpperCase()}`;
+            document.getElementById('editTabelaId').value = tabelaId;
+            document.getElementById('listaEdicaoPrecos').innerHTML = '<p>A carregar preços...</p>';
+            document.getElementById('modalPrecos').style.display = 'flex';
+            editorItens = []; itensExcluidos = [];
             try {
-                // SALVA FILIAL MANUAL SE NÃO EXISTIR NA LISTA GERAL
-                const cnpjLimpo = cnpjDestino.replace(/\D/g, '');
-                const idDestino = `${userId}_${cnpjLimpo}_tf`;
-                if(!filiaisSalvas.find(f => f.cnpj === cnpjDestino)) {
-                    await setDoc(doc(db, "clientes", idDestino), { lojaId: userId, razao: razaoDestino, cnpj: cnpjDestino, tipo: "transferencia" }, { merge: true });
-                }
-
-                // GRAVA O LOG NO HISTÓRICO PARA O ADMIN
-                await addDoc(collection(db, "historico"), { lojaId: userId, nomeLoja: nomeLoja, acao: "Gerou Transferência", destino: razaoDestino, dataHora: serverTimestamp() });
-
-                const response = await fetch('./TRANSFERENCIA.xlsx');
-                if(!response.ok) { alert("⚠️ Erro: O arquivo 'TRANSFERENCIA.xlsx' não foi encontrado."); btn.innerText = "⬇️ GERAR PLANILHA DE TRANSFERÊNCIA"; return; }
-                const buffer = await response.arrayBuffer(); const wb = new ExcelJS.Workbook(); await wb.xlsx.load(buffer);
-
-                const preencherAba = (nomeAba, categoriasPermitidas, tipoAba) => {
-                    const sheet = wb.getWorksheet(nomeAba); if(!sheet) return; 
-                    let selecionados = produtosGlobais.filter(p => categoriasPermitidas.includes(p.catReal) && p.calcTotalUnidades > 0);
-                    if(selecionados.length === 0) return;
-
-                    let qtdTotalUnidadeAba = 0; let valorTotalAba = 0;
-                    selecionados.forEach(p => { qtdTotalUnidadeAba += p.calcTotalUnidades; valorTotalAba += p.calcSubtotal; });
-
-                    if (tipoAba === 'FATURAMENTO') { sheet.getCell('D7').value = cnpjOrigem; sheet.getCell('I7').value = cnpjDestino; sheet.getCell('E8').value = qtdTotalUnidadeAba; sheet.getCell('J8').value = valorTotalAba; 
-                    } else if (tipoAba === 'ROMANEIO') { sheet.getCell('E7').value = cnpjOrigem; sheet.getCell('K7').value = razaoDestino.replace(/_/g, ' '); sheet.getCell('D8').value = window.resumoTransferencia.totalCaixas; sheet.getCell('G8').value = window.resumoTransferencia.totalPecas; sheet.getCell('L8').value = window.resumoTransferencia.valorTotal; }
-
-                    let linhaAtual = 10; 
-                    for(let i = 0; i < selecionados.length; i++) {
-                        let item = selecionados[i]; sheet.getCell(`C${linhaAtual}`).value = item.codigo;
-                        if (tipoAba === 'FATURAMENTO') { sheet.getCell(`D${linhaAtual}`).value = item.calcTotalUnidades; sheet.getCell(`E${linhaAtual}`).value = item.descricao; sheet.getCell(`F${linhaAtual}`).value = item.precoFinal; 
-                        } else if (tipoAba === 'ROMANEIO') { sheet.getCell(`D${linhaAtual}`).value = item.calcQtdCx; sheet.getCell(`E${linhaAtual}`).value = item.calcTotalUnidades; sheet.getCell(`F${linhaAtual}`).value = item.descricao; }
-                        linhaAtual++;
+                const [prodSnap, precoSnap] = await Promise.all([getDocs(collection(db, "produtos")), getDoc(doc(db, "precos", tabelaId))]);
+                const precosAtuais = precoSnap.exists() ? precoSnap.data() : {};
+                prodSnap.forEach(p => {
+                    const cod = p.id;
+                    if(precosAtuais[cod] !== undefined) {
+                        let pData = precosAtuais[cod]; let val = typeof pData === 'object' ? pData.preco : pData; let vis = typeof pData === 'object' ? (pData.visivel !== false) : true;
+                        editorItens.push({ cod: cod, desc: p.data().descricao, cat: p.data().categoria, eng: p.data().engradado, preco: val, visivel: vis });
                     }
-                };
-
-                preencherAba("FATURAMENTO - PROD", ["sorvete", "balde"], "FATURAMENTO"); preencherAba("FATURAMENTO - SECO", ["seco"], "FATURAMENTO"); preencherAba("ROMANEIO", ["sorvete", "seco", "balde"], "ROMANEIO");
-                const outBuffer = await wb.xlsx.writeBuffer(); saveAs(new Blob([outBuffer]), `TRANSFERENCIA_${razaoDestino.replace(/\s+/g, '_').toUpperCase()}.xlsx`);
-            } catch (error) { console.error(error); alert("Ocorreu um erro ao processar a planilha."); }
-            btn.innerText = "⬇️ GERAR PLANILHA DE TRANSFERÊNCIA";
+                });
+                renderEditor();
+            } catch (e) { document.getElementById('listaEdicaoPrecos').innerHTML = '<p style="color:red;">Erro ao carregar.</p>'; }
         };
 
-        iniciar();
+        function renderEditor() {
+            let html = `<table><tr><th style="width:10%">Cód</th><th>Produto</th><th style="width:20%">Preço R$</th><th style="width:10%">Visível</th><th style="width:10%">Ação</th></tr>`;
+            editorItens.forEach((item, i) => {
+                html += `<tr><td style="font-size:12px;">${item.cod}</td><td style="font-size:12px;">${item.desc}</td>
+                    <td><input type="number" step="0.01" value="${item.preco}" onchange="editorItens[${i}].preco = parseFloat(this.value)" style="padding:4px; margin:0;"></td>
+                    <td style="text-align:center;"><input type="checkbox" ${item.visivel ? 'checked' : ''} onchange="editorItens[${i}].visivel = this.checked"></td>
+                    <td><button class="btn-del btn-small" onclick="window.removerItemEditor(${i})">X</button></td></tr>`;
+            });
+            document.getElementById('listaEdicaoPrecos').innerHTML = html + '</table>';
+        }
+        window.removerItemEditor = (index) => { itensExcluidos.push(editorItens[index].cod); editorItens.splice(index, 1); renderEditor(); };
+        window.adicionarItemEditor = () => {
+            const cod = prompt("Código do Produto:"); if(!cod || editorItens.find(i => i.cod === cod)) return alert("Código inválido/existente.");
+            const desc = prompt("Descrição (Nome):"); const cat = prompt("Categoria (SORVETE, SECO ou BALDE):", "SORVETE");
+            const eng = parseFloat(prompt("Quantidade no Engradado/Caixa:", "1")) || 1; const preco = parseFloat(prompt("Preço R$:", "0.00")) || 0;
+            editorItens.unshift({ cod, desc, cat, eng, preco, visivel: true }); renderEditor();
+        };
+
+        document.getElementById('btnSalvarPrecos').onclick = async () => {
+            const tabelaId = document.getElementById('editTabelaId').value; document.getElementById('btnSalvarPrecos').innerText = "A guardar...";
+            let updates = {}; let batchProdutos = [];
+            editorItens.forEach(i => { if(i.preco > 0) { updates[i.cod] = { preco: i.preco, visivel: i.visivel }; batchProdutos.push(i); } });
+            itensExcluidos.forEach(cod => { updates[cod] = deleteField(); });
+            for(let item of batchProdutos) await setDoc(doc(db, "produtos", item.cod), { codigo: item.cod, descricao: item.desc, engradado: item.eng, categoria: item.cat }, { merge: true });
+            await setDoc(doc(db, "precos", tabelaId), updates, { merge: true });
+            alert("Preços atualizados com sucesso!"); window.fecharModal('modalPrecos'); document.getElementById('btnSalvarPrecos').innerText = "💾 Salvar Alterações na Tabela";
+        };
+
+        // IMPORTAÇÕES
+        document.getElementById('btnUpload').onclick = async () => {
+            const files = document.getElementById('fileCsv').files; if(files.length === 0) return alert("Selecione os arquivos de preço!");
+            const btn = document.getElementById('btnUpload'); btn.innerText = "⏳ Processando... Aguarde"; btn.disabled = true;
+            setTimeout(async () => {
+                let filesProcessed = 0;
+                for(let f of files) {
+                    const lojaId = f.name.replace(/\.[^/.]+$/, "").toLowerCase().trim(); const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'}); const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+                        let precos = {}; let count = 0;
+                        for(let row of rawData) {
+                            let cleanRow = {}; for(let key in row) cleanRow[key.toString().trim().toUpperCase()] = row[key];
+                            let cod = cleanRow['CODIGO'] || cleanRow['CÓDIGO']; let prod = cleanRow['PRODUTO']; let eng = parseFloat(cleanRow['ENGRADADO']) || 1; let cat = cleanRow['CATEGORIA'] ? String(cleanRow['CATEGORIA']).toUpperCase().trim() : 'SORVETE';
+                            let precoVal = cleanRow['PRECO'] || cleanRow['PREÇO'] || 0; let preco = typeof precoVal === 'number' ? precoVal : parseFloat(String(precoVal).replace(/R\$/gi, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
+                            if(cod && prod && preco > 0) {
+                                precos[cod.toString()] = { preco: preco, visivel: true }; 
+                                if(!lojaId.includes('_promo')) await setDoc(doc(db, "produtos", cod.toString()), { codigo: cod.toString(), descricao: prod, engradado: eng, categoria: cat }, { merge: true });
+                                count++;
+                            }
+                        }
+                        if(count > 0) { await setDoc(doc(db, "precos", lojaId), precos); alert(`SUCESSO! ${count} produtos na tabela "${lojaId}".`); }
+                        filesProcessed++; if(filesProcessed === files.length) { btn.innerText = "Subir Tabelas para o Banco"; btn.disabled = false; }
+                    }; reader.readAsArrayBuffer(f);
+                }
+            }, 50);
+        };
+
+        document.getElementById('btnUploadUsuarios').onclick = async () => {
+            const fileInput = document.getElementById('fileUsuarios'); if(fileInput.files.length === 0) return alert("Selecione a planilha de lojas!");
+            const btn = document.getElementById('btnUploadUsuarios'); btn.innerText = "⏳ Criando Lojas..."; btn.disabled = true;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'}); const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+                    let count = 0;
+                    for(let row of rawData) {
+                        let cleanRow = {}; for(let key in row) cleanRow[key.toString().trim().toUpperCase()] = row[key];
+                        let login = (cleanRow['LOGIN'] || '').toString().toLowerCase().trim(); let senha = (cleanRow['SENHA'] || '').toString().trim(); let nome = (cleanRow['NOME'] || cleanRow['RAZÃO SOCIAL'] || '').toString().trim();
+                        if(login && senha && nome) {
+                            let sSorv = (cleanRow['SORVETE']||'').toString().toUpperCase().trim(); let sSeco = (cleanRow['SECO']||'').toString().toUpperCase().trim(); let sBald = (cleanRow['BALDE']||'').toString().toUpperCase().trim(); let sProm = (cleanRow['PROMO']||'').toString().toUpperCase().trim();
+                            await setDoc(doc(db, "usuarios", login), { senha: senha, nomeLoja: nome, cnpj: (cleanRow['CNPJ']||'').toString().trim(), tipo: (cleanRow['TIPO']||'').toString().toLowerCase() === 'admin' ? 'admin' : 'loja',
+                                planilhas: { sorvete: sSorv !== 'NAO' && sSorv !== 'NÃO' && sSorv !== 'FALSE' && sSorv !== '0', seco: sSeco === 'SIM' || sSeco === 'TRUE' || sSeco === '1', balde: sBald === 'SIM' || sBald === 'TRUE' || sBald === '1', promo: sProm === 'SIM' || sProm === 'TRUE' || sProm === '1' }
+                            }, { merge: true });
+                            count++;
+                        }
+                    }
+                    alert(`SUCESSO! ${count} lojas cadastradas/atualizadas.`); carregarLojas(); carregarDashboard();
+                } catch (err) { alert("Erro ao processar planilha."); }
+                btn.innerText = "Importar Planilha de Lojas"; btn.disabled = false;
+            }; reader.readAsArrayBuffer(fileInput.files[0]);
+        };
+
+        // INÍCIO
+        carregarDashboard();
     </script>
 </body>
 </html>
