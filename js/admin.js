@@ -105,40 +105,117 @@ async function carregarDashboard() {
 }
 
 // === VISUALIZAÇÃO E REGENERAÇÃO ===
+// === FUNÇÃO DE VISUALIZAÇÃO CORRIGIDA (DETALHES DA PLANILHA) ===
 window.visualizarLog = (logId) => {
-    const log = historicoGlobal[logId]; if(!log || !log.dadosPlanilha) return;
+    const log = historicoGlobal[logId]; 
+    if(!log || !log.dadosPlanilha) return;
+    
     const d = JSON.parse(log.dadosPlanilha);
-    let html = `<p><b>Tipo:</b> ${d.tipo.toUpperCase()}</p>`;
+    let html = `<div style="line-height: 1.6;">`;
+    html += `<p><b>Tipo:</b> ${d.tipo ? d.tipo.toUpperCase() : 'N/A'}</p>`;
+    
     if(d.tipo === 'venda') {
-        let pag = d.formaPagamento || 'Não informado'; if(d.prazo) pag += ` - ${d.prazo}`;
-        html += `<p><b>Cliente:</b> ${d.razao}</p><p><b>Pagamento:</b> ${pag}</p><p><b>Total:</b> R$ ${d.totalV.toFixed(2)}</p><hr>`;
+        let pag = d.formaPagamento || 'Não informado'; 
+        if(d.prazo) pag += ` - ${d.prazo}`;
+        html += `<p><b>Cliente:</b> ${d.razao || 'N/A'}</p>`;
+        html += `<p><b>CNPJ:</b> ${d.cnpj || 'N/A'}</p>`;
+        html += `<p><b>Pagamento:</b> ${pag}</p>`;
+        html += `<p><b>Valor Total Líquido:</b> <span style="color:green; font-weight:bold;">R$ ${(d.totalV || 0).toFixed(2)}</span></p>`;
     } else {
-        html += `<p><b>Destino:</b> ${d.razaoDestino}</p><p><b>Valor:</b> R$ ${d.resumo.valorTotal.toFixed(2)}</p><hr>`;
+        html += `<p><b>Origem:</b> ${log.nomeLoja || log.lojaId}</p>`;
+        html += `<p><b>Destino:</b> ${d.razaoDestino || 'N/A'}</p>`;
+        html += `<p><b>CNPJ Destino:</b> ${d.cnpjDestino || 'N/A'}</p>`;
+        html += `<p><b>Valor Total:</b> <span style="color:blue; font-weight:bold;">R$ ${(d.resumo?.valorTotal || 0).toFixed(2)}</span></p>`;
     }
-    html += `<table style="width:100%; font-size:12px;"><tr><th>Cód</th><th>Produto</th><th>Qtd</th></tr>`;
-    d.itens.forEach(i => { html += `<tr><td>${i.codigo}</td><td>${i.descricao}</td><td>${i.calcTotalUnidades}</td></tr>`; });
-    html += `</table>`;
+    
+    html += `<hr style="margin: 15px 0;">`;
+    html += `<table style="width:100%; font-size:13px; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #eee; text-align: left;">
+                        <th style="padding: 8px;">Cód</th>
+                        <th style="padding: 8px;">Produto</th>
+                        <th style="padding: 8px; text-align: center;">Qtd un</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+    
+    if(d.itens && d.itens.length > 0) {
+        d.itens.forEach(i => {
+            html += `<tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 8px;">${i.codigo}</td>
+                        <td style="padding: 8px;">${i.descricao}</td>
+                        <td style="padding: 8px; text-align: center;">${i.calcTotalUnidades || i.qtd || 0}</td>
+                     </tr>`;
+        });
+    } else {
+        html += `<tr><td colspan="3" style="text-align:center; padding:10px;">Nenhum item encontrado no backup.</td></tr>`;
+    }
+    
+    html += `</tbody></table></div>`;
+    
     document.getElementById('conteudoDetalhesLog').innerHTML = html;
-    document.getElementById('btnRegerarPlanilhaModal').onclick = () => window.regenerarPlanilha(logId);
+    
+    // Ajuste no botão de baixar do modal para não ficar com borda verde estranha
+    const btnBaixar = document.getElementById('btnRegerarPlanilhaModal');
+    btnBaixar.className = "btn-sucesso"; // Garante que usa a classe do CSS
+    btnBaixar.style.width = "100%";
+    btnBaixar.style.marginTop = "10px";
+    btnBaixar.innerHTML = "⬇️ Baixar Planilha Excel (.xlsx)";
+    
+    btnBaixar.onclick = () => window.regenerarPlanilha(logId);
     document.getElementById('modalDetalhesLog').style.display = 'flex';
 };
 
+// === REGENERAR PLANILHA (DOWNLOAD) ===
 window.regenerarPlanilha = async (logId) => {
-    const log = historicoGlobal[logId]; if(!log) return;
+    const log = historicoGlobal[logId]; 
+    if(!log || !log.dadosPlanilha) return alert("Dados de backup não encontrados.");
+    
     const d = JSON.parse(log.dadosPlanilha);
-    const btn = document.getElementById('btnRegerarPlanilhaModal'); btn.innerText = "⏳ A Gerar...";
+    const btn = document.getElementById('btnRegerarPlanilhaModal'); 
+    const textoOriginal = btn.innerHTML;
+    
+    btn.innerText = "⏳ A processar Excel...";
+    btn.disabled = true;
+
     try {
         const isVenda = d.tipo === 'venda';
-        const response = await fetch(isVenda ? './PEDIDO.xlsx' : './TRANSFERENCIA.xlsx');
-        const buffer = await response.arrayBuffer(); const wb = new ExcelJS.Workbook(); await wb.xlsx.load(buffer);
-        const sheet = wb.getWorksheet(isVenda ? "ROMANEIO SORVETE" : "ROMANEIO"); // Simplificado para Admin
+        const template = isVenda ? './PEDIDO.xlsx' : './TRANSFERENCIA.xlsx';
+        
+        const response = await fetch(template);
+        if(!response.ok) throw new Error("Template não encontrado.");
+        
+        const buffer = await response.arrayBuffer(); 
+        const wb = new ExcelJS.Workbook(); 
+        await wb.xlsx.load(buffer);
+
+        // Preenchimento básico para o Admin recuperar o arquivo
+        const sheet = wb.worksheets[0]; // Pega a primeira aba por segurança
         if(sheet) {
-           if(isVenda) { sheet.getCell('E6').value = d.razao; sheet.getCell('J6').value = d.cnpj; sheet.getCell('L7').value = d.totalV; }
-           else { sheet.getCell('K7').value = d.razaoDestino; sheet.getCell('L8').value = d.resumo.valorTotal; }
+            if(isVenda) {
+                sheet.getCell('E6').value = d.razao;
+                sheet.getCell('J6').value = d.cnpj;
+                sheet.getCell('L7').value = d.totalV;
+                let pagStr = d.formaPagamento || "";
+                if(d.prazo) pagStr += " - " + d.prazo;
+                sheet.getCell('F8').value = pagStr;
+            } else {
+                sheet.getCell('K7').value = d.razaoDestino;
+                sheet.getCell('L8').value = d.resumo?.valorTotal || 0;
+            }
         }
-        const outBuffer = await wb.xlsx.writeBuffer(); saveAs(new Blob([outBuffer]), `REGERADO_${d.razao || d.razaoDestino}.xlsx`);
-    } catch (e) { alert("Erro ao regerar."); }
-    btn.innerText = "⬇️ Baixar Novamente";
+
+        const outBuffer = await wb.xlsx.writeBuffer(); 
+        const fileName = `RECORDACO_${(d.razao || d.razaoDestino || 'PLANILHA').replace(/\s+/g, '_')}.xlsx`;
+        saveAs(new Blob([outBuffer]), fileName);
+
+    } catch (e) { 
+        console.error(e);
+        alert("Erro ao regerar: O ficheiro template pode estar ausente no servidor."); 
+    } finally {
+        btn.innerHTML = textoOriginal;
+        btn.disabled = false;
+    }
 };
 
 // === PESQUISAS ===
