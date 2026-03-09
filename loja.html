@@ -42,7 +42,6 @@
         td { padding: 8px; border-bottom: 1px solid #eee; vertical-align: middle; transition: background-color 0.3s; }
         td input[type="number"] { width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 4px; }
         
-        /* NOVO CSS: A cor de destaque quando o produto tem quantidade digitada */
         .linha-destaque { background-color: #fff4cc !important; }
 
         .resumo-box { background: #fff; border: 2px solid #e3000f; padding: 20px; border-radius: 8px; margin-top: 20px; }
@@ -224,7 +223,7 @@
                     tbody.innerHTML += `<tr id="tr_${i}">
                         <td>${p.codigo}</td><td>${p.descricao}</td><td>${p.engradado}</td><td style="${p.isPromo?'color:orange;font-weight:bold;':''}">R$ ${p.precoFinal.toFixed(2)}</td>
                         <td><input type="number" id="eng_${i}" value="0" min="0" step="0.5" oninput="window.calcularTudo()"></td>
-                        <td><input type="number" id="uni_${i}" value="0" min="0" step="0.5" oninput="window.calcularTudo()"></td>
+                        <td><input type="number" id="uni_${i}" value="0" min="0" step="1" oninput="window.calcularTudo()"></td>
                         <td id="sub_${i}" style="font-weight:bold;">R$ 0.00</td>
                     </tr>`;
                 }
@@ -246,17 +245,32 @@
 
             produtosGlobais.forEach((p, i) => {
                 let inputEng = document.getElementById(`eng_${i}`);
-                if(!inputEng) return;
+                let inputUni = document.getElementById(`uni_${i}`);
+                if(!inputEng || !inputUni) return;
                 
-                let calcQtdCx = parseFloat(inputEng.value) || 0;
-                let calcQtdUn = parseFloat(document.getElementById(`uni_${i}`).value) || 0;
-                let qtd = (calcQtdCx * p.engradado) + calcQtdUn;
+                let cx = parseFloat(inputEng.value) || 0;
+                let un = parseFloat(inputUni.value) || 0;
+
+                // --- TRAVA DE SEGURANÇA (0.5 para Caixa, Inteiro para Unidade) ---
+                if ((cx * 10) % 5 !== 0) {
+                    alert(`⚠️ ERRO NO ENGRADADO: O produto "${p.descricao}" não aceita o valor ${cx}.\nUse apenas múltiplos de meio em meio (Ex: 0.5, 1, 1.5, 2).`);
+                    inputEng.value = "";
+                    cx = 0;
+                }
+                if (un % 1 !== 0) {
+                    alert(`⚠️ ERRO NA UNIDADE: O produto "${p.descricao}" não aceita o valor fracionado ${un}.\nUse apenas valores inteiros nas unidades (Ex: 1, 2, 3, 10).`);
+                    inputUni.value = "";
+                    un = 0;
+                }
+                // ------------------------------------------------------------------
+
+                let qtd = (cx * p.engradado) + un;
                 let sub = qtd * p.precoFinal;
 
                 document.getElementById(`sub_${i}`).innerText = `R$ ${sub.toFixed(2)}`;
                 
-                p.calcQtdCx = calcQtdCx; 
-                p.calcQtdUn = calcQtdUn;
+                p.calcQtdCx = cx; 
+                p.calcQtdUn = un;
                 p.calcTotalUnidades = qtd; 
                 p.calcSubtotal = sub;
 
@@ -266,7 +280,6 @@
                 resumo[cat].u += qtd;
                 resumo[cat].vBruto += sub;
 
-                // Destaca a linha se houver quantidade
                 let tr = document.getElementById(`tr_${i}`);
                 if (tr) {
                     if (qtd > 0) tr.classList.add('linha-destaque');
@@ -309,9 +322,14 @@
         };
 
         window.gerarExcelPedido = async () => {
-            const razao = document.getElementById('cliRazao').value || "Cliente Não Informado";
-            const cnpj = document.getElementById('cliCnpj').value || "Sem CNPJ/CPF";
-            const prazo = document.getElementById('cliPrazo').value || "À vista";
+            const razao = document.getElementById('cliRazao').value.trim();
+            const cnpj = document.getElementById('cliCnpj').value.trim();
+            const prazo = document.getElementById('cliPrazo').value.trim();
+
+            if(!razao || !cnpj || !prazo) {
+                alert("⚠️ ATENÇÃO: Os campos Razão Social, CPF/CNPJ e Prazo não podem ficar em branco!");
+                return; 
+            }
 
             document.querySelector('.btn-gerar').innerText = "⏳ GERANDO PEDIDO... AGUARDE";
 
