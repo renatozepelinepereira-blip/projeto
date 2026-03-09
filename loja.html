@@ -10,16 +10,15 @@
         body { background: #f8f9fa; padding: 20px; color: #333; }
         .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 12px; border-top: 5px solid #e3000f; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
         
-        /* MENU SANDUÍCHE E HEADER */
         header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e3000f; padding-bottom: 15px; margin-bottom: 20px; }
         .header-left { display: flex; align-items: center; gap: 15px; }
         .menu-btn { background: none; border: none; font-size: 28px; cursor: pointer; color: #e3000f; }
         h1, h2 { color: #e3000f; }
         
-        /* SIDEBAR (GAVETA) */
+        /* SIDEBAR / MENU SANDUÍCHE */
         .sidebar { position: fixed; left: -250px; top: 0; width: 250px; height: 100%; background: #fff; box-shadow: 2px 0 5px rgba(0,0,0,0.2); transition: 0.3s; z-index: 1000; display: flex; flex-direction: column; padding-top: 20px; }
         .sidebar.open { left: 0; }
-        .sidebar h2 { text-align: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .sidebar h2 { text-align: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; color: #e3000f; }
         .sidebar a { padding: 15px 20px; text-decoration: none; color: #333; font-weight: bold; border-bottom: 1px solid #eee; display: block; }
         .sidebar a:hover { background: #f4f4f4; color: #e3000f; }
         .sidebar a.active { background: #e3000f; color: white; }
@@ -49,6 +48,7 @@
         .resumo-item { background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #eee; }
         .resumo-item span { display: block; font-size: 18px; font-weight: bold; color: #e3000f; margin-top: 5px; }
         .total-final { font-size: 24px; text-align: right; border-top: 2px dashed #ccc; padding-top: 15px; margin-top: 10px; }
+        
         button.action-btn { background: #444; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
         .btn-gerar { background: #28a745; width: 100%; padding: 15px; font-size: 18px; font-weight: bold; margin-top: 20px; border-radius: 8px; border: none; color: white; cursor: pointer; }
         .btn-gerar:hover { background: #218838; }
@@ -150,26 +150,18 @@
             totalU: 0, totalV: 0
         };
 
-        // CONTROLE DO MENU SANDUÍCHE
         window.toggleMenu = () => {
             document.getElementById('sidebar').classList.toggle('open');
             document.getElementById('overlay').classList.toggle('show');
         };
 
-        // MÁSCARA INTELIGENTE CPF/CNPJ
+        // Máscara Inteligente CPF/CNPJ
         document.getElementById('cliCnpj').addEventListener('input', function (e) {
-            let x = e.target.value.replace(/\D/g, ''); // Remove tudo que não é número
+            let x = e.target.value.replace(/\D/g, '');
             if (x.length <= 11) {
-                // Formato CPF
-                x = x.replace(/(\d{3})(\d)/, '$1.$2');
-                x = x.replace(/(\d{3})(\d)/, '$1.$2');
-                x = x.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                x = x.replace(/(\d{3})(\d)/, '$1.$2'); x = x.replace(/(\d{3})(\d)/, '$1.$2'); x = x.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
             } else {
-                // Formato CNPJ
-                x = x.replace(/^(\d{2})(\d)/, '$1.$2');
-                x = x.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
-                x = x.replace(/\.(\d{3})(\d)/, '.$1/$2');
-                x = x.replace(/(\d{4})(\d)/, '$1-$2');
+                x = x.replace(/^(\d{2})(\d)/, '$1.$2'); x = x.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3'); x = x.replace(/\.(\d{3})(\d)/, '.$1/$2'); x = x.replace(/(\d{4})(\d)/, '$1-$2');
             }
             e.target.value = x;
         });
@@ -192,7 +184,8 @@
             if(planilhas.promo) { document.getElementById('btnTabPromo').style.display = 'block'; primeiraAba = primeiraAba || 'promo'; }
             if(primeiraAba) window.mudarAba(primeiraAba);
 
-            const tabelaId = planilhas.padrao ? 'padrao' : userId;
+            // Permite usar a "tf" (tabela padrao) se configurado, ou a própria da loja
+            const tabelaId = planilhas.padrao ? 'padrao' : userId; 
             const [precoSnap, promoSnap, prodSnap] = await Promise.all([
                 getDoc(doc(db, "precos", tabelaId)),
                 planilhas.promo ? getDoc(doc(db, "precos", userId + "_promo")) : Promise.resolve({ exists: () => false }),
@@ -230,8 +223,8 @@
                 if(tbody) {
                     tbody.innerHTML += `<tr id="tr_${i}">
                         <td>${p.codigo}</td><td>${p.descricao}</td><td>${p.engradado}</td><td style="${p.isPromo?'color:orange;font-weight:bold;':''}">R$ ${p.precoFinal.toFixed(2)}</td>
-                        <td><input type="number" id="eng_${i}" value="0" min="0" oninput="window.calcularTudo()"></td>
-                        <td><input type="number" id="uni_${i}" value="0" min="0" oninput="window.calcularTudo()"></td>
+                        <td><input type="number" id="eng_${i}" value="0" min="0" step="0.5" oninput="window.calcularTudo()"></td>
+                        <td><input type="number" id="uni_${i}" value="0" min="0" step="0.5" oninput="window.calcularTudo()"></td>
                         <td id="sub_${i}" style="font-weight:bold;">R$ 0.00</td>
                     </tr>`;
                 }
@@ -255,13 +248,15 @@
                 let inputEng = document.getElementById(`eng_${i}`);
                 if(!inputEng) return;
                 
-                let qtd = ((parseInt(inputEng.value)||0) * p.engradado) + (parseInt(document.getElementById(`uni_${i}`).value)||0);
+                let calcQtdCx = parseFloat(inputEng.value) || 0;
+                let calcQtdUn = parseFloat(document.getElementById(`uni_${i}`).value) || 0;
+                let qtd = (calcQtdCx * p.engradado) + calcQtdUn;
                 let sub = qtd * p.precoFinal;
 
                 document.getElementById(`sub_${i}`).innerText = `R$ ${sub.toFixed(2)}`;
                 
-                p.calcQtdCx = parseInt(inputEng.value)||0; 
-                p.calcQtdUn = parseInt(document.getElementById(`uni_${i}`).value)||0;
+                p.calcQtdCx = calcQtdCx; 
+                p.calcQtdUn = calcQtdUn;
                 p.calcTotalUnidades = qtd; 
                 p.calcSubtotal = sub;
 
@@ -316,7 +311,7 @@
             try {
                 const response = await fetch('./PEDIDO.xlsx');
                 if(!response.ok) {
-                    alert("⚠️ Erro: O arquivo modelo 'PEDIDO.xlsx' não foi encontrado.");
+                    alert("⚠️ Erro: O arquivo modelo 'PEDIDO.xlsx' não foi encontrado. Suba ele no Cloudflare.");
                     document.querySelector('.btn-gerar').innerText = "⬇️ GERAR PEDIDO EM EXCEL";
                     return;
                 }
@@ -371,7 +366,7 @@
                 
             } catch (error) {
                 console.error("Erro ao gerar Excel:", error);
-                alert("Ocorreu um erro ao processar a planilha.");
+                alert("Ocorreu um erro ao processar a planilha. Verifique se o PEDIDO.xlsx está no Cloudflare e não possui validações infinitas.");
             }
 
             document.querySelector('.btn-gerar').innerText = "⬇️ GERAR PEDIDO EM EXCEL";
