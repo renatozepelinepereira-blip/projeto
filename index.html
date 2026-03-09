@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Eskimó</title>
+    <link rel="stylesheet" href="css/index.css">
+</head>
+<body>
+    <div id="loginForm" class="card">
+        <h1>Portal Eskimó</h1>
+        <input type="text" id="user" placeholder="Usuário (Login)" required autocomplete="off">
+        <input type="password" id="pass" placeholder="Senha" required>
+        <button type="button" id="btnLogin">Entrar</button>
+        <p id="msg"></p>
+    </div>
+
+    <div id="modalFirstLogin" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="color: #28a745; margin-bottom: 10px;">Primeiro Acesso</h2>
+            <p>Você está a utilizar a senha padrão. Por questões de segurança, crie a sua própria senha de acesso.</p>
+            <input type="password" id="newPass" placeholder="Nova Senha">
+            <input type="password" id="confirmPass" placeholder="Confirme a Nova Senha">
+            <button type="button" id="btnSaveNewPass" style="background: #28a745;">Guardar e Entrar</button>
+            <p id="msgFirst" style="color: red; margin-top: 10px; display: none; font-weight: bold; font-size: 14px;"></p>
+        </div>
+    </div>
+
+    <script type="module" src="js/index.js"></script>
+</body>
+</html>
