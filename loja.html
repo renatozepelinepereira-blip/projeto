@@ -3,15 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <title>Pedidos - Eskimó</title>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
         body { background: #f8f9fa; padding: 20px; color: #333; }
         .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 12px; border-top: 5px solid #e3000f; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
         header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e3000f; padding-bottom: 15px; margin-bottom: 20px; }
         h1, h2 { color: #e3000f; }
-        .client-box { background: #f4f4f4; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 15px; border-left: 4px solid #e3000f; }
+        
+        /* Ajustado para 4 colunas para caber o Prazo */
+        .client-box { background: #f4f4f4; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 15px; border-left: 4px solid #e3000f; }
         .client-box input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px; }
+        
         .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; flex-wrap: wrap; }
         .tab-btn { background: none; border: none; padding: 10px 20px; cursor: pointer; color: #666; font-size: 16px; display: none; }
         .tab-btn.active { color: #e3000f; border-bottom: 3px solid #e3000f; font-weight: bold; }
@@ -41,6 +45,7 @@
         <div class="client-box">
             <div><label><b>Razão Social do Cliente</b></label><input type="text" id="cliRazao" placeholder="Nome da empresa"></div>
             <div><label><b>CNPJ</b></label><input type="text" id="cliCnpj" placeholder="00.000.000/0000-00"></div>
+            <div><label><b>Prazo</b></label><input type="text" id="cliPrazo" placeholder="Ex: 15 dias"></div>
             <div><label><b>Desconto (%)</b></label><input type="number" id="cliDesc" value="0" min="0" max="100" oninput="window.calcularTudo()"></div>
         </div>
 
@@ -124,7 +129,6 @@
                 const objPromo = precosPromo[item.codigo];
                 const objNormal = meusPrecos[item.codigo];
 
-                // LÓGICA DE EXCLUSIVIDADE: Se for promo, NÃO aparece no normal. E oculta se "visivel" for false.
                 if(planilhas.promo && objPromo !== undefined) {
                     let visivel = typeof objPromo === 'object' ? (objPromo.visivel !== false) : true;
                     let preco = typeof objPromo === 'object' ? objPromo.preco : objPromo;
@@ -182,35 +186,93 @@
             document.getElementById('valComDesc').innerText = "R$ " + valFinal.toFixed(2);
         };
 
-        window.gerarExcelPedido = () => {
-            const razao = document.getElementById('cliRazao').value || "Cliente_S_Nome";
-            const cnpj = document.getElementById('cliCnpj').value || "Sem_CNPJ";
-            const desc = document.getElementById('cliDesc').value || "0";
-            const wb = XLSX.utils.book_new();
-            
-            const criarAba = (nomeAba, tipoCategoria) => {
-                let selecionados = produtosGlobais.filter(p => (tipoCategoria === 'promo' ? p.isPromo : (p.catReal === tipoCategoria && !p.isPromo)) && p.calcTotalUnidades > 0);
-                if(selecionados.length === 0) return;
+        window.gerarExcelPedido = async () => {
+            const razao = document.getElementById('cliRazao').value || "Cliente Não Informado";
+            const cnpj = document.getElementById('cliCnpj').value || "Sem CNPJ";
+            const prazo = document.getElementById('cliPrazo').value || "À vista";
+            const desc = parseFloat(document.getElementById('cliDesc').value) || 0;
 
-                let aoa = [
-                    [`ROMANEIO - ${nomeAba.toUpperCase()}`],
-                    ["CLIENTE:", razao, "", "CNPJ:", cnpj],
-                    ["DESCONTO APLICADO:", desc + "%", "", "DATA:", new Date().toLocaleDateString()],
-                    [], ["CÓDIGO", "PRODUTO", "QTD CX", "QTD UN", "TOTAL (R$)", "  ", "CÓDIGO", "PRODUTO", "QTD CX", "QTD UN", "TOTAL (R$)"]
-                ];
+            document.querySelector('.btn-gerar').innerText = "⏳ GERANDO PEDIDO... AGUARDE";
 
-                let metade = Math.ceil(selecionados.length / 2);
-                for(let i = 0; i < metade; i++) {
-                    let esq = selecionados[i]; let dir = selecionados[i + metade];
-                    aoa.push([esq.codigo, esq.descricao, esq.calcQtdCx, esq.calcQtdUn, esq.calcSubtotal, "  ", dir ? dir.codigo : "", dir ? dir.descricao : "", dir ? dir.calcQtdCx : "", dir ? dir.calcQtdUn : "", dir ? dir.calcSubtotal : ""]);
+            try {
+                const response = await fetch('./PEDIDO.xlsx');
+                if(!response.ok) {
+                    alert("⚠️ Erro: O arquivo modelo 'PEDIDO.xlsx' não foi encontrado. Suba ele na raiz do Cloudflare!");
+                    document.querySelector('.btn-gerar').innerText = "⬇️ GERAR PEDIDO EM EXCEL";
+                    return;
                 }
-                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), nomeAba);
-            };
+                const buffer = await response.arrayBuffer();
+                const wb = new ExcelJS.Workbook();
+                await wb.xlsx.load(buffer);
 
-            criarAba("SORVETES", "sorvete"); criarAba("SECOS", "seco"); criarAba("BALDES", "balde"); criarAba("PROMOCOES", "promo");
-            if(wb.SheetNames.length === 0) return alert("Nenhum produto foi selecionado no pedido!");
-            XLSX.writeFile(wb, `PEDIDO_${razao.replace(/\s+/g, '_')}.xlsx`);
+                // Cálculo dos TOTAIS DO PEDIDO INTEIRO para o cabeçalho
+                let qtdTotalPedido = 0;
+                let valTotalPedido = 0;
+                produtosGlobais.forEach(p => {
+                    if(p.calcTotalUnidades > 0) {
+                        qtdTotalPedido += p.calcTotalUnidades;
+                        valTotalPedido += p.isPromo ? p.calcSubtotal : (p.calcSubtotal - (p.calcSubtotal * (desc/100)));
+                    }
+                });
+
+                const preencherAba = (nomeAba, tipoCategoria) => {
+                    const sheet = wb.getWorksheet(nomeAba);
+                    if(!sheet) return; 
+
+                    let selecionados = produtosGlobais.filter(p => (tipoCategoria === 'promo' ? p.isPromo : (p.catReal === tipoCategoria && !p.isPromo)) && p.calcTotalUnidades > 0);
+                    if(selecionados.length === 0) return;
+
+                    // CABEÇALHO CONFORME SOLICITADO
+                    sheet.getCell('E6').value = razao;       
+                    sheet.getCell('J6').value = cnpj;        
+                    sheet.getCell('F7').value = qtdTotalPedido; 
+                    sheet.getCell('L7').value = valTotalPedido; 
+                    sheet.getCell('D8').value = desc + "%";  
+                    sheet.getCell('F8').value = prazo;
+
+                    // Inicia os produtos na linha 11 (Ajuste este número se precisar)
+                    let linhaAtual = 10; 
+                    let metade = Math.ceil(selecionados.length / 2);
+
+                    for(let i = 0; i < metade; i++) {
+                        let esq = selecionados[i]; 
+                        let dir = selecionados[i + metade];
+
+                        // Lado Esquerdo - Colunas C, D, E, F, G
+                        sheet.getCell(`C${linhaAtual}`).value = esq.codigo;
+                        sheet.getCell(`D${linhaAtual}`).value = esq.calcQtdCx;
+                        sheet.getCell(`E${linhaAtual}`).value = esq.calcQtdUn;
+                        sheet.getCell(`F${linhaAtual}`).value = esq.descricao;
+                        sheet.getCell(`G${linhaAtual}`).value = esq.precoFinal; 
+
+                        // Lado Direito - Colunas I, J, K, L, M
+                        if(dir) {
+                            sheet.getCell(`I${linhaAtual}`).value = dir.codigo;
+                            sheet.getCell(`J${linhaAtual}`).value = dir.calcQtdCx;
+                            sheet.getCell(`K${linhaAtual}`).value = dir.calcQtdUn;
+                            sheet.getCell(`L${linhaAtual}`).value = dir.descricao;
+                            sheet.getCell(`M${linhaAtual}`).value = dir.precoFinal; 
+                        }
+
+                        linhaAtual++;
+                    }
+                };
+
+                preencherAba("ROMANEIO SORVETE", "sorvete");
+                preencherAba("ROMANEIO SECO", "seco");
+                preencherAba("ROMANEIO BALDE", "balde");
+
+                const outBuffer = await wb.xlsx.writeBuffer();
+                saveAs(new Blob([outBuffer]), `PEDIDO_${razao.replace(/\s+/g, '_').toUpperCase()}.xlsx`);
+                
+            } catch (error) {
+                console.error("Erro ao gerar Excel:", error);
+                alert("Ocorreu um erro ao processar a planilha. Verifique se o PEDIDO.xlsx está no Cloudflare.");
+            }
+
+            document.querySelector('.btn-gerar').innerText = "⬇️ GERAR PEDIDO EM EXCEL";
         };
+
         iniciar();
     </script>
 </body>
