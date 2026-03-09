@@ -25,7 +25,7 @@
         .checkbox-group label { display: flex; align-items: center; gap: 5px; cursor: pointer; background: #f4f4f4; padding: 8px 12px; border-radius: 6px; }
         .modal { display: none; background: #fff; border: 2px solid #e3000f; padding: 20px; border-radius: 8px; margin-top: 20px; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
+        th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
     </style>
 </head>
 <body>
@@ -39,11 +39,6 @@
             <div>
                 <div class="card" style="margin-bottom: 20px;">
                     <h2>Importar Planilhas (.xlsx ou .csv)</h2>
-                    <p style="font-size: 13px; color: #666; margin-bottom: 10px;">
-                        • Tabela específica: <b>nomedaloja.xlsx</b><br>
-                        • Tabela PADRÃO: <b>padrao.xlsx</b><br>
-                        • Tabela Promoções: <b>nomedaloja_promo.xlsx</b>
-                    </p>
                     <input type="file" id="fileCsv" accept=".csv, .xlsx" multiple>
                     <button id="btnUpload" style="background: #28a745;">Subir Planilha para o Banco</button>
                 </div>
@@ -59,7 +54,7 @@
                 <div class="card modal" id="modalEditar">
                     <h2 id="tituloForm">Editar Usuário</h2>
                     <input type="hidden" id="editId">
-                    <input type="text" id="editLogin" placeholder="Login da loja (ex: dourados)" disabled>
+                    <input type="text" id="editLogin" placeholder="Login da loja" disabled>
                     <input type="text" id="editNome" placeholder="Razão Social / Nome da Filial">
                     <input type="text" id="editSenha" placeholder="Senha">
                     
@@ -81,12 +76,15 @@
                     <button onclick="document.getElementById('modalEditar').style.display='none'" style="background:#666;">Cancelar</button>
                 </div>
 
-                <div class="card modal" id="modalPrecos" style="max-height: 600px; overflow-y: auto;">
+                <div class="card modal" id="modalPrecos">
                     <h2 id="tituloPrecos">Editor de Preços</h2>
-                    <p style="font-size: 12px; color: #666;">Altere os valores e clique em salvar no final da lista.</p>
+                    <button onclick="window.adicionarItemEditor()" style="background:#17a2b8; margin-bottom:15px;">+ Novo Produto</button>
                     <input type="hidden" id="editTabelaId">
-                    <div id="listaEdicaoPrecos"></div>
-                    <button id="btnSalvarPrecos" style="background:#28a745; margin-top:20px;">💾 Salvar Novos Preços</button>
+                    
+                    <div id="listaEdicaoPrecos" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 20px;"></div>
+                    
+                    <button id="btnSalvarPrecos" style="background:#28a745;">💾 Salvar Somente Nesta Loja</button>
+                    <button id="btnSalvarTodas" style="background:#dc3545;">🌍 Aplicar para TODAS as Lojas</button>
                     <button onclick="document.getElementById('modalPrecos').style.display='none'" style="background:#666;">Cancelar</button>
                 </div>
             </div>
@@ -95,7 +93,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+        // NOVO: Adicionado deleteField para limpar o campo sem quebrar a loja toda
+        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc, deleteField } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8",
@@ -110,6 +109,8 @@
         if(localStorage.getItem('tipo') !== 'admin') window.location.href = 'index.html';
 
         let usuariosData = {};
+        let editorItens = [];
+        let itensExcluidos = [];
 
         async function carregarLojas() {
             const snap = await getDocs(collection(db, "usuarios"));
@@ -121,7 +122,7 @@
                 usuariosData[d.id] = d.data();
                 const u = d.data();
                 lista.innerHTML += `<li>
-                    <span><b>${d.id}</b> - ${u.nomeLoja} ${u.planilhas?.padrao ? '<b style="color:orange; font-size:10px;">[TABELA PADRÃO]</b>' : ''}</span>
+                    <span><b>${d.id}</b> - ${u.nomeLoja} ${u.planilhas?.padrao ? '<b style="color:orange; font-size:10px;">[PADRÃO]</b>' : ''}</span>
                     <div>
                         <button class="btn-small btn-preco" onclick="window.abrirPrecos('${d.id}')">💲 Preços</button>
                         <button class="btn-small btn-edit" onclick="window.editar('${d.id}')">Editar</button>
@@ -131,157 +132,145 @@
             });
         }
 
-        window.abrirNovoUsuario = () => {
-            document.getElementById('modalPrecos').style.display = 'none';
-            document.getElementById('editId').value = "NOVO";
-            document.getElementById('editLogin').value = "";
-            document.getElementById('editLogin').disabled = false;
-            document.getElementById('editNome').value = "";
-            document.getElementById('editSenha').value = "";
-            document.getElementById('chkAdmin').checked = false;
-            document.getElementById('chkPadrao').checked = false;
-            document.getElementById('chkSorvete').checked = true;
-            document.getElementById('chkSeco').checked = false;
-            document.getElementById('chkBalde').checked = false;
-            document.getElementById('chkPromo').checked = false;
-            document.getElementById('modalEditar').style.display = 'block';
-        };
-
-        window.editar = (id) => {
-            document.getElementById('modalPrecos').style.display = 'none';
-            const u = usuariosData[id];
-            document.getElementById('editId').value = id;
-            document.getElementById('editLogin').value = id;
-            document.getElementById('editLogin').disabled = true; 
-            document.getElementById('editNome').value = u.nomeLoja || "";
-            document.getElementById('editSenha').value = u.senha || "";
-            
-            const plan = u.planilhas || {};
-            document.getElementById('chkAdmin').checked = u.tipo === 'admin';
-            document.getElementById('chkPadrao').checked = plan.padrao || false;
-            document.getElementById('chkSorvete').checked = plan.sorvete !== false; // default true
-            document.getElementById('chkSeco').checked = plan.seco || false;
-            document.getElementById('chkBalde').checked = plan.balde || false;
-            document.getElementById('chkPromo').checked = plan.promo || false;
-            
-            document.getElementById('modalEditar').style.display = 'block';
-        };
-
-        // NOVO: Editor Rápido de Preços
+        // LÓGICA DO EDITOR DE PREÇOS COM VISIBILIDADE
         window.abrirPrecos = async (userId) => {
             document.getElementById('modalEditar').style.display = 'none';
             const u = usuariosData[userId];
             const tabelaId = (u.planilhas && u.planilhas.padrao) ? 'padrao' : userId;
             
-            document.getElementById('tituloPrecos').innerText = `Editando Tabela: ${tabelaId.toUpperCase()}`;
+            document.getElementById('tituloPrecos').innerText = `Editando: ${tabelaId.toUpperCase()}`;
             document.getElementById('editTabelaId').value = tabelaId;
-            document.getElementById('listaEdicaoPrecos').innerHTML = '<p>Carregando catálogo...</p>';
+            document.getElementById('listaEdicaoPrecos').innerHTML = '<p>Carregando...</p>';
             document.getElementById('modalPrecos').style.display = 'block';
 
-            try {
-                // Busca catálogo e preços
-                const [prodSnap, precoSnap] = await Promise.all([
-                    getDocs(collection(db, "produtos")),
-                    getDoc(doc(db, "precos", tabelaId))
-                ]);
+            editorItens = [];
+            itensExcluidos = [];
 
+            try {
+                const [prodSnap, precoSnap] = await Promise.all([getDocs(collection(db, "produtos")), getDoc(doc(db, "precos", tabelaId))]);
                 const precosAtuais = precoSnap.exists() ? precoSnap.data() : {};
-                let html = '<table><tr><th>Produto</th><th>Preço R$</th></tr>';
                 
                 prodSnap.forEach(p => {
                     const cod = p.id;
-                    const desc = p.data().descricao;
-                    const val = precosAtuais[cod] ? precosAtuais[cod].toFixed(2) : "0.00";
-                    html += `<tr>
-                        <td style="font-size:12px;">${cod} - ${desc}</td>
-                        <td><input type="number" step="0.01" id="preco_edit_${cod}" value="${val}" style="padding:5px; margin:0; width:100px;"></td>
-                    </tr>`;
+                    if(precosAtuais[cod] !== undefined) {
+                        let pData = precosAtuais[cod];
+                        let val = typeof pData === 'object' ? pData.preco : pData;
+                        let vis = typeof pData === 'object' ? (pData.visivel !== false) : true;
+                        
+                        editorItens.push({ cod: cod, desc: p.data().descricao, cat: p.data().categoria, eng: p.data().engradado, preco: val, visivel: vis });
+                    }
                 });
-                html += '</table>';
-                document.getElementById('listaEdicaoPrecos').innerHTML = html;
-            } catch (e) {
-                document.getElementById('listaEdicaoPrecos').innerHTML = '<p style="color:red;">Erro ao carregar.</p>';
-            }
+                renderEditor();
+            } catch (e) { document.getElementById('listaEdicaoPrecos').innerHTML = '<p style="color:red;">Erro ao carregar.</p>'; }
         };
 
-        // Salvar Preços Editados Manualmente
-        document.getElementById('btnSalvarPrecos').onclick = async () => {
-            const tabelaId = document.getElementById('editTabelaId').value;
-            const inputs = document.querySelectorAll('input[id^="preco_edit_"]');
-            let novosPrecos = {};
-            
-            inputs.forEach(input => {
-                const cod = input.id.replace('preco_edit_', '');
-                const val = parseFloat(input.value);
-                if(val > 0) novosPrecos[cod] = val;
+        function renderEditor() {
+            let html = `<table><tr><th style="width:10%">Cód</th><th>Produto</th><th style="width:20%">Preço R$</th><th style="width:10%">Visível</th><th style="width:10%">Ação</th></tr>`;
+            editorItens.forEach((item, i) => {
+                html += `<tr>
+                    <td style="font-size:12px;">${item.cod}</td>
+                    <td style="font-size:12px;">${item.desc}</td>
+                    <td><input type="number" step="0.01" value="${item.preco}" onchange="editorItens[${i}].preco = parseFloat(this.value)" style="padding:4px; margin:0;"></td>
+                    <td style="text-align:center;"><input type="checkbox" ${item.visivel ? 'checked' : ''} onchange="editorItens[${i}].visivel = this.checked"></td>
+                    <td><button class="btn-del btn-small" onclick="window.removerItemEditor(${i})">X</button></td>
+                </tr>`;
             });
+            html += '</table>';
+            document.getElementById('listaEdicaoPrecos').innerHTML = html;
+        }
 
-            document.getElementById('btnSalvarPrecos').innerText = "Salvando...";
-            await setDoc(doc(db, "precos", tabelaId), novosPrecos);
-            alert("Preços atualizados com sucesso!");
-            document.getElementById('modalPrecos').style.display = 'none';
-            document.getElementById('btnSalvarPrecos').innerText = "💾 Salvar Novos Preços";
+        window.removerItemEditor = (index) => {
+            itensExcluidos.push(editorItens[index].cod); // Guarda quem foi apagado para limpar do banco
+            editorItens.splice(index, 1);
+            renderEditor();
         };
 
-        window.excluir = async (id) => { if(confirm("Excluir usuário " + id + "?")) { await deleteDoc(doc(db, "usuarios", id)); carregarLojas(); } };
+        window.adicionarItemEditor = () => {
+            const cod = prompt("Código do Produto:");
+            if(!cod || editorItens.find(i => i.cod === cod)) return alert("Código inválido ou já existe.");
+            const desc = prompt("Descrição (Nome):");
+            const cat = prompt("Categoria (SORVETE, SECO ou BALDE):", "SORVETE");
+            const eng = parseInt(prompt("Quantidade no Engradado/Caixa:", "1")) || 1;
+            const preco = parseFloat(prompt("Preço R$:", "0.00")) || 0;
+            
+            editorItens.unshift({ cod, desc, cat, eng, preco, visivel: true });
+            renderEditor();
+        };
 
-        document.getElementById('btnSalvarEdicao').onclick = async () => {
-            const login = document.getElementById('editLogin').value.toLowerCase().trim();
-            if(!login) return alert("O login é obrigatório!");
+        // SALVA ALTERAÇÕES (Múltipla Escolha)
+        async function dispararSalvamento(paraTodas) {
+            const tabelaId = document.getElementById('editTabelaId').value;
+            let btnId = paraTodas ? 'btnSalvarTodas' : 'btnSalvarPrecos';
+            document.getElementById(btnId).innerText = "Salvando...";
 
-            const dados = {
-                senha: document.getElementById('editSenha').value,
-                nomeLoja: document.getElementById('editNome').value,
-                tipo: document.getElementById('chkAdmin').checked ? "admin" : "loja",
-                planilhas: {
-                    padrao: document.getElementById('chkPadrao').checked,
-                    sorvete: document.getElementById('chkSorvete').checked,
-                    seco: document.getElementById('chkSeco').checked,
-                    balde: document.getElementById('chkBalde').checked,
-                    promo: document.getElementById('chkPromo').checked
+            let updates = {};
+            let batchProdutos = [];
+            
+            // Separa os que ficam/atualizam
+            editorItens.forEach(i => {
+                if(i.preco > 0) {
+                    updates[i.cod] = { preco: i.preco, visivel: i.visivel };
+                    batchProdutos.push(i);
                 }
-            };
-            await setDoc(doc(db, "usuarios", login), dados, { merge: true });
-            alert("Usuário salvo com sucesso!");
-            document.getElementById('modalEditar').style.display = 'none';
-            carregarLojas();
-        };
+            });
+            // Separa os que foram excluídos
+            itensExcluidos.forEach(cod => { updates[cod] = deleteField(); });
 
-        // Upload CSV / XLSX
+            // 1. Atualiza Catálogo Mestre
+            for(let item of batchProdutos) {
+                await setDoc(doc(db, "produtos", item.cod), { codigo: item.cod, descricao: item.desc, engradado: item.eng, categoria: item.cat }, { merge: true });
+            }
+
+            // 2. Dispara pros Lojistas
+            if(paraTodas) {
+                if(!confirm("Tem certeza? Todos os usuários receberão essas alterações, exclusões e ocultações!")) {
+                    document.getElementById(btnId).innerText = "🌍 Aplicar para TODAS as Lojas";
+                    return;
+                }
+                const snap = await getDocs(collection(db, "usuarios"));
+                let alvo = ["padrao"];
+                snap.forEach(d => { if(d.data().tipo !== 'admin') alvo.push(d.id); });
+                
+                for(let u of alvo) {
+                    await setDoc(doc(db, "precos", u), updates, { merge: true }); // Merge garante que não apague produtos que a loja tem e que não estavam na tela
+                }
+                alert("Aplicado para TODAS as lojas e para a tabela Padrão!");
+            } else {
+                await setDoc(doc(db, "precos", tabelaId), updates, { merge: true });
+                alert("Preços atualizados com sucesso!");
+            }
+
+            document.getElementById('modalPrecos').style.display = 'none';
+            document.getElementById(btnId).innerText = paraTodas ? "🌍 Aplicar para TODAS as Lojas" : "💾 Salvar Somente Nesta Loja";
+        }
+
+        document.getElementById('btnSalvarPrecos').onclick = () => dispararSalvamento(false);
+        document.getElementById('btnSalvarTodas').onclick = () => dispararSalvamento(true);
+
+        // Upload CSV atualizado para criar objetos visíveis
         document.getElementById('btnUpload').onclick = async () => {
             const files = document.getElementById('fileCsv').files;
             if(files.length === 0) return alert("Selecione os arquivos!");
-            document.getElementById('btnUpload').innerText = "Processando... Aguarde";
-            
             for(let f of files) {
                 const lojaId = f.name.replace(/\.[^/.]+$/, "").toLowerCase().trim();
                 const reader = new FileReader();
                 reader.onload = async (e) => {
                     const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
                     const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
-                    
-                    let precos = {};
-                    let count = 0;
-
+                    let precos = {}; let count = 0;
                     for(let row of rawData) {
-                        let cleanRow = {};
-                        for(let key in row) cleanRow[key.toString().trim().toUpperCase()] = row[key];
-
+                        let cleanRow = {}; for(let key in row) cleanRow[key.toString().trim().toUpperCase()] = row[key];
                         let cod = cleanRow['CODIGO'] || cleanRow['CÓDIGO'];
                         let prod = cleanRow['PRODUTO'];
                         let eng = parseInt(cleanRow['ENGRADADO']) || 1;
                         let cat = cleanRow['CATEGORIA'] ? String(cleanRow['CATEGORIA']).toUpperCase().trim() : 'SORVETE';
-                        
                         let precoStr = String(cleanRow['PRECO'] || cleanRow['PREÇO'] || "0");
                         let preco = parseFloat(precoStr.replace(/R\$/gi, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
 
                         if(cod && prod && preco > 0) {
-                            precos[cod.toString()] = preco;
-                            // Só atualiza o catálogo se NÃO for uma planilha de promoção
+                            precos[cod.toString()] = { preco: preco, visivel: true }; // Novo Padrão de Objeto
                             if(!lojaId.includes('_promo')) {
-                                await setDoc(doc(db, "produtos", cod.toString()), {
-                                    codigo: cod.toString(), descricao: prod, engradado: eng, categoria: cat
-                                }, { merge: true });
+                                await setDoc(doc(db, "produtos", cod.toString()), { codigo: cod.toString(), descricao: prod, engradado: eng, categoria: cat }, { merge: true });
                             }
                             count++;
                         }
@@ -293,9 +282,26 @@
                 };
                 reader.readAsArrayBuffer(f);
             }
-            document.getElementById('btnUpload').innerText = "Subir Planilha para o Banco";
         };
 
+        // Outros controles (Novo e Editar) mantidos
+        window.abrirNovoUsuario = () => { document.getElementById('modalEditar').style.display='block'; document.getElementById('editId').value="NOVO"; document.getElementById('editLogin').disabled=false; };
+        window.editar = (id) => { 
+            const u = usuariosData[id]; const plan = u.planilhas || {};
+            document.getElementById('editId').value = id; document.getElementById('editLogin').value = id; document.getElementById('editLogin').disabled = true;
+            document.getElementById('editNome').value = u.nomeLoja||""; document.getElementById('editSenha').value = u.senha||"";
+            document.getElementById('chkAdmin').checked = u.tipo === 'admin'; document.getElementById('chkPadrao').checked = plan.padrao||false;
+            document.getElementById('chkSorvete').checked = plan.sorvete !== false; document.getElementById('chkSeco').checked = plan.seco||false;
+            document.getElementById('chkBalde').checked = plan.balde||false; document.getElementById('chkPromo').checked = plan.promo||false;
+            document.getElementById('modalEditar').style.display = 'block';
+        };
+        window.excluir = async (id) => { if(confirm("Excluir usuário "+id+"?")){ await deleteDoc(doc(db, "usuarios", id)); carregarLojas();} };
+        document.getElementById('btnSalvarEdicao').onclick = async () => {
+            const login = document.getElementById('editLogin').value.toLowerCase().trim();
+            const dados = { senha: document.getElementById('editSenha').value, nomeLoja: document.getElementById('editNome').value, tipo: document.getElementById('chkAdmin').checked ? "admin" : "loja",
+                planilhas: { padrao: document.getElementById('chkPadrao').checked, sorvete: document.getElementById('chkSorvete').checked, seco: document.getElementById('chkSeco').checked, balde: document.getElementById('chkBalde').checked, promo: document.getElementById('chkPromo').checked } };
+            await setDoc(doc(db, "usuarios", login), dados, { merge: true }); document.getElementById('modalEditar').style.display = 'none'; carregarLojas();
+        };
         carregarLojas();
     </script>
 </body>
