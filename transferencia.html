@@ -9,12 +9,10 @@
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
         body { background: #f8f9fa; padding: 20px; color: #333; }
         .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 12px; border-top: 5px solid #0056b3; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-        
         header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0056b3; padding-bottom: 15px; margin-bottom: 20px; }
         .header-left { display: flex; align-items: center; gap: 15px; }
         .menu-btn { background: none; border: none; font-size: 28px; cursor: pointer; color: #0056b3; }
-        h1 { color: #0056b3; font-size: 22px; }
-        
+        h1 { color: #0056b3; font-size: 22px; } 
         .sidebar { position: fixed; left: -250px; top: 0; width: 250px; height: 100%; background: #fff; box-shadow: 2px 0 5px rgba(0,0,0,0.2); transition: 0.3s; z-index: 1000; display: flex; flex-direction: column; padding-top: 20px; }
         .sidebar.open { left: 0; }
         .sidebar h2 { text-align: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; color: #e3000f; }
@@ -24,31 +22,23 @@
         .sidebar .close-btn { position: absolute; top: 10px; right: 15px; font-size: 24px; background: none; border: none; cursor: pointer; color: #666; }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none; }
         .overlay.show { display: block; }
-
         .client-box { background: #e6f2ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: 2fr 1fr; gap: 15px; border-left: 4px solid #0056b3; }
         .client-box input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px; font-size: 14px; }
-        
         .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 15px; flex-wrap: wrap; }
         .tab-btn { background: none; border: none; padding: 10px 20px; cursor: pointer; color: #666; font-size: 15px; display: none; }
         .tab-btn.active { color: #0056b3; border-bottom: 3px solid #0056b3; font-weight: bold; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        
         table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         th { background: #0056b3; color: white; padding: 10px; text-align: left; font-size: 14px; }
         td { padding: 8px; border-bottom: 1px solid #eee; vertical-align: middle; font-size: 14px; transition: background-color 0.3s; }
         td input[type="number"] { width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-        
-        /* NOVO CSS: A cor de destaque quando o produto tem quantidade digitada */
         .linha-destaque { background-color: #fff4cc !important; }
-
         .resumo-box { background: #fff; border: 2px solid #0056b3; padding: 15px; border-radius: 8px; margin-top: 20px; }
         .resumo-box h2 { font-size: 18px; margin-bottom: 15px; }
-        
         .resumo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; text-align: center; margin-bottom: 15px; }
         .resumo-item { background: #f9f9f9; padding: 12px; border-radius: 6px; border: 1px solid #eee; display: flex; flex-direction: column; justify-content: center; }
-        .resumo-item span { display: block; font-size: 18px; font-weight: bold; color: #0056b3; margin-top: 5px; }
-        
+        .resumo-item span { display: block; font-size: 18px; font-weight: bold; color: #0056b3; margin-top: 5px; } 
         button.action-btn { background: #0056b3; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; transition: 0.2s; }
         button.action-btn:hover { background: #004494; }
     </style>
@@ -71,9 +61,12 @@
             </div>
         </header>
 
+        <datalist id="listaLojasDestino"></datalist>
+        <datalist id="listaCnpjDestino"></datalist>
+
         <div class="client-box">
-            <div><label style="font-size:13px; color:#555;"><b>Filial de Entrada (Destino)</b></label><input type="text" id="cliRazao" placeholder="Nome da Filial que vai receber a mercadoria"></div>
-            <div><label style="font-size:13px; color:#555;"><b>CNPJ da Filial de Entrada</b></label><input type="text" id="cliCnpj" placeholder="00.000.000/0000-00" maxlength="18"></div>
+            <div><label style="font-size:13px; color:#555;"><b>Filial de Entrada (Destino)</b></label><input type="text" id="cliRazao" list="listaLojasDestino" placeholder="Comece a digitar o nome da Filial..." autocomplete="off"></div>
+            <div><label style="font-size:13px; color:#555;"><b>CNPJ da Filial de Entrada</b></label><input type="text" id="cliCnpj" list="listaCnpjDestino" placeholder="00.000.000/0000-00" maxlength="18" autocomplete="off"></div>
         </div>
 
         <div class="tabs" id="tabContainer">
@@ -99,216 +92,168 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, getDocs, collection, query, where, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8",
-            authDomain: "sistema-pedidos-3f2c2.firebaseapp.com",
-            projectId: "sistema-pedidos-3f2c2",
-            storageBucket: "sistema-pedidos-3f2c2.firebasestorage.app",
-            messagingSenderId: "669786014126",
-            appId: "1:669786014126:web:d0da498633a145d56a883f"
-        };
-
+        const firebaseConfig = { apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8", authDomain: "sistema-pedidos-3f2c2.firebaseapp.com", projectId: "sistema-pedidos-3f2c2", storageBucket: "sistema-pedidos-3f2c2.firebasestorage.app", messagingSenderId: "669786014126", appId: "1:669786014126:web:d0da498633a145d56a883f" };
         const db = getFirestore(initializeApp(firebaseConfig));
         const userId = localStorage.getItem('user');
+        const nomeLoja = localStorage.getItem('nome') || userId;
         if(!userId) window.location.href = 'index.html';
-        document.getElementById('txtLoja').innerText = localStorage.getItem('nome') || userId;
+        document.getElementById('txtLoja').innerText = nomeLoja;
         
         let produtosGlobais = [];
+        let filiaisSalvas = [];
         window.lojaCnpj = "Não Cadastrado"; 
 
-        window.toggleMenu = () => {
-            document.getElementById('sidebar').classList.toggle('open');
-            document.getElementById('overlay').classList.toggle('show');
-        };
+        window.toggleMenu = () => { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('show'); };
 
+        // Autocomplete de Filiais e Clientes Extra de Transferência
+        document.getElementById('cliRazao').addEventListener('input', (e) => {
+            const encontrado = filiaisSalvas.find(c => c.razao.toUpperCase() === e.target.value.toUpperCase());
+            if(encontrado) document.getElementById('cliCnpj').value = encontrado.cnpj;
+        });
         document.getElementById('cliCnpj').addEventListener('input', function (e) {
             let x = e.target.value.replace(/\D/g, '');
-            if (x.length <= 11) {
-                x = x.replace(/(\d{3})(\d)/, '$1.$2'); x = x.replace(/(\d{3})(\d)/, '$1.$2'); x = x.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-            } else {
-                x = x.replace(/^(\d{2})(\d)/, '$1.$2'); x = x.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3'); x = x.replace(/\.(\d{3})(\d)/, '.$1/$2'); x = x.replace(/(\d{4})(\d)/, '$1-$2');
-            }
+            if (x.length <= 11) { x = x.replace(/(\d{3})(\d)/, '$1.$2'); x = x.replace(/(\d{3})(\d)/, '$1.$2'); x = x.replace(/(\d{3})(\d{1,2})$/, '$1-$2'); } 
+            else { x = x.replace(/^(\d{2})(\d)/, '$1.$2'); x = x.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3'); x = x.replace(/\.(\d{3})(\d)/, '.$1/$2'); x = x.replace(/(\d{4})(\d)/, '$1-$2'); }
             e.target.value = x;
+            const encontrado = filiaisSalvas.find(c => c.cnpj === x);
+            if(encontrado) document.getElementById('cliRazao').value = encontrado.razao;
         });
 
-        window.mudarAba = (cat) => {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.getElementById('btnTab' + cat.charAt(0).toUpperCase() + cat.slice(1)).classList.add('active');
-            document.getElementById('content_' + cat).classList.add('active');
-        };
+        window.mudarAba = (cat) => { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.getElementById('btnTab' + cat.charAt(0).toUpperCase() + cat.slice(1)).classList.add('active'); document.getElementById('content_' + cat).classList.add('active'); };
 
         async function iniciar() {
+            // Busca o próprio usuário para achar o CNPJ da Base
             const userSnap = await getDoc(doc(db, "usuarios", userId));
             if (userSnap.exists()) window.lojaCnpj = userSnap.data().cnpj || "CNPJ NÃO CADASTRADO";
 
-            const planilhas = userSnap.exists() && userSnap.data().planilhas ? userSnap.data().planilhas : { sorvete: true, seco: false, balde: false };
+            // Busca TODOS os usuários (lojas) para servir de Autocomplete
+            const allUsers = await getDocs(collection(db, "usuarios"));
+            let dlistaNomes = document.getElementById('listaLojasDestino');
+            let dlistaCnpj = document.getElementById('listaCnpjDestino');
             
+            allUsers.forEach(u => {
+                if(u.id !== 'admin' && u.id !== userId) { // Não lista ele mesmo
+                    let fData = { razao: u.data().nomeLoja, cnpj: u.data().cnpj || '' };
+                    filiaisSalvas.push(fData);
+                    dlistaNomes.innerHTML += `<option value="${fData.razao}">`;
+                    if(fData.cnpj) dlistaCnpj.innerHTML += `<option value="${fData.cnpj}">`;
+                }
+            });
+
+            // Busca clientes de transferência manuais que a pessoa salvou
+            const qClientesManuais = query(collection(db, "clientes"), where("lojaId", "==", userId), where("tipo", "==", "transferencia"));
+            const manuaisSnap = await getDocs(qClientesManuais);
+            manuaisSnap.forEach(d => { 
+                filiaisSalvas.push(d.data()); 
+                dlistaNomes.innerHTML += `<option value="${d.data().razao}">`;
+                dlistaCnpj.innerHTML += `<option value="${d.data().cnpj}">`;
+            });
+
+            const planilhas = userSnap.exists() && userSnap.data().planilhas ? userSnap.data().planilhas : { sorvete: true, seco: false, balde: false };
             let primeiraAba = null;
             if(planilhas.sorvete) { document.getElementById('btnTabSorvete').style.display = 'block'; primeiraAba = primeiraAba || 'sorvete'; }
             if(planilhas.seco) { document.getElementById('btnTabSeco').style.display = 'block'; primeiraAba = primeiraAba || 'seco'; }
             if(planilhas.balde) { document.getElementById('btnTabBalde').style.display = 'block'; primeiraAba = primeiraAba || 'balde'; }
             if(primeiraAba) window.mudarAba(primeiraAba);
 
-            const [precoTfSnap, prodSnap] = await Promise.all([
-                getDoc(doc(db, "precos", "tf")),
-                getDocs(collection(db, "produtos"))
-            ]);
-
+            const [precoTfSnap, prodSnap] = await Promise.all([ getDoc(doc(db, "precos", "tf")), getDocs(collection(db, "produtos")) ]);
             const precosTF = precoTfSnap.exists() ? precoTfSnap.data() : {};
 
             prodSnap.forEach(d => {
-                const item = d.data();
-                const objTf = precosTF[item.codigo];
-
+                const item = d.data(); const objTf = precosTF[item.codigo];
                 if (objTf !== undefined) {
-                    let visivel = typeof objTf === 'object' ? (objTf.visivel !== false) : true;
-                    let preco = typeof objTf === 'object' ? objTf.preco : objTf;
-                    if(visivel) produtosGlobais.push({ ...item, precoFinal: preco, catReal: (item.categoria || 'sorvete').toLowerCase().trim() });
+                    if((typeof objTf === 'object' ? (objTf.visivel !== false) : true)) produtosGlobais.push({ ...item, precoFinal: typeof objTf === 'object' ? objTf.preco : objTf, catReal: (item.categoria || 'sorvete').toLowerCase().trim() });
                 }
             });
-
             renderizarTabelas();
         }
 
         function renderizarTabelas() {
             produtosGlobais.forEach((p, i) => {
-                let cat = p.catReal;
-                if(!['sorvete', 'seco', 'balde'].includes(cat)) cat = 'sorvete';
-                
+                let cat = p.catReal; if(!['sorvete', 'seco', 'balde'].includes(cat)) cat = 'sorvete';
                 const tbody = document.querySelector(`#tbl_${cat} tbody`);
                 if(tbody) {
-                    tbody.innerHTML += `<tr id="tr_${i}">
-                        <td>${p.codigo}</td><td>${p.descricao}</td><td>${p.engradado}</td><td>R$ ${p.precoFinal.toFixed(2)}</td>
+                    tbody.innerHTML += `<tr id="tr_${i}"><td>${p.codigo}</td><td>${p.descricao}</td><td>${p.engradado}</td><td>R$ ${p.precoFinal.toFixed(2)}</td>
                         <td><input type="number" id="eng_${i}" value="0" min="0" step="0.5" oninput="window.calcularTudo()"></td>
-                        <td><input type="number" id="uni_${i}" value="0" min="0" step="0.5" oninput="window.calcularTudo()"></td>
-                        <td id="sub_${i}" style="font-weight:bold;">R$ 0.00</td>
-                    </tr>`;
+                        <td><input type="number" id="uni_${i}" value="0" min="0" step="1" oninput="window.calcularTudo()"></td><td id="sub_${i}" style="font-weight:bold;">R$ 0.00</td></tr>`;
                 }
             });
         }
 
         window.calcularTudo = () => {
-            let totalCaixas = 0;
-            let totalPecas = 0;
-            let valorTotal = 0;
+            let totalCaixas = 0; let totalPecas = 0; let valorTotal = 0;
 
             produtosGlobais.forEach((p, i) => {
-                let inputEng = document.getElementById(`eng_${i}`);
-                if(!inputEng) return;
+                let inputEng = document.getElementById(`eng_${i}`); let inputUni = document.getElementById(`uni_${i}`);
+                if(!inputEng || !inputUni) return;
                 
-                let cx = parseFloat(inputEng.value) || 0;
-                let un = parseFloat(document.getElementById(`uni_${i}`).value) || 0;
-                let qtdTotalPecas = (cx * p.engradado) + un;
-                let sub = qtdTotalPecas * p.precoFinal;
+                let cx = parseFloat(inputEng.value) || 0; let un = parseFloat(inputUni.value) || 0;
+                if ((cx * 10) % 5 !== 0) { alert(`⚠️ ERRO NO ENGRADADO: Apenas múltiplos de meio em meio (Ex: 0.5, 1, 1.5).`); inputEng.value = ""; cx = 0; }
+                if (un % 1 !== 0) { alert(`⚠️ ERRO NA UNIDADE: Apenas valores inteiros.`); inputUni.value = ""; un = 0; }
 
+                let qtdTotalPecas = (cx * p.engradado) + un; let sub = qtdTotalPecas * p.precoFinal;
                 document.getElementById(`sub_${i}`).innerText = `R$ ${sub.toFixed(2)}`;
                 
-                p.calcQtdCx = cx; 
-                p.calcQtdUn = un;
-                p.calcTotalUnidades = qtdTotalPecas; 
-                p.calcSubtotal = sub;
+                p.calcQtdCx = cx; p.calcQtdUn = un; p.calcTotalUnidades = qtdTotalPecas; p.calcSubtotal = sub;
+                totalCaixas += cx; totalPecas += qtdTotalPecas; valorTotal += sub;
 
-                totalCaixas += cx;
-                totalPecas += qtdTotalPecas;
-                valorTotal += sub;
-
-                // Destaca a linha se houver quantidade
-                let tr = document.getElementById(`tr_${i}`);
-                if (tr) {
-                    if (qtdTotalPecas > 0) tr.classList.add('linha-destaque');
-                    else tr.classList.remove('linha-destaque');
-                }
+                let tr = document.getElementById(`tr_${i}`); if (tr) { if (qtdTotalPecas > 0) tr.classList.add('linha-destaque'); else tr.classList.remove('linha-destaque'); }
             });
 
-            document.getElementById('resTotalEngradados').innerText = totalCaixas + " cx";
-            document.getElementById('resTotalUnidades').innerText = totalPecas + " un";
-            document.getElementById('resValorTotal').innerText = "R$ " + valorTotal.toFixed(2);
-            
+            document.getElementById('resTotalEngradados').innerText = totalCaixas + " cx"; document.getElementById('resTotalUnidades').innerText = totalPecas + " un"; document.getElementById('resValorTotal').innerText = "R$ " + valorTotal.toFixed(2);
             window.resumoTransferencia = { totalCaixas, totalPecas, valorTotal };
         };
 
         window.gerarExcelTransferencia = async () => {
-            const razaoDestino = document.getElementById('cliRazao').value || "Destino_Nao_Informado";
-            const cnpjDestino = document.getElementById('cliCnpj').value || "Sem CNPJ/CPF";
+            const razaoDestino = document.getElementById('cliRazao').value.trim();
+            const cnpjDestino = document.getElementById('cliCnpj').value.trim();
             const cnpjOrigem = window.lojaCnpj || "CNPJ NÃO CADASTRADO";
             const btn = document.querySelector('button.action-btn');
             
-            btn.innerText = "⏳ GERANDO TRANSFERÊNCIA... AGUARDE";
+            if(!razaoDestino || !cnpjDestino) return alert("⚠️ ATENÇÃO: Os campos Filial de Entrada e CNPJ da Filial não podem ficar em branco!");
+
+            btn.innerText = "⏳ SALVANDO DADOS E GERANDO... AGUARDE";
 
             try {
-                const response = await fetch('./TRANSFERENCIA.xlsx');
-                if(!response.ok) {
-                    alert("⚠️ Erro: O arquivo 'TRANSFERENCIA.xlsx' não foi encontrado. Suba ele no Cloudflare.");
-                    btn.innerText = "⬇️ GERAR PLANILHA DE TRANSFERÊNCIA";
-                    return;
+                // SALVA FILIAL MANUAL SE NÃO EXISTIR NA LISTA GERAL
+                const cnpjLimpo = cnpjDestino.replace(/\D/g, '');
+                const idDestino = `${userId}_${cnpjLimpo}_tf`;
+                if(!filiaisSalvas.find(f => f.cnpj === cnpjDestino)) {
+                    await setDoc(doc(db, "clientes", idDestino), { lojaId: userId, razao: razaoDestino, cnpj: cnpjDestino, tipo: "transferencia" }, { merge: true });
                 }
-                const buffer = await response.arrayBuffer();
-                const wb = new ExcelJS.Workbook();
-                await wb.xlsx.load(buffer);
+
+                // GRAVA O LOG NO HISTÓRICO PARA O ADMIN
+                await addDoc(collection(db, "historico"), { lojaId: userId, nomeLoja: nomeLoja, acao: "Gerou Transferência", destino: razaoDestino, dataHora: serverTimestamp() });
+
+                const response = await fetch('./TRANSFERENCIA.xlsx');
+                if(!response.ok) { alert("⚠️ Erro: O arquivo 'TRANSFERENCIA.xlsx' não foi encontrado."); btn.innerText = "⬇️ GERAR PLANILHA DE TRANSFERÊNCIA"; return; }
+                const buffer = await response.arrayBuffer(); const wb = new ExcelJS.Workbook(); await wb.xlsx.load(buffer);
 
                 const preencherAba = (nomeAba, categoriasPermitidas, tipoAba) => {
-                    const sheet = wb.getWorksheet(nomeAba);
-                    if(!sheet) return; 
-
+                    const sheet = wb.getWorksheet(nomeAba); if(!sheet) return; 
                     let selecionados = produtosGlobais.filter(p => categoriasPermitidas.includes(p.catReal) && p.calcTotalUnidades > 0);
                     if(selecionados.length === 0) return;
 
-                    let qtdTotalUnidadeAba = 0;
-                    let valorTotalAba = 0;
-                    selecionados.forEach(p => {
-                        qtdTotalUnidadeAba += p.calcTotalUnidades;
-                        valorTotalAba += p.calcSubtotal;
-                    });
+                    let qtdTotalUnidadeAba = 0; let valorTotalAba = 0;
+                    selecionados.forEach(p => { qtdTotalUnidadeAba += p.calcTotalUnidades; valorTotalAba += p.calcSubtotal; });
 
-                    if (tipoAba === 'FATURAMENTO') {
-                        sheet.getCell('D7').value = cnpjOrigem;       
-                        sheet.getCell('I7').value = cnpjDestino;        
-                        sheet.getCell('E8').value = qtdTotalUnidadeAba; 
-                        sheet.getCell('J8').value = valorTotalAba; 
-                    } else if (tipoAba === 'ROMANEIO') {
-                        sheet.getCell('E7').value = cnpjOrigem;       
-                        sheet.getCell('K7').value = razaoDestino.replace(/_/g, ' ');        
-                        sheet.getCell('D8').value = window.resumoTransferencia.totalCaixas; 
-                        sheet.getCell('G8').value = window.resumoTransferencia.totalPecas; 
-                        sheet.getCell('L8').value = window.resumoTransferencia.valorTotal; 
-                    }
+                    if (tipoAba === 'FATURAMENTO') { sheet.getCell('D7').value = cnpjOrigem; sheet.getCell('I7').value = cnpjDestino; sheet.getCell('E8').value = qtdTotalUnidadeAba; sheet.getCell('J8').value = valorTotalAba; 
+                    } else if (tipoAba === 'ROMANEIO') { sheet.getCell('E7').value = cnpjOrigem; sheet.getCell('K7').value = razaoDestino.replace(/_/g, ' '); sheet.getCell('D8').value = window.resumoTransferencia.totalCaixas; sheet.getCell('G8').value = window.resumoTransferencia.totalPecas; sheet.getCell('L8').value = window.resumoTransferencia.valorTotal; }
 
                     let linhaAtual = 10; 
-
                     for(let i = 0; i < selecionados.length; i++) {
-                        let item = selecionados[i];
-                        sheet.getCell(`C${linhaAtual}`).value = item.codigo;
-                        
-                        if (tipoAba === 'FATURAMENTO') {
-                            sheet.getCell(`D${linhaAtual}`).value = item.calcTotalUnidades; // Qtd Unitaria
-                            sheet.getCell(`E${linhaAtual}`).value = item.descricao; // Produto
-                            sheet.getCell(`F${linhaAtual}`).value = item.precoFinal; // Valor
-                        } else if (tipoAba === 'ROMANEIO') {
-                            // Romaneio (Sem preço)
-                            sheet.getCell(`D${linhaAtual}`).value = item.calcQtdCx; // Caixa
-                            sheet.getCell(`E${linhaAtual}`).value = item.calcTotalUnidades; // Qtd Unidade
-                            sheet.getCell(`F${linhaAtual}`).value = item.descricao; // Produto
-                        }
-                        
+                        let item = selecionados[i]; sheet.getCell(`C${linhaAtual}`).value = item.codigo;
+                        if (tipoAba === 'FATURAMENTO') { sheet.getCell(`D${linhaAtual}`).value = item.calcTotalUnidades; sheet.getCell(`E${linhaAtual}`).value = item.descricao; sheet.getCell(`F${linhaAtual}`).value = item.precoFinal; 
+                        } else if (tipoAba === 'ROMANEIO') { sheet.getCell(`D${linhaAtual}`).value = item.calcQtdCx; sheet.getCell(`E${linhaAtual}`).value = item.calcTotalUnidades; sheet.getCell(`F${linhaAtual}`).value = item.descricao; }
                         linhaAtual++;
                     }
                 };
 
-                preencherAba("FATURAMENTO - PROD", ["sorvete", "balde"], "FATURAMENTO");
-                preencherAba("FATURAMENTO - SECO", ["seco"], "FATURAMENTO");
-                preencherAba("ROMANEIO", ["sorvete", "seco", "balde"], "ROMANEIO");
-
-                const outBuffer = await wb.xlsx.writeBuffer();
-                saveAs(new Blob([outBuffer]), `TRANSFERENCIA_${razaoDestino.toUpperCase()}.xlsx`);
-                
-            } catch (error) {
-                console.error("Erro ao gerar Excel:", error);
-                alert("Ocorreu um erro ao processar a planilha.");
-            }
-
+                preencherAba("FATURAMENTO - PROD", ["sorvete", "balde"], "FATURAMENTO"); preencherAba("FATURAMENTO - SECO", ["seco"], "FATURAMENTO"); preencherAba("ROMANEIO", ["sorvete", "seco", "balde"], "ROMANEIO");
+                const outBuffer = await wb.xlsx.writeBuffer(); saveAs(new Blob([outBuffer]), `TRANSFERENCIA_${razaoDestino.replace(/\s+/g, '_').toUpperCase()}.xlsx`);
+            } catch (error) { console.error(error); alert("Ocorreu um erro ao processar a planilha."); }
             btn.innerText = "⬇️ GERAR PLANILHA DE TRANSFERÊNCIA";
         };
 
