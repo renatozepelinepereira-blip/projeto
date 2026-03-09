@@ -12,7 +12,6 @@
         header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e3000f; padding-bottom: 15px; margin-bottom: 20px; }
         h1, h2 { color: #e3000f; }
         
-        /* Ajustado de volta para 3 colunas, pois o desconto saiu daqui */
         .client-box { background: #f4f4f4; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 15px; border-left: 4px solid #e3000f; }
         .client-box input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px; }
         
@@ -22,7 +21,6 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         
-        /* Barra de Desconto Individual */
         .discount-bar { background: #fff; padding: 10px 15px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px; display: inline-block; border-left: 4px solid #e3000f; font-size: 14px; }
         .discount-bar input { width: 80px; padding: 5px; margin-left: 10px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-weight: bold; }
 
@@ -32,7 +30,6 @@
         td input[type="number"] { width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 4px; }
         
         .resumo-box { background: #fff; border: 2px solid #e3000f; padding: 20px; border-radius: 8px; margin-top: 20px; }
-        /* Grid atualizado para 5 colunas para caber todas as categorias separadas */
         .resumo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; text-align: center; margin-bottom: 15px; }
         .resumo-item { background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #eee; }
         .resumo-item span { display: block; font-size: 18px; font-weight: bold; color: #e3000f; margin-top: 5px; }
@@ -92,6 +89,7 @@
                 <div class="resumo-item" style="background: #ffe6e6;">Total Unidades<span id="resQtdTotal" style="color:#333; margin-top:15px;">0 un</span></div>
             </div>
             <div class="total-final">
+                <div id="divSemDesc" style="font-size: 16px; color: #666; display: none;">Total sem Desconto: <s id="valSemDesc">R$ 0,00</s></div>
                 <div style="color: #28a745;"><b>TOTAL GERAL DO PEDIDO: <span id="valComDesc">R$ 0,00</span></b></div>
             </div>
             
@@ -117,13 +115,11 @@
         document.getElementById('txtLoja').innerText = localStorage.getItem('nome') || userId;
         
         let produtosGlobais = [];
-        
-        // Objeto global para guardar os valores calculados que irão para o Excel
         window.resumoGlobal = {
-            sorvete: { u: 0, vLiq: 0, desc: 0 },
-            seco:    { u: 0, vLiq: 0, desc: 0 },
-            balde:   { u: 0, vLiq: 0, desc: 0 },
-            promo:   { u: 0, vLiq: 0, desc: 0 },
+            sorvete: { u: 0, vBruto: 0, vLiq: 0, desc: 0 },
+            seco:    { u: 0, vBruto: 0, vLiq: 0, desc: 0 },
+            balde:   { u: 0, vBruto: 0, vLiq: 0, desc: 0 },
+            promo:   { u: 0, vBruto: 0, vLiq: 0, desc: 0 },
             totalU: 0, totalV: 0
         };
 
@@ -192,7 +188,6 @@
         }
 
         window.calcularTudo = () => {
-            // Captura os descontos individuais
             let dSorv = parseFloat(document.getElementById('desc_sorvete').value) || 0;
             let dSeco = parseFloat(document.getElementById('desc_seco').value) || 0;
             let dBald = parseFloat(document.getElementById('desc_balde').value) || 0;
@@ -226,34 +221,38 @@
                 resumo[cat].vBruto += sub;
             });
 
-            // Aplica os descontos matemáticos por categoria
             resumo.sorvete.vLiq = resumo.sorvete.vBruto - (resumo.sorvete.vBruto * (dSorv / 100));
             resumo.seco.vLiq = resumo.seco.vBruto - (resumo.seco.vBruto * (dSeco / 100));
             resumo.balde.vLiq = resumo.balde.vBruto - (resumo.balde.vBruto * (dBald / 100));
             resumo.promo.vLiq = resumo.promo.vBruto - (resumo.promo.vBruto * (dProm / 100));
 
-            // Atualiza os painéis na tela
             document.getElementById('resQtdSorvete').innerText = resumo.sorvete.u + " un";
             document.getElementById('resValSorvete').innerText = "R$ " + resumo.sorvete.vLiq.toFixed(2);
-            
             document.getElementById('resQtdSeco').innerText = resumo.seco.u + " un";
             document.getElementById('resValSeco').innerText = "R$ " + resumo.seco.vLiq.toFixed(2);
-            
             document.getElementById('resQtdBalde').innerText = resumo.balde.u + " un";
             document.getElementById('resValBalde').innerText = "R$ " + resumo.balde.vLiq.toFixed(2);
-            
             document.getElementById('resQtdPromo').innerText = resumo.promo.u + " un";
             document.getElementById('resValPromo').innerText = "R$ " + resumo.promo.vLiq.toFixed(2);
             
             let totalUn = resumo.sorvete.u + resumo.seco.u + resumo.balde.u + resumo.promo.u;
-            let valFinal = resumo.sorvete.vLiq + resumo.seco.vLiq + resumo.balde.vLiq + resumo.promo.vLiq;
+            let valBrutoFinal = resumo.sorvete.vBruto + resumo.seco.vBruto + resumo.balde.vBruto + resumo.promo.vBruto;
+            let valLiqFinal = resumo.sorvete.vLiq + resumo.seco.vLiq + resumo.balde.vLiq + resumo.promo.vLiq;
             
             document.getElementById('resQtdTotal').innerText = totalUn + " un";
-            document.getElementById('valComDesc').innerText = "R$ " + valFinal.toFixed(2);
+            document.getElementById('valComDesc').innerText = "R$ " + valLiqFinal.toFixed(2);
 
-            // Salva na memória global para o Excel ler
+            // Controle da div com o valor riscado (só aparece se o valor bruto for maior que o líquido)
+            const divSemDesc = document.getElementById('divSemDesc');
+            if (valBrutoFinal > valLiqFinal) {
+                document.getElementById('valSemDesc').innerText = "R$ " + valBrutoFinal.toFixed(2);
+                divSemDesc.style.display = 'block';
+            } else {
+                divSemDesc.style.display = 'none';
+            }
+
             resumo.totalU = totalUn;
-            resumo.totalV = valFinal;
+            resumo.totalV = valLiqFinal;
             window.resumoGlobal = resumo;
         };
 
@@ -275,7 +274,6 @@
                 const wb = new ExcelJS.Workbook();
                 await wb.xlsx.load(buffer);
 
-                // A função agora recebe qual categoria está imprimindo para colocar o desconto correto
                 const preencherAba = (nomeAba, tipoCategoria) => {
                     const sheet = wb.getWorksheet(nomeAba);
                     if(!sheet) return; 
@@ -283,35 +281,32 @@
                     let selecionados = produtosGlobais.filter(p => (tipoCategoria === 'promo' ? p.isPromo : (p.catReal === tipoCategoria && !p.isPromo)) && p.calcTotalUnidades > 0);
                     if(selecionados.length === 0) return;
 
-                    // CABEÇALHO DA PLANILHA
                     sheet.getCell('E6').value = razao;       
                     sheet.getCell('J6').value = cnpj;        
-                    sheet.getCell('F7').value = window.resumoGlobal.totalU; // Total Global de Peças
-                    sheet.getCell('L7').value = window.resumoGlobal.totalV; // Total Global Financeiro
-                    
-                    // Coloca o desconto específico DESTA aba na célula D8
+                    sheet.getCell('F7').value = window.resumoGlobal.totalU; 
+                    sheet.getCell('L7').value = window.resumoGlobal.totalV; 
                     sheet.getCell('D8').value = window.resumoGlobal[tipoCategoria].desc + "%";  
                     sheet.getCell('F8').value = prazo;
 
-                    let linhaAtual = 11; 
+                    let linhaAtual = 10; 
                     let metade = Math.ceil(selecionados.length / 2);
 
                     for(let i = 0; i < metade; i++) {
                         let esq = selecionados[i]; 
                         let dir = selecionados[i + metade];
 
-                        // Lado Esquerdo - Colunas C, D, E, F, G
+                        // Lado Esquerdo - Inserção da Quantidade Total na Coluna E
                         sheet.getCell(`C${linhaAtual}`).value = esq.codigo;
                         sheet.getCell(`D${linhaAtual}`).value = esq.calcQtdCx;
-                        sheet.getCell(`E${linhaAtual}`).value = esq.calcQtdUn;
+                        sheet.getCell(`E${linhaAtual}`).value = esq.calcTotalUnidades; 
                         sheet.getCell(`F${linhaAtual}`).value = esq.descricao;
                         sheet.getCell(`G${linhaAtual}`).value = esq.precoFinal; 
 
-                        // Lado Direito - Colunas I, J, K, L, M
+                        // Lado Direito - Inserção da Quantidade Total na Coluna K
                         if(dir) {
                             sheet.getCell(`I${linhaAtual}`).value = dir.codigo;
                             sheet.getCell(`J${linhaAtual}`).value = dir.calcQtdCx;
-                            sheet.getCell(`K${linhaAtual}`).value = dir.calcQtdUn;
+                            sheet.getCell(`K${linhaAtual}`).value = dir.calcTotalUnidades; 
                             sheet.getCell(`L${linhaAtual}`).value = dir.descricao;
                             sheet.getCell(`M${linhaAtual}`).value = dir.precoFinal; 
                         }
@@ -322,14 +317,13 @@
                 preencherAba("ROMANEIO SORVETE", "sorvete");
                 preencherAba("ROMANEIO SECO", "seco");
                 preencherAba("ROMANEIO BALDE", "balde");
-                // preencherAba("ROMANEIO PROMO", "promo"); // Descomente se for criar uma aba específica para promos no Excel
 
                 const outBuffer = await wb.xlsx.writeBuffer();
                 saveAs(new Blob([outBuffer]), `PEDIDO_${razao.replace(/\s+/g, '_').toUpperCase()}.xlsx`);
                 
             } catch (error) {
                 console.error("Erro ao gerar Excel:", error);
-                alert("Ocorreu um erro ao processar a planilha. Verifique se o PEDIDO.xlsx está no Cloudflare e não possui validações infinitas.");
+                alert("Ocorreu um erro ao processar a planilha.");
             }
 
             document.querySelector('.btn-gerar').innerText = "⬇️ GERAR PEDIDO EM EXCEL";
