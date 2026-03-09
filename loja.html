@@ -2,62 +2,55 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Transferência - Eskimó</title>
+    <title>Venda - Eskimó</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
         body { background: #f8f9fa; padding: 20px; color: #333; }
-        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 12px; border-top: 5px solid #0056b3; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-        
-        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0056b3; padding-bottom: 15px; margin-bottom: 20px; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 12px; border-top: 5px solid #e3000f; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e3000f; padding-bottom: 15px; margin-bottom: 20px; }
         .header-left { display: flex; align-items: center; gap: 15px; }
-        .menu-btn { background: none; border: none; font-size: 28px; cursor: pointer; color: #0056b3; }
-        h1 { color: #0056b3; font-size: 22px; } 
-        
+        .menu-btn { background: none; border: none; font-size: 28px; cursor: pointer; color: #e3000f; }
+        h1, h2 { color: #e3000f; }
         .sidebar { position: fixed; left: -250px; top: 0; width: 250px; height: 100%; background: #fff; box-shadow: 2px 0 5px rgba(0,0,0,0.2); transition: 0.3s; z-index: 1000; display: flex; flex-direction: column; padding-top: 20px; }
         .sidebar.open { left: 0; }
         .sidebar h2 { text-align: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; color: #e3000f; }
         .sidebar a { padding: 15px 20px; text-decoration: none; color: #333; font-weight: bold; border-bottom: 1px solid #eee; display: block; }
-        .sidebar a:hover { background: #f4f4f4; color: #0056b3; }
-        .sidebar a.active { background: #0056b3; color: white; }
+        .sidebar a:hover { background: #f4f4f4; color: #e3000f; }
+        .sidebar a.active { background: #e3000f; color: white; }
         .sidebar .close-btn { position: absolute; top: 10px; right: 15px; font-size: 24px; background: none; border: none; cursor: pointer; color: #666; }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none; }
         .overlay.show { display: block; }
-
-        .client-box { background: #e6f2ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: 2fr 1fr; gap: 15px; border-left: 4px solid #0056b3; }
-        .client-box input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px; font-size: 14px; }
-        
+        .client-box { background: #f4f4f4; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 15px; border-left: 4px solid #e3000f; }
+        .client-box input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px; }
         .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 15px; flex-wrap: wrap; }
-        .tab-btn { background: none; border: none; padding: 10px 20px; cursor: pointer; color: #666; font-size: 15px; display: none; }
-        .tab-btn.active { color: #0056b3; border-bottom: 3px solid #0056b3; font-weight: bold; }
+        .tab-btn { background: none; border: none; padding: 10px 20px; cursor: pointer; color: #666; font-size: 16px; display: none; }
+        .tab-btn.active { color: #e3000f; border-bottom: 3px solid #e3000f; font-weight: bold; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        
+        .discount-bar { background: #fff; padding: 10px 15px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px; display: inline-block; border-left: 4px solid #e3000f; font-size: 14px; }
+        .discount-bar input { width: 80px; padding: 5px; margin-left: 10px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-weight: bold; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th { background: #0056b3; color: white; padding: 10px; text-align: left; font-size: 14px; }
-        td { padding: 8px; border-bottom: 1px solid #eee; vertical-align: middle; font-size: 14px; transition: background-color 0.3s; }
-        td input[type="number"] { width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-        
+        th { background: #e3000f; color: white; padding: 12px; text-align: left; }
+        td { padding: 8px; border-bottom: 1px solid #eee; vertical-align: middle; transition: background-color 0.3s; }
+        td input[type="number"] { width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 4px; }
         .linha-destaque { background-color: #fff4cc !important; }
-
-        .resumo-box { background: #fff; border: 2px solid #0056b3; padding: 15px; border-radius: 8px; margin-top: 20px; }
-        .resumo-box h2 { font-size: 18px; margin-bottom: 15px; }
-        
-        .resumo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; text-align: center; margin-bottom: 15px; }
-        .resumo-item { background: #f9f9f9; padding: 12px; border-radius: 6px; border: 1px solid #eee; display: flex; flex-direction: column; justify-content: center; }
-        .resumo-item span { display: block; font-size: 18px; font-weight: bold; color: #0056b3; margin-top: 5px; } 
-        
-        button.action-btn { background: #0056b3; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; transition: 0.2s; }
-        button.action-btn:hover { background: #004494; }
+        .resumo-box { background: #fff; border: 2px solid #e3000f; padding: 20px; border-radius: 8px; margin-top: 20px; }
+        .resumo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; text-align: center; margin-bottom: 15px; }
+        .resumo-item { background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #eee; }
+        .resumo-item span { display: block; font-size: 18px; font-weight: bold; color: #e3000f; margin-top: 5px; }
+        .total-final { font-size: 24px; text-align: right; border-top: 2px dashed #ccc; padding-top: 15px; margin-top: 10px; }
+        .btn-gerar { background: #28a745; width: 100%; padding: 15px; font-size: 18px; font-weight: bold; margin-top: 20px; border-radius: 8px; border: none; color: white; cursor: pointer; }
+        .btn-gerar:hover { background: #218838; }
     </style>
 </head>
 <body>
     <div id="sidebar" class="sidebar">
         <button class="close-btn" onclick="window.toggleMenu()">×</button>
         <h2>Menu Eskimó</h2>
-        <a href="loja.html">🛒 Venda</a>
-        <a href="transferencia.html" class="active">🔄 Transferência</a>
+        <a href="loja.html" class="active">🛒 Venda</a>
+        <a href="transferencia.html">🔄 Transferência</a>
         <a href="#" onclick="localStorage.clear(); window.location.href='index.html'" style="color: #dc3545; margin-top: auto; border-top: 1px solid #eee;">🚪 Sair</a>
     </div>
     <div id="overlay" class="overlay" onclick="window.toggleMenu()"></div>
@@ -66,269 +59,229 @@
         <header>
             <div class="header-left">
                 <button class="menu-btn" onclick="window.toggleMenu()">☰</button>
-                <h1>Filial Base: <span id="txtLoja"></span> - <span style="color:#666; font-size:18px;">Módulo Transferência</span></h1>
+                <h1>Filial: <span id="txtLoja"></span> - <span style="color:#444; font-size:20px;">Módulo Venda</span></h1>
             </div>
         </header>
 
+        <datalist id="listaNomesClientes"></datalist>
+        <datalist id="listaCnpjClientes"></datalist>
+
         <div class="client-box">
-            <div><label style="font-size:13px; color:#555;"><b>Filial de Entrada (Destino)</b></label><input type="text" id="cliRazao" placeholder="Nome da Filial que vai receber a mercadoria"></div>
-            <div><label style="font-size:13px; color:#555;"><b>CNPJ da Filial de Entrada</b></label><input type="text" id="cliCnpj" placeholder="00.000.000/0000-00" maxlength="18"></div>
+            <div>
+                <label><b>Razão Social do Cliente</b></label>
+                <input type="text" id="cliRazao" list="listaNomesClientes" placeholder="Comece a digitar o nome..." autocomplete="off">
+            </div>
+            <div>
+                <label><b>CPF / CNPJ</b></label>
+                <input type="text" id="cliCnpj" list="listaCnpjClientes" placeholder="000.000.000-00" maxlength="18" autocomplete="off">
+            </div>
+            <div>
+                <label><b>Prazo</b></label>
+                <input type="text" id="cliPrazo" placeholder="Ex: 15 dias">
+            </div>
         </div>
 
         <div class="tabs" id="tabContainer">
             <button class="tab-btn" id="btnTabSorvete" onclick="window.mudarAba('sorvete')">🍨 Sorvetes</button>
             <button class="tab-btn" id="btnTabSeco" onclick="window.mudarAba('seco')">📦 Secos</button>
             <button class="tab-btn" id="btnTabBalde" onclick="window.mudarAba('balde')">🪣 Baldes</button>
+            <button class="tab-btn" id="btnTabPromo" onclick="window.mudarAba('promo')" style="color:#e0a800;">⭐ PROMOÇÕES</button>
         </div>
 
-        <div id="content_sorvete" class="tab-content"><table id="tbl_sorvete"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço TF</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
-        <div id="content_seco" class="tab-content"><table id="tbl_seco"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço TF</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
-        <div id="content_balde" class="tab-content"><table id="tbl_balde"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço TF</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+        <div id="content_sorvete" class="tab-content"><div class="discount-bar"><label>Desconto nesta aba (%):</label><input type="number" id="desc_sorvete" value="0" min="0" max="100" oninput="window.calcularTudo()"></div><table id="tbl_sorvete"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+        <div id="content_seco" class="tab-content"><div class="discount-bar"><label>Desconto nesta aba (%):</label><input type="number" id="desc_seco" value="0" min="0" max="100" oninput="window.calcularTudo()"></div><table id="tbl_seco"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+        <div id="content_balde" class="tab-content"><div class="discount-bar"><label>Desconto nesta aba (%):</label><input type="number" id="desc_balde" value="0" min="0" max="100" oninput="window.calcularTudo()"></div><table id="tbl_balde"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+        <div id="content_promo" class="tab-content"><div class="discount-bar" style="border-color:#ffc107;"><label>Desconto nesta aba (%):</label><input type="number" id="desc_promo" value="0" min="0" max="100" oninput="window.calcularTudo()"></div><table id="tbl_promo"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço Promo</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
 
         <div class="resumo-box">
-            <h2>Resumo da Transferência</h2>
+            <h2>Resumo do Pedido (Valores Líquidos)</h2>
             <div class="resumo-grid">
-                <div class="resumo-item"><div style="font-size:12px; color:#666;">Total de Engradados</div><span id="resTotalEngradados">0 cx</span></div>
-                <div class="resumo-item"><div style="font-size:12px; color:#666;">Total de Unidades Soltas</div><span id="resTotalUnidades">0 un</span></div>
-                <div class="resumo-item" style="background: #e6f2ff;"><div style="font-size:12px; color:#666;">Valor Total</div><span id="resValorTotal" style="color:#000;">R$ 0,00</span></div>
+                <div class="resumo-item">Sorvetes<div style="font-size:12px; color:#666;" id="resQtdSorvete">0 un</div><span id="resValSorvete">R$ 0,00</span></div>
+                <div class="resumo-item">Secos<div style="font-size:12px; color:#666;" id="resQtdSeco">0 un</div><span id="resValSeco">R$ 0,00</span></div>
+                <div class="resumo-item">Baldes<div style="font-size:12px; color:#666;" id="resQtdBalde">0 un</div><span id="resValBalde">R$ 0,00</span></div>
+                <div class="resumo-item" style="border-color:#ffc107;">Promoções<div style="font-size:12px; color:#666;" id="resQtdPromo">0 un</div><span style="color:#e0a800;" id="resValPromo">R$ 0,00</span></div>
+                <div class="resumo-item" style="background: #ffe6e6;">Total Unidades<span id="resQtdTotal" style="color:#333; margin-top:15px;">0 un</span></div>
             </div>
-            <button class="action-btn" onclick="window.gerarExcelTransferencia()">⬇️ GERAR PLANILHA DE TRANSFERÊNCIA</button>
+            <div class="total-final">
+                <div id="divSemDesc" style="font-size: 16px; color: #666; display: none;">Total sem Desconto: <s id="valSemDesc">R$ 0,00</s></div>
+                <div style="color: #28a745;"><b>TOTAL GERAL DO PEDIDO: <span id="valComDesc">R$ 0,00</span></b></div>
+            </div>
+            <button class="btn-gerar" onclick="window.gerarExcelPedido()">⬇️ GERAR PEDIDO EM EXCEL</button>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, getDocs, collection, query, where, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8",
-            authDomain: "sistema-pedidos-3f2c2.firebaseapp.com",
-            projectId: "sistema-pedidos-3f2c2",
-            storageBucket: "sistema-pedidos-3f2c2.firebasestorage.app",
-            messagingSenderId: "669786014126",
-            appId: "1:669786014126:web:d0da498633a145d56a883f"
-        };
-
+        const firebaseConfig = { apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8", authDomain: "sistema-pedidos-3f2c2.firebaseapp.com", projectId: "sistema-pedidos-3f2c2", storageBucket: "sistema-pedidos-3f2c2.firebasestorage.app", messagingSenderId: "669786014126", appId: "1:669786014126:web:d0da498633a145d56a883f" };
         const db = getFirestore(initializeApp(firebaseConfig));
         const userId = localStorage.getItem('user');
+        const nomeLoja = localStorage.getItem('nome') || userId;
         if(!userId) window.location.href = 'index.html';
-        document.getElementById('txtLoja').innerText = localStorage.getItem('nome') || userId;
+        document.getElementById('txtLoja').innerText = nomeLoja;
         
         let produtosGlobais = [];
-        window.lojaCnpj = "Não Cadastrado"; 
+        let clientesSalvos = [];
+        window.resumoGlobal = { sorvete: {u:0, vBruto:0, vLiq:0}, seco: {u:0, vBruto:0, vLiq:0}, balde: {u:0, vBruto:0, vLiq:0}, promo: {u:0, vBruto:0, vLiq:0}, totalU: 0, totalV: 0 };
 
-        window.toggleMenu = () => {
-            document.getElementById('sidebar').classList.toggle('open');
-            document.getElementById('overlay').classList.toggle('show');
-        };
+        window.toggleMenu = () => { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('show'); };
 
-        document.getElementById('cliCnpj').addEventListener('input', function (e) {
+        // Inteligência do Autocomplete
+        document.getElementById('cliRazao').addEventListener('input', (e) => {
+            const encontrado = clientesSalvos.find(c => c.razao.toUpperCase() === e.target.value.toUpperCase());
+            if(encontrado) { document.getElementById('cliCnpj').value = encontrado.cnpj; document.getElementById('cliPrazo').value = encontrado.prazo || ''; }
+        });
+        document.getElementById('cliCnpj').addEventListener('input', (e) => {
             let x = e.target.value.replace(/\D/g, '');
-            if (x.length <= 11) {
-                x = x.replace(/(\d{3})(\d)/, '$1.$2'); x = x.replace(/(\d{3})(\d)/, '$1.$2'); x = x.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-            } else {
-                x = x.replace(/^(\d{2})(\d)/, '$1.$2'); x = x.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3'); x = x.replace(/\.(\d{3})(\d)/, '.$1/$2'); x = x.replace(/(\d{4})(\d)/, '$1-$2');
-            }
+            if (x.length <= 11) { x = x.replace(/(\d{3})(\d)/, '$1.$2'); x = x.replace(/(\d{3})(\d)/, '$1.$2'); x = x.replace(/(\d{3})(\d{1,2})$/, '$1-$2'); } 
+            else { x = x.replace(/^(\d{2})(\d)/, '$1.$2'); x = x.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3'); x = x.replace(/\.(\d{3})(\d)/, '.$1/$2'); x = x.replace(/(\d{4})(\d)/, '$1-$2'); }
             e.target.value = x;
+            const encontrado = clientesSalvos.find(c => c.cnpj === x);
+            if(encontrado) { document.getElementById('cliRazao').value = encontrado.razao; document.getElementById('cliPrazo').value = encontrado.prazo || ''; }
         });
 
-        window.mudarAba = (cat) => {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.getElementById('btnTab' + cat.charAt(0).toUpperCase() + cat.slice(1)).classList.add('active');
-            document.getElementById('content_' + cat).classList.add('active');
-        };
+        window.mudarAba = (cat) => { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.getElementById('btnTab' + cat.charAt(0).toUpperCase() + cat.slice(1)).classList.add('active'); document.getElementById('content_' + cat).classList.add('active'); };
 
         async function iniciar() {
-            const userSnap = await getDoc(doc(db, "usuarios", userId));
-            
-            if (userSnap.exists()) {
-                window.lojaCnpj = userSnap.data().cnpj || "CNPJ NÃO CADASTRADO";
-            }
+            // Busca Clientes Cadastrados Desta Loja
+            const qClientes = query(collection(db, "clientes"), where("lojaId", "==", userId), where("tipo", "==", "venda"));
+            const cliSnap = await getDocs(qClientes);
+            let dlistaNomes = document.getElementById('listaNomesClientes');
+            let dlistaCnpj = document.getElementById('listaCnpjClientes');
+            cliSnap.forEach(d => { 
+                clientesSalvos.push(d.data()); 
+                dlistaNomes.innerHTML += `<option value="${d.data().razao}">`;
+                dlistaCnpj.innerHTML += `<option value="${d.data().cnpj}">`;
+            });
 
-            const planilhas = userSnap.exists() && userSnap.data().planilhas ? userSnap.data().planilhas : { sorvete: true, seco: false, balde: false };
+            // Busca Permissões e Produtos
+            const userSnap = await getDoc(doc(db, "usuarios", userId));
+            const planilhas = userSnap.exists() && userSnap.data().planilhas ? userSnap.data().planilhas : { sorvete: true, seco: false, balde: false, promo: false, padrao: false };
             
             let primeiraAba = null;
             if(planilhas.sorvete) { document.getElementById('btnTabSorvete').style.display = 'block'; primeiraAba = primeiraAba || 'sorvete'; }
             if(planilhas.seco) { document.getElementById('btnTabSeco').style.display = 'block'; primeiraAba = primeiraAba || 'seco'; }
             if(planilhas.balde) { document.getElementById('btnTabBalde').style.display = 'block'; primeiraAba = primeiraAba || 'balde'; }
+            if(planilhas.promo) { document.getElementById('btnTabPromo').style.display = 'block'; primeiraAba = primeiraAba || 'promo'; }
             if(primeiraAba) window.mudarAba(primeiraAba);
 
-            const [precoTfSnap, prodSnap] = await Promise.all([
-                getDoc(doc(db, "precos", "tf")),
-                getDocs(collection(db, "produtos"))
+            const tabelaId = planilhas.padrao ? 'padrao' : userId; 
+            const [precoSnap, promoSnap, prodSnap] = await Promise.all([
+                getDoc(doc(db, "precos", tabelaId)), planilhas.promo ? getDoc(doc(db, "precos", userId + "_promo")) : Promise.resolve({ exists: () => false }), getDocs(collection(db, "produtos"))
             ]);
 
-            const precosTF = precoTfSnap.exists() ? precoTfSnap.data() : {};
+            const meusPrecos = precoSnap.exists() ? precoSnap.data() : {};
+            const precosPromo = promoSnap.exists() ? promoSnap.data() : {};
 
             prodSnap.forEach(d => {
                 const item = d.data();
-                const objTf = precosTF[item.codigo];
+                const objPromo = precosPromo[item.codigo];
+                const objNormal = meusPrecos[item.codigo];
 
-                if (objTf !== undefined) {
-                    let visivel = typeof objTf === 'object' ? (objTf.visivel !== false) : true;
-                    let preco = typeof objTf === 'object' ? objTf.preco : objTf;
-                    if(visivel) produtosGlobais.push({ ...item, precoFinal: preco, catReal: (item.categoria || 'sorvete').toLowerCase().trim() });
+                if(planilhas.promo && objPromo !== undefined) {
+                    if((typeof objPromo === 'object' ? (objPromo.visivel !== false) : true)) produtosGlobais.push({ ...item, precoFinal: typeof objPromo === 'object' ? objPromo.preco : objPromo, isPromo: true, catReal: 'promo' });
+                } else if (objNormal !== undefined) {
+                    if((typeof objNormal === 'object' ? (objNormal.visivel !== false) : true)) produtosGlobais.push({ ...item, precoFinal: typeof objNormal === 'object' ? objNormal.preco : objNormal, isPromo: false, catReal: (item.categoria || 'sorvete').toLowerCase().trim() });
                 }
             });
-
             renderizarTabelas();
         }
 
         function renderizarTabelas() {
             produtosGlobais.forEach((p, i) => {
-                let cat = p.catReal;
-                if(!['sorvete', 'seco', 'balde'].includes(cat)) cat = 'sorvete';
-                
+                let cat = p.isPromo ? 'promo' : p.catReal; if(!['sorvete', 'seco', 'balde', 'promo'].includes(cat)) cat = 'sorvete';
                 const tbody = document.querySelector(`#tbl_${cat} tbody`);
                 if(tbody) {
-                    tbody.innerHTML += `<tr id="tr_${i}">
-                        <td>${p.codigo}</td><td>${p.descricao}</td><td>${p.engradado}</td><td>R$ ${p.precoFinal.toFixed(2)}</td>
+                    tbody.innerHTML += `<tr id="tr_${i}"><td>${p.codigo}</td><td>${p.descricao}</td><td>${p.engradado}</td><td style="${p.isPromo?'color:orange;font-weight:bold;':''}">R$ ${p.precoFinal.toFixed(2)}</td>
                         <td><input type="number" id="eng_${i}" value="0" min="0" step="0.5" oninput="window.calcularTudo()"></td>
-                        <td><input type="number" id="uni_${i}" value="0" min="0" step="1" oninput="window.calcularTudo()"></td>
-                        <td id="sub_${i}" style="font-weight:bold;">R$ 0.00</td>
-                    </tr>`;
+                        <td><input type="number" id="uni_${i}" value="0" min="0" step="1" oninput="window.calcularTudo()"></td><td id="sub_${i}" style="font-weight:bold;">R$ 0.00</td></tr>`;
                 }
             });
         }
 
         window.calcularTudo = () => {
-            let totalCaixas = 0;
-            let totalPecas = 0;
-            let valorTotal = 0;
+            let dSorv = parseFloat(document.getElementById('desc_sorvete').value) || 0; let dSeco = parseFloat(document.getElementById('desc_seco').value) || 0; let dBald = parseFloat(document.getElementById('desc_balde').value) || 0; let dProm = parseFloat(document.getElementById('desc_promo').value) || 0;
+            let resumo = { sorvete: { u: 0, vBruto: 0, vLiq: 0 }, seco: { u: 0, vBruto: 0, vLiq: 0 }, balde: { u: 0, vBruto: 0, vLiq: 0 }, promo: { u: 0, vBruto: 0, vLiq: 0 } };
 
             produtosGlobais.forEach((p, i) => {
-                let inputEng = document.getElementById(`eng_${i}`);
-                let inputUni = document.getElementById(`uni_${i}`);
+                let inputEng = document.getElementById(`eng_${i}`); let inputUni = document.getElementById(`uni_${i}`);
                 if(!inputEng || !inputUni) return;
                 
-                let cx = parseFloat(inputEng.value) || 0;
-                let un = parseFloat(inputUni.value) || 0;
+                let cx = parseFloat(inputEng.value) || 0; let un = parseFloat(inputUni.value) || 0;
+                if ((cx * 10) % 5 !== 0) { alert(`⚠️ ERRO NO ENGRADADO: Apenas múltiplos de meio em meio (Ex: 0.5, 1, 1.5).`); inputEng.value = ""; cx = 0; }
+                if (un % 1 !== 0) { alert(`⚠️ ERRO NA UNIDADE: Apenas valores inteiros.`); inputUni.value = ""; un = 0; }
 
-                // --- TRAVA DE SEGURANÇA (0.5 para Caixa, Inteiro para Unidade) ---
-                if ((cx * 10) % 5 !== 0) {
-                    alert(`⚠️ ERRO NO ENGRADADO: O produto "${p.descricao}" não aceita o valor ${cx}.\nUse apenas múltiplos de meio em meio (Ex: 0.5, 1, 1.5, 2).`);
-                    inputEng.value = "";
-                    cx = 0;
-                }
-                if (un % 1 !== 0) {
-                    alert(`⚠️ ERRO NA UNIDADE: O produto "${p.descricao}" não aceita o valor fracionado ${un}.\nUse apenas valores inteiros nas unidades (Ex: 1, 2, 3, 10).`);
-                    inputUni.value = "";
-                    un = 0;
-                }
-                // ------------------------------------------------------------------
-
-                let qtdTotalPecas = (cx * p.engradado) + un;
-                let sub = qtdTotalPecas * p.precoFinal;
-
+                let qtd = (cx * p.engradado) + un; let sub = qtd * p.precoFinal;
                 document.getElementById(`sub_${i}`).innerText = `R$ ${sub.toFixed(2)}`;
-                
-                p.calcQtdCx = cx; 
-                p.calcQtdUn = un;
-                p.calcTotalUnidades = qtdTotalPecas; 
-                p.calcSubtotal = sub;
+                p.calcQtdCx = cx; p.calcQtdUn = un; p.calcTotalUnidades = qtd; p.calcSubtotal = sub;
 
-                totalCaixas += cx;
-                totalPecas += qtdTotalPecas;
-                valorTotal += sub;
-
-                let tr = document.getElementById(`tr_${i}`);
-                if (tr) {
-                    if (qtdTotalPecas > 0) tr.classList.add('linha-destaque');
-                    else tr.classList.remove('linha-destaque');
-                }
+                let cat = p.isPromo ? 'promo' : p.catReal; if(!['sorvete', 'seco', 'balde', 'promo'].includes(cat)) cat = 'sorvete';
+                resumo[cat].u += qtd; resumo[cat].vBruto += sub;
+                let tr = document.getElementById(`tr_${i}`); if (tr) { if (qtd > 0) tr.classList.add('linha-destaque'); else tr.classList.remove('linha-destaque'); }
             });
 
-            document.getElementById('resTotalEngradados').innerText = totalCaixas + " cx";
-            document.getElementById('resTotalUnidades').innerText = totalPecas + " un";
-            document.getElementById('resValorTotal').innerText = "R$ " + valorTotal.toFixed(2);
+            resumo.sorvete.vLiq = resumo.sorvete.vBruto - (resumo.sorvete.vBruto * (dSorv / 100)); resumo.seco.vLiq = resumo.seco.vBruto - (resumo.seco.vBruto * (dSeco / 100)); resumo.balde.vLiq = resumo.balde.vBruto - (resumo.balde.vBruto * (dBald / 100)); resumo.promo.vLiq = resumo.promo.vBruto - (resumo.promo.vBruto * (dProm / 100));
+
+            document.getElementById('resQtdSorvete').innerText = resumo.sorvete.u + " un"; document.getElementById('resValSorvete').innerText = "R$ " + resumo.sorvete.vLiq.toFixed(2);
+            document.getElementById('resQtdSeco').innerText = resumo.seco.u + " un"; document.getElementById('resValSeco').innerText = "R$ " + resumo.seco.vLiq.toFixed(2);
+            document.getElementById('resQtdBalde').innerText = resumo.balde.u + " un"; document.getElementById('resValBalde').innerText = "R$ " + resumo.balde.vLiq.toFixed(2);
+            document.getElementById('resQtdPromo').innerText = resumo.promo.u + " un"; document.getElementById('resValPromo').innerText = "R$ " + resumo.promo.vLiq.toFixed(2);
             
-            window.resumoTransferencia = { totalCaixas, totalPecas, valorTotal };
+            let totalUn = resumo.sorvete.u + resumo.seco.u + resumo.balde.u + resumo.promo.u; let valBrutoFinal = resumo.sorvete.vBruto + resumo.seco.vBruto + resumo.balde.vBruto + resumo.promo.vBruto; let valLiqFinal = resumo.sorvete.vLiq + resumo.seco.vLiq + resumo.balde.vLiq + resumo.promo.vLiq;
+            document.getElementById('resQtdTotal').innerText = totalUn + " un"; document.getElementById('valComDesc').innerText = "R$ " + valLiqFinal.toFixed(2);
+
+            const divSemDesc = document.getElementById('divSemDesc');
+            if (valBrutoFinal > valLiqFinal) { document.getElementById('valSemDesc').innerText = "R$ " + valBrutoFinal.toFixed(2); divSemDesc.style.display = 'block'; } else { divSemDesc.style.display = 'none'; }
+            window.resumoGlobal = { ...resumo, totalU: totalUn, totalV: valLiqFinal, dSorv, dSeco, dBald, dProm };
         };
 
-        window.gerarExcelTransferencia = async () => {
-            const razaoDestino = document.getElementById('cliRazao').value.trim();
-            const cnpjDestino = document.getElementById('cliCnpj').value.trim();
-            const cnpjOrigem = window.lojaCnpj || "CNPJ NÃO CADASTRADO";
-            const btn = document.querySelector('button.action-btn');
-            
-            if(!razaoDestino || !cnpjDestino) {
-                alert("⚠️ ATENÇÃO: Os campos Filial de Entrada e CNPJ da Filial não podem ficar em branco!");
-                return; 
-            }
+        window.gerarExcelPedido = async () => {
+            const razao = document.getElementById('cliRazao').value.trim();
+            const cnpj = document.getElementById('cliCnpj').value.trim();
+            const prazo = document.getElementById('cliPrazo').value.trim();
 
-            btn.innerText = "⏳ GERANDO TRANSFERÊNCIA... AGUARDE";
+            if(!razao || !cnpj || !prazo) return alert("⚠️ ATENÇÃO: Os campos Razão Social, CPF/CNPJ e Prazo não podem ficar em branco!");
+
+            document.querySelector('.btn-gerar').innerText = "⏳ GERANDO PEDIDO E SALVANDO CLIENTE...";
 
             try {
-                const response = await fetch('./TRANSFERENCIA.xlsx');
-                if(!response.ok) {
-                    alert("⚠️ Erro: O arquivo 'TRANSFERENCIA.xlsx' não foi encontrado. Suba ele no Cloudflare.");
-                    btn.innerText = "⬇️ GERAR PLANILHA DE TRANSFERÊNCIA";
-                    return;
-                }
-                const buffer = await response.arrayBuffer();
-                const wb = new ExcelJS.Workbook();
-                await wb.xlsx.load(buffer);
+                // SALVA CLIENTE SE FOR NOVO
+                const cnpjLimpo = cnpj.replace(/\D/g, '');
+                const idCliente = `${userId}_${cnpjLimpo}`;
+                await setDoc(doc(db, "clientes", idCliente), { lojaId: userId, razao: razao, cnpj: cnpj, prazo: prazo, tipo: "venda" }, { merge: true });
 
-                const preencherAba = (nomeAba, categoriasPermitidas, tipoAba) => {
-                    const sheet = wb.getWorksheet(nomeAba);
-                    if(!sheet) return; 
+                // GRAVA O LOG NO HISTÓRICO PARA O ADMIN
+                await addDoc(collection(db, "historico"), { lojaId: userId, nomeLoja: nomeLoja, acao: "Gerou Pedido de Venda", destino: razao, dataHora: serverTimestamp() });
 
-                    let selecionados = produtosGlobais.filter(p => categoriasPermitidas.includes(p.catReal) && p.calcTotalUnidades > 0);
+                const response = await fetch('./PEDIDO.xlsx');
+                if(!response.ok) { alert("⚠️ Erro: 'PEDIDO.xlsx' não encontrado no servidor."); document.querySelector('.btn-gerar').innerText = "⬇️ GERAR PEDIDO EM EXCEL"; return; }
+                const buffer = await response.arrayBuffer(); const wb = new ExcelJS.Workbook(); await wb.xlsx.load(buffer);
+
+                const preencherAba = (nomeAba, tipoCategoria) => {
+                    const sheet = wb.getWorksheet(nomeAba); if(!sheet) return; 
+                    let selecionados = produtosGlobais.filter(p => (tipoCategoria === 'promo' ? p.isPromo : (p.catReal === tipoCategoria && !p.isPromo)) && p.calcTotalUnidades > 0);
                     if(selecionados.length === 0) return;
 
-                    let qtdTotalUnidadeAba = 0;
-                    let valorTotalAba = 0;
-                    selecionados.forEach(p => {
-                        qtdTotalUnidadeAba += p.calcTotalUnidades;
-                        valorTotalAba += p.calcSubtotal;
-                    });
+                    sheet.getCell('E6').value = razao; sheet.getCell('J6').value = cnpj; sheet.getCell('F7').value = window.resumoGlobal.totalU; sheet.getCell('L7').value = window.resumoGlobal.totalV; 
+                    let descKey = 'd' + tipoCategoria.charAt(0).toUpperCase() + tipoCategoria.slice(1);
+                    if(tipoCategoria==='sorvete') descKey='dSorv'; else if(tipoCategoria==='seco') descKey='dSeco'; else if(tipoCategoria==='balde') descKey='dBald'; else if(tipoCategoria==='promo') descKey='dProm';
+                    sheet.getCell('D8').value = (window.resumoGlobal[descKey] || 0) + "%"; sheet.getCell('F8').value = prazo;
 
-                    if (tipoAba === 'FATURAMENTO') {
-                        sheet.getCell('D7').value = cnpjOrigem;       
-                        sheet.getCell('I7').value = cnpjDestino;        
-                        sheet.getCell('E8').value = qtdTotalUnidadeAba; 
-                        sheet.getCell('J8').value = valorTotalAba; 
-                    } else if (tipoAba === 'ROMANEIO') {
-                        sheet.getCell('E7').value = cnpjOrigem;       
-                        sheet.getCell('K7').value = razaoDestino.replace(/_/g, ' ');        
-                        sheet.getCell('D8').value = window.resumoTransferencia.totalCaixas; 
-                        sheet.getCell('G8').value = window.resumoTransferencia.totalPecas; 
-                        sheet.getCell('L8').value = window.resumoTransferencia.valorTotal; 
-                    }
-
-                    let linhaAtual = 10; 
-
-                    for(let i = 0; i < selecionados.length; i++) {
-                        let item = selecionados[i];
-                        sheet.getCell(`C${linhaAtual}`).value = item.codigo;
-                        
-                        if (tipoAba === 'FATURAMENTO') {
-                            sheet.getCell(`D${linhaAtual}`).value = item.calcTotalUnidades; 
-                            sheet.getCell(`E${linhaAtual}`).value = item.descricao; 
-                            sheet.getCell(`F${linhaAtual}`).value = item.precoFinal; 
-                        } else if (tipoAba === 'ROMANEIO') {
-                            sheet.getCell(`D${linhaAtual}`).value = item.calcQtdCx; 
-                            sheet.getCell(`E${linhaAtual}`).value = item.calcTotalUnidades; 
-                            sheet.getCell(`F${linhaAtual}`).value = item.descricao; 
-                        }
+                    let linhaAtual = 10; let metade = Math.ceil(selecionados.length / 2);
+                    for(let i = 0; i < metade; i++) {
+                        let esq = selecionados[i]; let dir = selecionados[i + metade];
+                        sheet.getCell(`C${linhaAtual}`).value = esq.codigo; sheet.getCell(`D${linhaAtual}`).value = esq.calcQtdCx; sheet.getCell(`E${linhaAtual}`).value = esq.calcTotalUnidades; sheet.getCell(`F${linhaAtual}`).value = esq.descricao; sheet.getCell(`G${linhaAtual}`).value = esq.precoFinal; 
+                        if(dir) { sheet.getCell(`I${linhaAtual}`).value = dir.codigo; sheet.getCell(`J${linhaAtual}`).value = dir.calcQtdCx; sheet.getCell(`K${linhaAtual}`).value = dir.calcTotalUnidades; sheet.getCell(`L${linhaAtual}`).value = dir.descricao; sheet.getCell(`M${linhaAtual}`).value = dir.precoFinal; }
                         linhaAtual++;
                     }
                 };
 
-                preencherAba("FATURAMENTO - PROD", ["sorvete", "balde"], "FATURAMENTO");
-                preencherAba("FATURAMENTO - SECO", ["seco"], "FATURAMENTO");
-                preencherAba("ROMANEIO", ["sorvete", "seco", "balde"], "ROMANEIO");
-
+                preencherAba("ROMANEIO SORVETE", "sorvete"); preencherAba("ROMANEIO SECO", "seco"); preencherAba("ROMANEIO BALDE", "balde");
                 const outBuffer = await wb.xlsx.writeBuffer();
-                saveAs(new Blob([outBuffer]), `TRANSFERENCIA_${razaoDestino.replace(/\s+/g, '_').toUpperCase()}.xlsx`);
-                
-            } catch (error) {
-                console.error("Erro ao gerar Excel:", error);
-                alert("Ocorreu um erro ao processar a planilha. Verifique se o arquivo não possui validações infinitas.");
-            }
-
-            btn.innerText = "⬇️ GERAR PLANILHA DE TRANSFERÊNCIA";
+                saveAs(new Blob([outBuffer]), `PEDIDO_${razao.replace(/\s+/g, '_').toUpperCase()}.xlsx`);
+            } catch (error) { console.error(error); alert("Erro ao gerar a planilha."); }
+            document.querySelector('.btn-gerar').innerText = "⬇️ GERAR PEDIDO EM EXCEL";
         };
 
         iniciar();
