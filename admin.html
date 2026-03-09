@@ -114,14 +114,12 @@
         let editorItens = [];
         let itensExcluidos = [];
 
-        // Máscara de CNPJ no form do Admin
+        // Máscara CNPJ do Admin
         document.getElementById('editCnpj').addEventListener('input', function (e) {
             let x = e.target.value.replace(/\D/g, '');
             if(x.length > 11) {
-                x = x.replace(/^(\d{2})(\d)/, '$1.$2');
-                x = x.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
-                x = x.replace(/\.(\d{3})(\d)/, '.$1/$2');
-                x = x.replace(/(\d{4})(\d)/, '$1-$2');
+                x = x.replace(/^(\d{2})(\d)/, '$1.$2'); x = x.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+                x = x.replace(/\.(\d{3})(\d)/, '.$1/$2'); x = x.replace(/(\d{4})(\d)/, '$1-$2');
             }
             e.target.value = x;
         });
@@ -132,7 +130,7 @@
             lista.innerHTML = '';
             usuariosData = {};
             
-            // Adiciona a Tabela TF fixa na lista para facilitar edição manual
+            // Tabela Fixa Transferência
             lista.innerHTML += `<li style="background: #e6f2ff; border-left: 4px solid blue;">
                 <span><b>📦 TABELA TRANSFERÊNCIA (tf)</b></span>
                 <div><button class="btn-small btn-preco" onclick="window.abrirPrecos('tf')">💲 Preços TF</button></div>
@@ -161,8 +159,7 @@
             document.getElementById('listaEdicaoPrecos').innerHTML = '<p>Carregando...</p>';
             document.getElementById('modalPrecos').style.display = 'block';
 
-            editorItens = [];
-            itensExcluidos = [];
+            editorItens = []; itensExcluidos = [];
 
             try {
                 const [prodSnap, precoSnap] = await Promise.all([getDocs(collection(db, "produtos")), getDoc(doc(db, "precos", tabelaId))]);
@@ -212,8 +209,8 @@
         document.getElementById('btnSalvarPrecos').onclick = async () => {
             const tabelaId = document.getElementById('editTabelaId').value;
             document.getElementById('btnSalvarPrecos').innerText = "Salvando...";
-
             let updates = {}; let batchProdutos = [];
+            
             editorItens.forEach(i => { if(i.preco > 0) { updates[i.cod] = { preco: i.preco, visivel: i.visivel }; batchProdutos.push(i); } });
             itensExcluidos.forEach(cod => { updates[cod] = deleteField(); });
 
@@ -246,7 +243,7 @@
                             let cleanRow = {}; for(let key in row) cleanRow[key.toString().trim().toUpperCase()] = row[key];
                             let cod = cleanRow['CODIGO'] || cleanRow['CÓDIGO'];
                             let prod = cleanRow['PRODUTO'];
-                            let eng = parseFloat(cleanRow['ENGRADADO']) || 1; // Permite float
+                            let eng = parseFloat(cleanRow['ENGRADADO']) || 1; // Aceita decimais
                             let cat = cleanRow['CATEGORIA'] ? String(cleanRow['CATEGORIA']).toUpperCase().trim() : 'SORVETE';
                             let precoVal = cleanRow['PRECO'] || cleanRow['PREÇO'] || 0;
                             let preco = typeof precoVal === 'number' ? precoVal : parseFloat(String(precoVal).replace(/R\$/gi, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
