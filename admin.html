@@ -59,6 +59,9 @@
         .modal-content { background: white; padding: 25px; border-radius: 8px; width: 500px; max-width: 90%; max-height: 90vh; overflow-y: auto; }
         .checkbox-group { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
         .checkbox-group label { display: flex; align-items: center; gap: 5px; cursor: pointer; background: #f4f4f4; padding: 8px 12px; border-radius: 6px; }
+        
+        /* BLOCO DE UPLOAD INTERNO */
+        .upload-interno-box { background: #f0f8ff; padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px dashed #0056b3; }
     </style>
 </head>
 <body>
@@ -122,12 +125,12 @@
         </div>
 
         <div id="sec-precos" class="secao">
-            <h2 class="section-title">Importação de Tabelas de Preço</h2>
+            <h2 class="section-title">Importação Geral de Tabelas</h2>
             
             <div class="card-panel" style="max-width: 600px;">
-                <h3>Atualização de Preços via Planilha</h3>
+                <h3>Atualização de Preços via Nome do Ficheiro</h3>
                 <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
-                    Os nomes dos arquivos devem ser exatos:<br>
+                    O sistema lerá o nome do ficheiro para saber a qual loja pertence:<br>
                     • Venda Padrão: <b>nomedaloja.xlsx</b><br>
                     • Venda Promoção: <b>nomedaloja_promo.xlsx</b><br>
                     • Transferência: <b>tf.xlsx</b>
@@ -180,11 +183,20 @@
     <div class="modal-overlay" id="modalPrecos">
         <div class="modal-content" style="width: 800px;">
             <h2 id="tituloPrecos" style="color: #e3000f; margin-bottom: 10px;">Editor de Preços</h2>
-            <button onclick="adicionarItemEditor()" class="btn-secundario" style="margin-bottom:15px;">+ Novo Produto Manual</button>
             <input type="hidden" id="editTabelaId">
-            <div id="listaEdicaoPrecos" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 20px;"></div>
-            <button id="btnSalvarPrecos" class="btn-sucesso">💾 Salvar Alterações na Tabela</button>
-            <button onclick="fecharModal('modalPrecos')" class="btn-primario" style="background:#666; margin-top:10px;">Cancelar</button>
+            
+            <div class="upload-interno-box">
+                <h3 style="font-size: 15px; margin-bottom: 5px; color:#0056b3;">Carregar Planilha Específica para: <span id="txtNomeTabelaAtual"></span></h3>
+                <p style="font-size: 12px; color: #555; margin-bottom: 10px;">O nome do ficheiro será ignorado. Os dados substituirão os preços apenas desta loja aberta.</p>
+                <input type="file" id="fileCsvModal" accept=".csv, .xlsx">
+                <button id="btnUploadModal" class="btn-secundario" style="width: 100%;">⬆️ Importar Tabela Aqui</button>
+            </div>
+
+            <button onclick="adicionarItemEditor()" class="btn-secundario" style="background:#28a745; margin-bottom:15px;">+ Novo Produto Manual</button>
+            
+            <div id="listaEdicaoPrecos" style="max-height: 350px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 20px;"></div>
+            <button id="btnSalvarPrecos" class="btn-sucesso">💾 Salvar Alterações Manuais</button>
+            <button onclick="fecharModal('modalPrecos')" class="btn-primario" style="background:#666; margin-top:10px;">Fechar</button>
         </div>
     </div>
 
@@ -217,7 +229,7 @@
         let editorItens = []; let itensExcluidos = [];
         let clientesData = {};
 
-        // === CONTROLE DE NAVEGAÇÃO (TABS) ===
+        // === NAVEGAÇÃO ===
         window.mudarSecao = (secaoId) => {
             document.querySelectorAll('.secao').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-links button').forEach(el => el.classList.remove('active'));
@@ -231,7 +243,7 @@
 
         window.fecharModal = (id) => { document.getElementById(id).style.display = 'none'; };
 
-        // === MÁSCARAS DE CNPJ ===
+        // === MÁSCARAS ===
         const aplicaMascara = (e) => {
             let x = e.target.value.replace(/\D/g, '');
             if(x.length > 11) { x = x.replace(/^(\d{2})(\d)/, '$1.$2'); x = x.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3'); x = x.replace(/\.(\d{3})(\d)/, '.$1/$2'); x = x.replace(/(\d{4})(\d)/, '$1-$2'); }
@@ -240,13 +252,13 @@
         document.getElementById('editCnpj').addEventListener('input', aplicaMascara);
         document.getElementById('editCliCnpj').addEventListener('input', aplicaMascara);
 
-        // === FUNÇÕES DO DASHBOARD ===
+        // === DASHBOARD ===
         async function carregarDashboard() {
             const [snapLojas, snapCli, snapHist] = await Promise.all([
                 getDocs(collection(db, "usuarios")), getDocs(collection(db, "clientes")), getDocs(query(collection(db, "historico"), orderBy("dataHora", "desc"), limit(30)))
             ]);
 
-            document.getElementById('dashTotLojas').innerText = (snapLojas.size > 0 ? snapLojas.size - 1 : 0); // Desconta o admin
+            document.getElementById('dashTotLojas').innerText = (snapLojas.size > 0 ? snapLojas.size - 1 : 0);
             document.getElementById('dashTotClientes').innerText = snapCli.size;
             document.getElementById('dashTotAcoes').innerText = snapHist.size;
 
@@ -257,33 +269,23 @@
             snapHist.forEach(d => {
                 let data = d.data();
                 let dataStr = data.dataHora ? data.dataHora.toDate().toLocaleString('pt-BR') : 'Data Indisponível';
-                tbody.innerHTML += `<tr>
-                    <td>${dataStr}</td>
-                    <td><b>${data.nomeLoja || data.lojaId}</b></td>
-                    <td style="color: ${data.acao.includes('Venda') ? 'green' : 'blue'}; font-weight:bold;">${data.acao}</td>
-                    <td>${data.destino || '-'}</td>
-                </tr>`;
+                tbody.innerHTML += `<tr><td>${dataStr}</td><td><b>${data.nomeLoja || data.lojaId}</b></td><td style="color: ${data.acao.includes('Venda') ? 'green' : 'blue'}; font-weight:bold;">${data.acao}</td><td>${data.destino || '-'}</td></tr>`;
             });
         }
 
-        // === FUNÇÕES DE LOJAS ===
+        // === LOJAS ===
         async function carregarLojas() {
             const snap = await getDocs(collection(db, "usuarios"));
             const tbody = document.querySelector('#tabelaLojas tbody');
             tbody.innerHTML = ''; usuariosData = {};
             
-            // Fixa Transferência
-            tbody.innerHTML += `<tr style="background:#e6f2ff;">
-                <td><b>TABELA TF</b></td><td>Tabela de Transferência Base</td>
-                <td><button class="btn-small btn-preco" onclick="window.abrirPrecos('tf')">Editar Preços TF</button></td>
-            </tr>`;
+            tbody.innerHTML += `<tr style="background:#e6f2ff;"><td><b>TABELA TF</b></td><td>Tabela de Transferência Base</td><td><button class="btn-small btn-preco" onclick="window.abrirPrecos('tf')">Editar Preços TF</button></td></tr>`;
 
             snap.forEach(d => {
                 usuariosData[d.id] = d.data(); const u = d.data();
                 if(d.id !== 'admin') {
                     tbody.innerHTML += `<tr>
-                        <td>${d.id}</td>
-                        <td>${u.nomeLoja} <br><small style="color:#666;">CNPJ: ${u.cnpj||'-'}</small></td>
+                        <td>${d.id}</td><td>${u.nomeLoja} <br><small style="color:#666;">CNPJ: ${u.cnpj||'-'}</small></td>
                         <td>
                             <button class="btn-small btn-preco" onclick="window.abrirPrecos('${d.id}')">Preços</button>
                             <button class="btn-small btn-edit" onclick="window.editarLoja('${d.id}')">Editar</button>
@@ -312,22 +314,16 @@
             await setDoc(doc(db, "usuarios", login), dados, { merge: true }); window.fecharModal('modalEditar'); carregarLojas(); carregarDashboard();
         };
 
-        // === FUNÇÕES DE CLIENTES (CRM) ===
+        // === CLIENTES (CRM) ===
         async function carregarClientes() {
             const snap = await getDocs(collection(db, "clientes"));
             const tbody = document.querySelector('#tabelaClientes tbody');
             tbody.innerHTML = ''; clientesData = {};
-
             snap.forEach(d => {
                 clientesData[d.id] = d.data(); const c = d.data();
                 let badge = c.tipo === 'venda' ? '<span class="badge bg-venda">VENDA</span>' : '<span class="badge bg-tf">TRANSFERÊNCIA</span>';
-                tbody.innerHTML += `<tr>
-                    <td>${badge}</td><td><b>${c.razao}</b></td><td>${c.cnpj||'-'}</td><td>${c.prazo||'-'}</td><td>${c.lojaId}</td>
-                    <td>
-                        <button class="btn-small btn-edit" onclick="window.editarCliente('${d.id}')">Editar</button>
-                        <button class="btn-small btn-del" onclick="window.excluirCliente('${d.id}')">X</button>
-                    </td>
-                </tr>`;
+                tbody.innerHTML += `<tr><td>${badge}</td><td><b>${c.razao}</b></td><td>${c.cnpj||'-'}</td><td>${c.prazo||'-'}</td><td>${c.lojaId}</td>
+                    <td><button class="btn-small btn-edit" onclick="window.editarCliente('${d.id}')">Editar</button><button class="btn-small btn-del" onclick="window.excluirCliente('${d.id}')">X</button></td></tr>`;
             });
         }
         window.editarCliente = (id) => {
@@ -342,9 +338,10 @@
             await setDoc(doc(db, "clientes", id), dados, { merge: true }); window.fecharModal('modalEditarCliente'); carregarClientes();
         };
 
-        // === FUNÇÕES DE PREÇOS ===
+        // === EDITOR DE PREÇOS ===
         window.abrirPrecos = async (tabelaId) => {
             document.getElementById('tituloPrecos').innerText = `Editando Tabela: ${tabelaId.toUpperCase()}`;
+            document.getElementById('txtNomeTabelaAtual').innerText = tabelaId.toUpperCase();
             document.getElementById('editTabelaId').value = tabelaId;
             document.getElementById('listaEdicaoPrecos').innerHTML = '<p>A carregar preços...</p>';
             document.getElementById('modalPrecos').style.display = 'flex';
@@ -388,10 +385,62 @@
             itensExcluidos.forEach(cod => { updates[cod] = deleteField(); });
             for(let item of batchProdutos) await setDoc(doc(db, "produtos", item.cod), { codigo: item.cod, descricao: item.desc, engradado: item.eng, categoria: item.cat }, { merge: true });
             await setDoc(doc(db, "precos", tabelaId), updates, { merge: true });
-            alert("Preços atualizados com sucesso!"); window.fecharModal('modalPrecos'); document.getElementById('btnSalvarPrecos').innerText = "💾 Salvar Alterações na Tabela";
+            alert("Preços atualizados com sucesso!"); window.fecharModal('modalPrecos'); document.getElementById('btnSalvarPrecos').innerText = "💾 Salvar Alterações Manuais";
         };
 
-        // IMPORTAÇÕES
+        // === NOVA FUNÇÃO: UPLOAD DENTRO DO MODAL ===
+        document.getElementById('btnUploadModal').onclick = async () => {
+            const fileInput = document.getElementById('fileCsvModal');
+            if(fileInput.files.length === 0) return alert("Selecione uma planilha!");
+            
+            const tabelaId = document.getElementById('editTabelaId').value;
+            const btn = document.getElementById('btnUploadModal');
+            btn.innerText = "⏳ Processando..."; btn.disabled = true;
+
+            const f = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = async (e) => {
+                try {
+                    const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+                    const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+                    let precos = {}; let count = 0;
+                    
+                    for(let row of rawData) {
+                        let cleanRow = {}; for(let key in row) cleanRow[key.toString().trim().toUpperCase()] = row[key];
+                        let cod = cleanRow['CODIGO'] || cleanRow['CÓDIGO'];
+                        let prod = cleanRow['PRODUTO'];
+                        let eng = parseFloat(cleanRow['ENGRADADO']) || 1;
+                        let cat = cleanRow['CATEGORIA'] ? String(cleanRow['CATEGORIA']).toUpperCase().trim() : 'SORVETE';
+                        let precoVal = cleanRow['PRECO'] || cleanRow['PREÇO'] || 0;
+                        let preco = typeof precoVal === 'number' ? precoVal : parseFloat(String(precoVal).replace(/R\$/gi, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
+
+                        if(cod && prod && preco > 0) {
+                            precos[cod.toString()] = { preco: preco, visivel: true }; 
+                            if(!tabelaId.includes('_promo')) {
+                                await setDoc(doc(db, "produtos", cod.toString()), { codigo: cod.toString(), descricao: prod, engradado: eng, categoria: cat }, { merge: true });
+                            }
+                            count++;
+                        }
+                    }
+                    
+                    if(count > 0) {
+                        await setDoc(doc(db, "precos", tabelaId), precos);
+                        alert(`SUCESSO! ${count} produtos salvos diretamente na tabela "${tabelaId}".`);
+                        window.abrirPrecos(tabelaId); // Recarrega a visualização
+                    } else {
+                        alert("⚠️ ERRO: Nenhum produto lido. Verifique se as colunas estão corretas.");
+                    }
+                } catch (err) {
+                    console.error(err); alert("Erro ao processar planilha.");
+                }
+                btn.innerText = "⬆️ Importar Tabela Aqui"; btn.disabled = false;
+                fileInput.value = ""; 
+            };
+            reader.readAsArrayBuffer(f);
+        };
+
+        // === IMPORTAÇÕES GERAIS ===
         document.getElementById('btnUpload').onclick = async () => {
             const files = document.getElementById('fileCsv').files; if(files.length === 0) return alert("Selecione os arquivos de preço!");
             const btn = document.getElementById('btnUpload'); btn.innerText = "⏳ Processando... Aguarde"; btn.disabled = true;
