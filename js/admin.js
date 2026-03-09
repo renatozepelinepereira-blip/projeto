@@ -5,16 +5,13 @@ const firebaseConfig = { apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8", auth
 const db = getFirestore(initializeApp(firebaseConfig));
 if(localStorage.getItem('tipo') !== 'admin') window.location.href = 'index.html';
 
-let usuariosData = {};
-let editorItens = []; let itensExcluidos = [];
-let clientesData = {};
+let usuariosData = {}; let editorItens = []; let itensExcluidos = []; let clientesData = {};
 
 window.mudarSecao = (secaoId) => {
     document.querySelectorAll('.secao').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-links button').forEach(el => el.classList.remove('active'));
     document.getElementById('sec-' + secaoId).classList.add('active');
     document.getElementById('nav-' + secaoId).classList.add('active');
-    
     if(secaoId === 'dashboard') carregarDashboard();
     if(secaoId === 'lojas') carregarLojas();
     if(secaoId === 'clientes') carregarClientes();
@@ -30,213 +27,127 @@ const aplicaMascara = (e) => {
 document.getElementById('editCnpj').addEventListener('input', aplicaMascara);
 document.getElementById('editCliCnpj').addEventListener('input', aplicaMascara);
 
-// NOVO FORMATADOR INTELIGENTE (REMOVE 'ATACADAO', 'CD' E BARRAS '/')
+// === FORMATADOR DE LOGIN TURBINADO ===
 function formatarNomeLogin(nomeRaw) {
     let nome = nomeRaw.toLowerCase();
+    
+    // 1. Remove acentos
     nome = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
     
-    // Remove palavras e siglas indesejadas
+    // 2. Remove TUDO o que estiver entre parênteses (ex: "(rio jardim)")
+    nome = nome.replace(/\([^)]*\)/g, " ");
+
+    // 3. Remove barra e o estado no final (ex: /pr, /sp, /mg)
+    nome = nome.replace(/\/[a-z]{2}\b/g, " "); 
+    
+    // 4. Remove palavras e siglas indesejadas
     nome = nome.replace(/\b(eskimo|eskimó|loja de fabrica|loja|fabrica|sorvetes|sorvete|de|atacadao|atacadão|cd)\b/g, " ");
     
-    // Remove tudo o que não for letra, número ou espaço em branco (Elimina traços, barras, pontos)
+    // 5. Remove caracteres especiais (traços, pontos, etc) deixando só letras e números
     nome = nome.replace(/[^a-z0-9\s]/g, " "); 
     
+    // 6. Separa as palavras que sobraram
     let palavras = nome.split(/\s+/).filter(p => p.length > 0);
     const romanos = /^(i{1,3}|iv|v|vi{1,3}|ix|x)$/;
     let loginStr = "";
     
     if (palavras.length > 0) {
         let ultima = palavras[palavras.length - 1];
-        if (romanos.test(ultima)) {
-            let base = palavras.slice(0, -1).join("");
-            loginStr = base + "." + ultima;
-        } else {
-            loginStr = palavras.join("");
+        // Se a última palavra for um número romano, separa com um ponto
+        if (romanos.test(ultima)) { 
+            let base = palavras.slice(0, -1).join(""); 
+            loginStr = base + "." + ultima; 
+        } 
+        else { 
+            loginStr = palavras.join(""); 
         }
     }
     return loginStr ? "filial." + loginStr : "";
 }
 
 document.getElementById('editNome').addEventListener('input', (e) => {
-    if(document.getElementById('editId').value === "NOVO") {
-        document.getElementById('editLogin').value = formatarNomeLogin(e.target.value);
-    }
+    if(document.getElementById('editId').value === "NOVO") document.getElementById('editLogin').value = formatarNomeLogin(e.target.value);
 });
 
 window.apagarTodasLojas = async () => {
     if(!confirm("⚠️ ATENÇÃO EXTREMA: Isto vai apagar TODAS as lojas e tabelas de preços da base de dados (exceto o Admin)! Tem certeza que deseja prosseguir?")) return;
     if(!confirm("Atenção: Esta ação NÃO PODE ser desfeita. Deseja mesmo limpar tudo?")) return;
-
-    const btn = document.getElementById('btnApagarTudo');
-    btn.innerText = "⏳ A limpar..."; btn.disabled = true;
-
+    const btn = document.getElementById('btnApagarTudo'); btn.innerText = "⏳ A limpar..."; btn.disabled = true;
     try {
-        const snap = await getDocs(collection(db, "usuarios"));
-        let count = 0;
-        for(let d of snap.docs) {
-            if(d.id !== 'admin') {
-                await deleteDoc(doc(db, "usuarios", d.id));
-                await deleteDoc(doc(db, "precos", d.id)); 
-                count++;
-            }
-        }
+        const snap = await getDocs(collection(db, "usuarios")); let count = 0;
+        for(let d of snap.docs) { if(d.id !== 'admin') { await deleteDoc(doc(db, "usuarios", d.id)); await deleteDoc(doc(db, "precos", d.id)); count++; } }
         alert(`Limpeza concluída! ${count} lojas e seus preços foram apagados com sucesso.`);
     } catch (error) { console.error(error); alert("Erro ao tentar limpar o banco."); }
-
-    btn.innerText = "🗑️ Limpar Banco de Lojas"; btn.disabled = false;
-    carregarLojas(); carregarDashboard();
+    btn.innerText = "🗑️ Limpar Banco de Lojas"; btn.disabled = false; carregarLojas(); carregarDashboard();
 };
 
-// === DASHBOARD ===
 async function carregarDashboard() {
-    const [snapLojas, snapCli, snapHist] = await Promise.all([
-        getDocs(collection(db, "usuarios")), getDocs(collection(db, "clientes")), getDocs(query(collection(db, "historico"), orderBy("dataHora", "desc"), limit(30)))
-    ]);
-
+    const [snapLojas, snapCli, snapHist] = await Promise.all([ getDocs(collection(db, "usuarios")), getDocs(collection(db, "clientes")), getDocs(query(collection(db, "historico"), orderBy("dataHora", "desc"), limit(30))) ]);
     document.getElementById('dashTotLojas').innerText = (snapLojas.size > 0 ? snapLojas.size - 1 : 0);
     document.getElementById('dashTotClientes').innerText = snapCli.size;
     document.getElementById('dashTotAcoes').innerText = snapHist.size;
-
-    let tbody = document.querySelector('#tabelaHistorico tbody');
-    tbody.innerHTML = '';
+    let tbody = document.querySelector('#tabelaHistorico tbody'); tbody.innerHTML = '';
     if(snapHist.size === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">Nenhuma atividade registada ainda.</td></tr>'; return; }
-
     snapHist.forEach(d => {
-        let data = d.data();
-        let dataStr = 'Data Indisponível';
-        if(data.dataHora) {
-            if(typeof data.dataHora.toDate === 'function') dataStr = data.dataHora.toDate().toLocaleString('pt-BR');
-            else if(data.dataHora.seconds) dataStr = new Date(data.dataHora.seconds * 1000).toLocaleString('pt-BR');
-        }
+        let data = d.data(); let dataStr = 'Data Indisponível';
+        if(data.dataHora) { if(typeof data.dataHora.toDate === 'function') dataStr = data.dataHora.toDate().toLocaleString('pt-BR'); else if(data.dataHora.seconds) dataStr = new Date(data.dataHora.seconds * 1000).toLocaleString('pt-BR'); }
         tbody.innerHTML += `<tr><td>${dataStr}</td><td><b>${data.nomeLoja || data.lojaId}</b></td><td style="color: ${data.acao.includes('Venda') ? 'green' : 'blue'}; font-weight:bold;">${data.acao}</td><td>${data.destino || '-'}</td></tr>`;
     });
 }
 
-// === LOJAS E CRIAÇÃO ===
 async function carregarLojas() {
     const snap = await getDocs(collection(db, "usuarios"));
-    const tbody = document.querySelector('#tabelaLojas tbody');
-    tbody.innerHTML = ''; usuariosData = {};
-    
+    const tbody = document.querySelector('#tabelaLojas tbody'); tbody.innerHTML = ''; usuariosData = {};
     tbody.innerHTML += `<tr style="background:#e6f2ff;"><td><b>TABELA TF</b></td><td>Tabela de Transferência Base</td><td>-</td><td><button class="btn-small btn-preco" onclick="window.abrirPrecos('tf')">Editar Preços TF</button></td></tr>`;
-
     snap.forEach(d => {
         usuariosData[d.id] = d.data(); const u = d.data();
         if(d.id !== 'admin') {
-            tbody.innerHTML += `<tr>
-                <td><b>${d.id}</b></td>
-                <td>${u.nomeLoja}</td>
-                <td style="color:#666;">${u.cnpj||'Não informado'}</td>
-                <td>
-                    <button class="btn-small btn-preco" onclick="window.abrirPrecos('${d.id}')">💲 Preços</button>
-                    <button class="btn-small btn-edit" onclick="window.editarLoja('${d.id}')">✏️ Editar</button>
-                    <button class="btn-small btn-del" onclick="window.excluirLoja('${d.id}')">❌</button>
-                </td>
-            </tr>`;
+            tbody.innerHTML += `<tr><td><b>${d.id}</b></td><td>${u.nomeLoja}</td><td style="color:#666;">${u.cnpj||'Não informado'}</td>
+                <td><button class="btn-small btn-preco" onclick="window.abrirPrecos('${d.id}')">💲 Preços</button><button class="btn-small btn-edit" onclick="window.editarLoja('${d.id}')">✏️ Editar</button><button class="btn-small btn-del" onclick="window.excluirLoja('${d.id}')">❌</button></td></tr>`;
         }
     });
 }
 
 window.abrirNovoUsuario = () => { 
-    document.getElementById('modalEditar').style.display='flex'; 
-    document.getElementById('tituloForm').innerText = "Cadastro de Loja";
-    document.getElementById('editId').value="NOVO"; 
-    document.getElementById('editLogin').value=""; 
-    document.getElementById('editLogin').disabled=false; 
-    document.getElementById('editCnpj').value=""; 
-    document.getElementById('editNome').value=""; 
-    document.getElementById('chkAdmin').checked = false;
-    document.getElementById('chkBalde').checked = false;
-    document.getElementById('chkPromo').checked = false;
-    document.getElementById('btnResetSenha').style.display = 'none';
-    document.getElementById('dicaSenhaMsg').style.display = 'block';
-    document.getElementById('alertaMigracao').style.display = 'none';
+    document.getElementById('modalEditar').style.display='flex'; document.getElementById('tituloForm').innerText = "Cadastro de Loja"; document.getElementById('editId').value="NOVO"; document.getElementById('editLogin').value=""; document.getElementById('editLogin').disabled=false; document.getElementById('editCnpj').value=""; document.getElementById('editNome').value=""; document.getElementById('chkAdmin').checked = false; document.getElementById('chkBalde').checked = false; document.getElementById('chkPromo').checked = false; document.getElementById('btnResetSenha').style.display = 'none'; document.getElementById('dicaSenhaMsg').style.display = 'block'; document.getElementById('alertaMigracao').style.display = 'none';
 };
 
 window.editarLoja = (id) => { 
     const u = usuariosData[id]; const plan = u.planilhas || {};
-    document.getElementById('tituloForm').innerText = "Editar Loja";
-    document.getElementById('editId').value = id; 
-    document.getElementById('editLogin').value = id; 
-    document.getElementById('editLogin').disabled = false; 
-    document.getElementById('editNome').value = u.nomeLoja||""; 
-    document.getElementById('editCnpj').value = u.cnpj||""; 
-    document.getElementById('chkAdmin').checked = u.tipo === 'admin'; 
-    document.getElementById('chkBalde').checked = plan.balde||false; 
-    document.getElementById('chkPromo').checked = plan.promo||false;
-    document.getElementById('btnResetSenha').style.display = 'block';
-    document.getElementById('dicaSenhaMsg').style.display = 'none';
-    document.getElementById('alertaMigracao').style.display = 'block'; 
-    document.getElementById('modalEditar').style.display = 'flex';
+    document.getElementById('tituloForm').innerText = "Editar Loja"; document.getElementById('editId').value = id; document.getElementById('editLogin').value = id; document.getElementById('editLogin').disabled = false; document.getElementById('editNome').value = u.nomeLoja||""; document.getElementById('editCnpj').value = u.cnpj||""; document.getElementById('chkAdmin').checked = u.tipo === 'admin'; document.getElementById('chkBalde').checked = plan.balde||false; document.getElementById('chkPromo').checked = plan.promo||false; document.getElementById('btnResetSenha').style.display = 'block'; document.getElementById('dicaSenhaMsg').style.display = 'none'; document.getElementById('alertaMigracao').style.display = 'block'; document.getElementById('modalEditar').style.display = 'flex';
 };
 
 window.excluirLoja = async (id) => { if(confirm("Atenção: Excluir loja "+id+"? O histórico de preços dela será perdido!")){ await deleteDoc(doc(db, "usuarios", id)); carregarLojas(); carregarDashboard(); } };
 
 window.resetarSenha = async () => {
-    const id = document.getElementById('editId').value;
-    if (id === "NOVO") return;
-    if (confirm(`Tem a certeza que deseja repor a senha de ${id} para 'eskimo'?`)) {
-        await setDoc(doc(db, "usuarios", id), { senha: "eskimo" }, { merge: true });
-        alert("Senha redefinida com sucesso! No próximo login a loja deverá criar uma nova senha.");
-    }
+    const id = document.getElementById('editId').value; if (id === "NOVO") return;
+    if (confirm(`Tem a certeza que deseja repor a senha de ${id} para 'eskimo'?`)) { await setDoc(doc(db, "usuarios", id), { senha: "eskimo" }, { merge: true }); alert("Senha redefinida com sucesso! No próximo login a loja deverá criar uma nova senha."); }
 };
 
 document.getElementById('btnSalvarEdicao').onclick = async () => {
-    const novoLogin = document.getElementById('editLogin').value.toLowerCase().trim();
-    const oldLogin = document.getElementById('editId').value;
-    
+    const novoLogin = document.getElementById('editLogin').value.toLowerCase().trim(); const oldLogin = document.getElementById('editId').value;
     if(!novoLogin) return alert("O Login não pode estar vazio!");
-    
-    document.getElementById('btnSalvarEdicao').innerText = "A processar...";
-    const isNovo = (oldLogin === "NOVO");
-    
-    let dados = { 
-        nomeLoja: document.getElementById('editNome').value, 
-        cnpj: document.getElementById('editCnpj').value, 
-        tipo: document.getElementById('chkAdmin').checked ? "admin" : "loja",
-        planilhas: { sorvete: true, seco: true, balde: document.getElementById('chkBalde').checked, promo: document.getElementById('chkPromo').checked } 
-    };
+    document.getElementById('btnSalvarEdicao').innerText = "A processar..."; const isNovo = (oldLogin === "NOVO");
+    let dados = { nomeLoja: document.getElementById('editNome').value, cnpj: document.getElementById('editCnpj').value, tipo: document.getElementById('chkAdmin').checked ? "admin" : "loja", planilhas: { sorvete: true, seco: true, balde: document.getElementById('chkBalde').checked, promo: document.getElementById('chkPromo').checked } };
 
     if(isNovo) {
-        dados.senha = 'eskimo';
-        await setDoc(doc(db, "usuarios", novoLogin), dados, { merge: true }); 
+        dados.senha = 'eskimo'; await setDoc(doc(db, "usuarios", novoLogin), dados, { merge: true }); 
     } else {
         if (oldLogin !== novoLogin) {
-            const userRefOld = doc(db, "usuarios", oldLogin);
-            const userSnapOld = await getDoc(userRefOld);
-            
+            const userRefOld = doc(db, "usuarios", oldLogin); const userSnapOld = await getDoc(userRefOld);
             if (userSnapOld.exists()) {
-                dados.senha = userSnapOld.data().senha;
-                await setDoc(doc(db, "usuarios", novoLogin), dados, { merge: true });
-                
-                const precoRefOld = doc(db, "precos", oldLogin);
-                const precoSnapOld = await getDoc(precoRefOld);
-                if (precoSnapOld.exists()) {
-                    await setDoc(doc(db, "precos", novoLogin), precoSnapOld.data());
-                    await deleteDoc(precoRefOld);
-                }
-                
-                const qClientes = query(collection(db, "clientes"), where("lojaId", "==", oldLogin));
-                const cliSnapOld = await getDocs(qClientes);
-                for (let cli of cliSnapOld.docs) {
-                    await setDoc(doc(db, "clientes", cli.id), { lojaId: novoLogin }, { merge: true });
-                }
-
-                await deleteDoc(userRefOld);
-                alert(`Login alterado com sucesso! A loja ${oldLogin} agora chama-se ${novoLogin}. Todos os preços e clientes foram migrados.`);
+                dados.senha = userSnapOld.data().senha; await setDoc(doc(db, "usuarios", novoLogin), dados, { merge: true });
+                const precoRefOld = doc(db, "precos", oldLogin); const precoSnapOld = await getDoc(precoRefOld);
+                if (precoSnapOld.exists()) { await setDoc(doc(db, "precos", novoLogin), precoSnapOld.data()); await deleteDoc(precoRefOld); }
+                const qClientes = query(collection(db, "clientes"), where("lojaId", "==", oldLogin)); const cliSnapOld = await getDocs(qClientes);
+                for (let cli of cliSnapOld.docs) { await setDoc(doc(db, "clientes", cli.id), { lojaId: novoLogin }, { merge: true }); }
+                await deleteDoc(userRefOld); alert(`Login alterado com sucesso! A loja ${oldLogin} agora chama-se ${novoLogin}. Todos os preços e clientes foram migrados.`);
             }
-        } else {
-            await setDoc(doc(db, "usuarios", oldLogin), dados, { merge: true }); 
-        }
+        } else { await setDoc(doc(db, "usuarios", oldLogin), dados, { merge: true }); }
     }
-    
-    document.getElementById('btnSalvarEdicao').innerText = "Salvar Loja";
-    window.fecharModal('modalEditar'); 
-    carregarLojas(); 
-    carregarDashboard();
+    document.getElementById('btnSalvarEdicao').innerText = "Salvar Loja"; window.fecharModal('modalEditar'); carregarLojas(); carregarDashboard();
 };
 
-// === IMPORTAÇÃO DE LOJAS EM MASSA ===
 document.getElementById('btnUploadUsuarios').onclick = async () => {
     const fileInput = document.getElementById('fileUsuarios'); if(fileInput.files.length === 0) return alert("Selecione a planilha de lojas!");
     const btn = document.getElementById('btnUploadUsuarios'); btn.innerText = "⏳ Criando Lojas..."; btn.disabled = true;
@@ -251,28 +162,18 @@ document.getElementById('btnUploadUsuarios').onclick = async () => {
                 if(nome) {
                     let login = (cleanRow['LOGIN'] || '').toString().toLowerCase().trim();
                     if (!login) { login = formatarNomeLogin(nome); }
-
-                    if (login) {
-                        await setDoc(doc(db, "usuarios", login), { 
-                            senha: 'eskimo', nomeLoja: nome, cnpj: (cleanRow['CNPJ']||'').toString().trim(), tipo: 'loja', planilhas: { sorvete: true, seco: true, balde: false, promo: false }
-                        }, { merge: true }); count++;
-                    }
+                    if (login) { await setDoc(doc(db, "usuarios", login), { senha: 'eskimo', nomeLoja: nome, cnpj: (cleanRow['CNPJ']||'').toString().trim(), tipo: 'loja', planilhas: { sorvete: true, seco: true, balde: false, promo: false } }, { merge: true }); count++; }
                 }
             }
             alert(`SUCESSO! ${count} lojas cadastradas/atualizadas na base.`); carregarLojas(); carregarDashboard();
-        } catch (err) { 
-            console.error("ERRO DE IMPORTAÇÃO:", err); 
-            alert(`Erro ao processar planilha: ${err.message}\nVerifique se o nome das colunas são 'NOME' e 'CNPJ' na Linha 1.`); 
-        }
+        } catch (err) { console.error("ERRO DE IMPORTAÇÃO:", err); alert(`Erro ao processar planilha: ${err.message}\nVerifique se o nome das colunas são 'NOME' e 'CNPJ' na Linha 1.`); }
         btn.innerText = "⚡ Importar Lojas"; btn.disabled = false; fileInput.value = "";
     }; reader.readAsArrayBuffer(fileInput.files[0]);
 };
 
-// === CLIENTES (CRM) ===
 async function carregarClientes() {
     const snap = await getDocs(collection(db, "clientes"));
-    const tbody = document.querySelector('#tabelaClientes tbody');
-    tbody.innerHTML = ''; clientesData = {};
+    const tbody = document.querySelector('#tabelaClientes tbody'); tbody.innerHTML = ''; clientesData = {};
     snap.forEach(d => {
         clientesData[d.id] = d.data(); const c = d.data();
         let badge = c.tipo === 'venda' ? '<span class="badge bg-venda">VENDA</span>' : '<span class="badge bg-tf">TRANSFERÊNCIA</span>';
@@ -281,27 +182,18 @@ async function carregarClientes() {
     });
 }
 window.editarCliente = (id) => {
-    const c = clientesData[id]; document.getElementById('editCliId').value = id;
-    document.getElementById('editCliRazao').value = c.razao||""; document.getElementById('editCliCnpj').value = c.cnpj||""; document.getElementById('editCliPrazo').value = c.prazo||""; document.getElementById('editCliTipo').value = c.tipo||"venda";
-    document.getElementById('modalEditarCliente').style.display = 'flex';
+    const c = clientesData[id]; document.getElementById('editCliId').value = id; document.getElementById('editCliRazao').value = c.razao||""; document.getElementById('editCliCnpj').value = c.cnpj||""; document.getElementById('editCliPrazo').value = c.prazo||""; document.getElementById('editCliTipo').value = c.tipo||"venda"; document.getElementById('modalEditarCliente').style.display = 'flex';
 };
 window.excluirCliente = async (id) => { if(confirm("Excluir este cliente da base?")){ await deleteDoc(doc(db, "clientes", id)); carregarClientes(); carregarDashboard(); } };
 document.getElementById('btnSalvarCliente').onclick = async () => {
-    const id = document.getElementById('editCliId').value;
-    const dados = { razao: document.getElementById('editCliRazao').value, cnpj: document.getElementById('editCliCnpj').value, prazo: document.getElementById('editCliPrazo').value, tipo: document.getElementById('editCliTipo').value };
+    const id = document.getElementById('editCliId').value; const dados = { razao: document.getElementById('editCliRazao').value, cnpj: document.getElementById('editCliCnpj').value, prazo: document.getElementById('editCliPrazo').value, tipo: document.getElementById('editCliTipo').value };
     await setDoc(doc(db, "clientes", id), dados, { merge: true }); window.fecharModal('modalEditarCliente'); carregarClientes();
 };
 
-// === EDITOR DE PREÇOS ===
 window.abrirPrecos = async (tabelaId) => {
-    document.getElementById('txtNomeTabelaAtual').innerText = tabelaId.toUpperCase();
-    document.getElementById('editTabelaId').value = tabelaId;
-    document.getElementById('listaEdicaoPrecos').innerHTML = '<p>A carregar preços...</p>';
-    document.getElementById('modalPrecos').style.display = 'flex';
-    editorItens = []; itensExcluidos = [];
+    document.getElementById('txtNomeTabelaAtual').innerText = tabelaId.toUpperCase(); document.getElementById('editTabelaId').value = tabelaId; document.getElementById('listaEdicaoPrecos').innerHTML = '<p>A carregar preços...</p>'; document.getElementById('modalPrecos').style.display = 'flex'; editorItens = []; itensExcluidos = [];
     try {
-        const [prodSnap, precoSnap] = await Promise.all([getDocs(collection(db, "produtos")), getDoc(doc(db, "precos", tabelaId))]);
-        const precosAtuais = precoSnap.exists() ? precoSnap.data() : {};
+        const [prodSnap, precoSnap] = await Promise.all([getDocs(collection(db, "produtos")), getDoc(doc(db, "precos", tabelaId))]); const precosAtuais = precoSnap.exists() ? precoSnap.data() : {};
         prodSnap.forEach(p => {
             const cod = p.id;
             if(precosAtuais[cod] !== undefined) {
@@ -326,27 +218,21 @@ function renderEditor() {
 window.removerItemEditor = (index) => { itensExcluidos.push(editorItens[index].cod); editorItens.splice(index, 1); renderEditor(); };
 window.adicionarItemEditor = () => {
     const cod = prompt("Código do Produto:"); if(!cod || editorItens.find(i => i.cod === cod)) return alert("Código inválido/existente.");
-    const desc = prompt("Descrição (Nome):"); const cat = prompt("Categoria (SORVETE, SECO ou BALDE):", "SORVETE");
-    const eng = parseFloat(prompt("Quantidade no Engradado/Caixa:", "1")) || 1; const preco = parseFloat(prompt("Preço R$:", "0.00")) || 0;
+    const desc = prompt("Descrição (Nome):"); const cat = prompt("Categoria (SORVETE, SECO ou BALDE):", "SORVETE"); const eng = parseFloat(prompt("Quantidade no Engradado/Caixa:", "1")) || 1; const preco = parseFloat(prompt("Preço R$:", "0.00")) || 0;
     editorItens.unshift({ cod, desc, cat, eng, preco, visivel: true }); renderEditor();
 };
 
 document.getElementById('btnSalvarPrecos').onclick = async () => {
-    const tabelaId = document.getElementById('editTabelaId').value; document.getElementById('btnSalvarPrecos').innerText = "A guardar...";
-    let updates = {}; let batchProdutos = [];
+    const tabelaId = document.getElementById('editTabelaId').value; document.getElementById('btnSalvarPrecos').innerText = "A guardar..."; let updates = {}; let batchProdutos = [];
     editorItens.forEach(i => { if(i.preco > 0) { updates[i.cod] = { preco: i.preco, visivel: i.visivel }; batchProdutos.push(i); } });
     itensExcluidos.forEach(cod => { updates[cod] = deleteField(); });
     for(let item of batchProdutos) await setDoc(doc(db, "produtos", item.cod), { codigo: item.cod, descricao: item.desc, engradado: item.eng, categoria: item.cat }, { merge: true });
-    await setDoc(doc(db, "precos", tabelaId), updates, { merge: true });
-    alert("Preços atualizados com sucesso!"); window.fecharModal('modalPrecos'); document.getElementById('btnSalvarPrecos').innerText = "💾 Salvar Alterações Manuais";
+    await setDoc(doc(db, "precos", tabelaId), updates, { merge: true }); alert("Preços atualizados com sucesso!"); window.fecharModal('modalPrecos'); document.getElementById('btnSalvarPrecos').innerText = "💾 Salvar Alterações Manuais";
 };
 
-// === UPLOAD ESPECÍFICO DENTRO DO MODAL ===
 document.getElementById('btnUploadModal').onclick = async () => {
     const fileInput = document.getElementById('fileCsvModal'); if(fileInput.files.length === 0) return alert("Selecione uma planilha!");
-    const tabelaId = document.getElementById('editTabelaId').value; const btn = document.getElementById('btnUploadModal');
-    btn.innerText = "⏳ Processando..."; btn.disabled = true;
-
+    const tabelaId = document.getElementById('editTabelaId').value; const btn = document.getElementById('btnUploadModal'); btn.innerText = "⏳ Processando..."; btn.disabled = true;
     const reader = new FileReader();
     reader.onload = async (e) => {
         try {
@@ -369,7 +255,6 @@ document.getElementById('btnUploadModal').onclick = async () => {
     }; reader.readAsArrayBuffer(fileInput.files[0]);
 };
 
-// === IMPORTAÇÃO GERAL (VÁRIAS TABELAS) ===
 document.getElementById('btnUpload').onclick = async () => {
     const files = document.getElementById('fileCsv').files; if(files.length === 0) return alert("Selecione os arquivos de preço!");
     const btn = document.getElementById('btnUpload'); btn.innerText = "⏳ Processando... Aguarde"; btn.disabled = true;
@@ -425,7 +310,7 @@ window.restaurarBackup = async () => {
                 for (let docId in docs) { await setDoc(doc(db, col, docId), docs[docId], { merge: true }); totalRestaurado++; }
             }
             alert(`Restauração concluída com sucesso! ${totalRestaurado} registos recuperados.`); window.location.reload(); 
-        } catch (err) { console.error(err); alert("Erro ao ler o ficheiro de backup. Certifique-se que é um ficheiro .json válido."); }
+        } catch (err) { console.error(err); alert("Erro ao ler o ficheiro de backup. Certifique-se que é um ficheiro .json válido e gerado pelo sistema."); }
         btn.innerText = "⬆️ Restaurar Sistema"; btn.disabled = false;
     }; reader.readAsText(fileInput.files[0]);
 };
