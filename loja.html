@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Venda - Eskimó</title>
+    <link rel="stylesheet" href="css/app.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+<body>
+    <div id="sidebar" class="sidebar">
+        <button class="close-btn" onclick="window.toggleMenu()">×</button>
+        <h2>Menu Eskimó</h2>
+        <a href="loja.html" class="active">🛒 Venda</a>
+        <a href="transferencia.html">🔄 Transferência</a>
+        <a href="#" onclick="localStorage.clear(); window.location.href='index.html'" style="color: #dc3545; margin-top: auto; border-top: 1px solid #eee;">🚪 Sair</a>
+    </div>
+    <div id="overlay" class="overlay" onclick="window.toggleMenu()"></div>
+
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <button class="menu-btn" onclick="window.toggleMenu()">☰</button>
+                <h1>Filial: <span id="txtLoja"></span> - <span style="color:#444; font-size:20px;">Módulo Venda</span></h1>
+            </div>
+        </header>
+
+        <datalist id="listaNomesClientes"></datalist>
+        <datalist id="listaCnpjClientes"></datalist>
+
+        <div class="client-box">
+            <div><label><b>Razão Social do Cliente</b></label><input type="text" id="cliRazao" list="listaNomesClientes" placeholder="Comece a digitar o nome..." autocomplete="off"></div>
+            <div><label><b>CPF / CNPJ</b></label><input type="text" id="cliCnpj" list="listaCnpjClientes" placeholder="000.000.000-00" maxlength="18" autocomplete="off"></div>
+            <div><label><b>Prazo</b></label><input type="text" id="cliPrazo" placeholder="Ex: 15 dias"></div>
+        </div>
+
+        <div class="tabs" id="tabContainer">
+            <button class="tab-btn" id="btnTabSorvete" onclick="window.mudarAba('sorvete')">🍨 Sorvetes</button>
+            <button class="tab-btn" id="btnTabSeco" onclick="window.mudarAba('seco')">📦 Secos</button>
+            <button class="tab-btn" id="btnTabBalde" onclick="window.mudarAba('balde')">🪣 Baldes</button>
+            <button class="tab-btn" id="btnTabPromo" onclick="window.mudarAba('promo')" style="color:#e0a800;">⭐ PROMOÇÕES</button>
+        </div>
+
+        <div id="content_sorvete" class="tab-content"><div class="discount-bar"><label>Desconto nesta aba (%):</label><input type="number" id="desc_sorvete" value="0" min="0" max="100" oninput="window.calcularTudo()"></div><table id="tbl_sorvete"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+        <div id="content_seco" class="tab-content"><div class="discount-bar"><label>Desconto nesta aba (%):</label><input type="number" id="desc_seco" value="0" min="0" max="100" oninput="window.calcularTudo()"></div><table id="tbl_seco"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+        <div id="content_balde" class="tab-content"><div class="discount-bar"><label>Desconto nesta aba (%):</label><input type="number" id="desc_balde" value="0" min="0" max="100" oninput="window.calcularTudo()"></div><table id="tbl_balde"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+        <div id="content_promo" class="tab-content"><div class="discount-bar" style="border-color:#ffc107;"><label>Desconto nesta aba (%):</label><input type="number" id="desc_promo" value="0" min="0" max="100" oninput="window.calcularTudo()"></div><table id="tbl_promo"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço Promo</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+
+        <div class="resumo-box">
+            <h2>Resumo do Pedido (Valores Líquidos)</h2>
+            <div class="resumo-grid grid-5">
+                <div class="resumo-item">Sorvetes<div style="font-size:12px; color:#666;" id="resQtdSorvete">0 un</div><span id="resValSorvete">R$ 0,00</span></div>
+                <div class="resumo-item">Secos<div style="font-size:12px; color:#666;" id="resQtdSeco">0 un</div><span id="resValSeco">R$ 0,00</span></div>
+                <div class="resumo-item">Baldes<div style="font-size:12px; color:#666;" id="resQtdBalde">0 un</div><span id="resValBalde">R$ 0,00</span></div>
+                <div class="resumo-item" style="border-color:#ffc107;">Promoções<div style="font-size:12px; color:#666;" id="resQtdPromo">0 un</div><span style="color:#e0a800;" id="resValPromo">R$ 0,00</span></div>
+                <div class="resumo-item" style="background: #ffe6e6;">Total Unidades<span id="resQtdTotal" style="color:#333; margin-top:15px;">0 un</span></div>
+            </div>
+            <div class="total-final">
+                <div id="divSemDesc" style="font-size: 16px; color: #666; display: none;">Total sem Desconto: <s id="valSemDesc">R$ 0,00</s></div>
+                <div style="color: #28a745;"><b>TOTAL GERAL DO PEDIDO: <span id="valComDesc">R$ 0,00</span></b></div>
+            </div>
+            <button class="btn-gerar" onclick="window.gerarExcelPedido()">⬇️ GERAR PEDIDO EM EXCEL</button>
+        </div>
+    </div>
+
+    <script type="module" src="js/loja.js"></script>
+</body>
+</html>
