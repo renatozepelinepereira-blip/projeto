@@ -99,11 +99,9 @@
         };
 
         async function iniciar() {
-            // 1. Busca permissões do usuário
             const userSnap = await getDoc(doc(db, "usuarios", userId));
             const planilhas = userSnap.exists() && userSnap.data().planilhas ? userSnap.data().planilhas : { sorvete: true, seco: false, balde: false, promo: false, padrao: false };
             
-            // Ativa Abas
             let primeiraAba = null;
             if(planilhas.sorvete) { document.getElementById('btnTabSorvete').style.display = 'block'; primeiraAba = primeiraAba || 'sorvete'; }
             if(planilhas.seco) { document.getElementById('btnTabSeco').style.display = 'block'; primeiraAba = primeiraAba || 'seco'; }
@@ -111,10 +109,7 @@
             if(planilhas.promo) { document.getElementById('btnTabPromo').style.display = 'block'; primeiraAba = primeiraAba || 'promo'; }
             if(primeiraAba) window.mudarAba(primeiraAba);
 
-            // 2. Define qual tabela ler (Padrão ou a da Loja)
             const tabelaId = planilhas.padrao ? 'padrao' : userId;
-            
-            // Busca Preços (Normais e Promo) e Catálogo
             const [precoSnap, promoSnap, prodSnap] = await Promise.all([
                 getDoc(doc(db, "precos", tabelaId)),
                 planilhas.promo ? getDoc(doc(db, "precos", userId + "_promo")) : Promise.resolve({ exists: () => false }),
@@ -126,13 +121,18 @@
 
             prodSnap.forEach(d => {
                 const item = d.data();
-                // Itens Normais
-                if(meusPrecos[item.codigo]) {
-                    produtosGlobais.push({ ...item, precoFinal: meusPrecos[item.codigo], isPromo: false, catReal: (item.categoria || 'sorvete').toLowerCase().trim() });
-                }
-                // Itens em Promoção
-                if(precosPromo[item.codigo]) {
-                    produtosGlobais.push({ ...item, precoFinal: precosPromo[item.codigo], isPromo: true, catReal: 'promo' });
+                const objPromo = precosPromo[item.codigo];
+                const objNormal = meusPrecos[item.codigo];
+
+                // LÓGICA DE EXCLUSIVIDADE: Se for promo, NÃO aparece no normal. E oculta se "visivel" for false.
+                if(planilhas.promo && objPromo !== undefined) {
+                    let visivel = typeof objPromo === 'object' ? (objPromo.visivel !== false) : true;
+                    let preco = typeof objPromo === 'object' ? objPromo.preco : objPromo;
+                    if(visivel) produtosGlobais.push({ ...item, precoFinal: preco, isPromo: true, catReal: 'promo' });
+                } else if (objNormal !== undefined) {
+                    let visivel = typeof objNormal === 'object' ? (objNormal.visivel !== false) : true;
+                    let preco = typeof objNormal === 'object' ? objNormal.preco : objNormal;
+                    if(visivel) produtosGlobais.push({ ...item, precoFinal: preco, isPromo: false, catReal: (item.categoria || 'sorvete').toLowerCase().trim() });
                 }
             });
 
@@ -163,85 +163,54 @@
             produtosGlobais.forEach((p, i) => {
                 let inputEng = document.getElementById(`eng_${i}`);
                 if(!inputEng) return;
-                
                 let qtd = ((parseInt(inputEng.value)||0) * p.engradado) + (parseInt(document.getElementById(`uni_${i}`).value)||0);
                 let sub = qtd * p.precoFinal;
 
                 document.getElementById(`sub_${i}`).innerText = `R$ ${sub.toFixed(2)}`;
+                p.calcQtdCx = parseInt(inputEng.value)||0; p.calcQtdUn = parseInt(document.getElementById(`uni_${i}`).value)||0;
+                p.calcTotalUnidades = qtd; p.calcSubtotal = sub;
 
-                // Adiciona propriedades de cálculo no produto para o Excel
-                p.calcQtdCx = parseInt(inputEng.value)||0;
-                p.calcQtdUn = parseInt(document.getElementById(`uni_${i}`).value)||0;
-                p.calcTotalUnidades = qtd;
-                p.calcSubtotal = sub;
-
-                if(p.isPromo) { resumo.promoU += qtd; resumo.promoV += sub; }
-                else { resumo.normalU += qtd; resumo.normalV += sub; }
+                if(p.isPromo) { resumo.promoU += qtd; resumo.promoV += sub; } else { resumo.normalU += qtd; resumo.normalV += sub; }
             });
 
-            document.getElementById('resQtdNormal').innerText = resumo.normalU + " un";
-            document.getElementById('resValNormal').innerText = "R$ " + resumo.normalV.toFixed(2);
-            document.getElementById('resQtdPromo').innerText = resumo.promoU + " un";
-            document.getElementById('resValPromo').innerText = "R$ " + resumo.promoV.toFixed(2);
+            document.getElementById('resQtdNormal').innerText = resumo.normalU + " un"; document.getElementById('resValNormal').innerText = "R$ " + resumo.normalV.toFixed(2);
+            document.getElementById('resQtdPromo').innerText = resumo.promoU + " un"; document.getElementById('resValPromo').innerText = "R$ " + resumo.promoV.toFixed(2);
             document.getElementById('resQtdTotal').innerText = (resumo.normalU + resumo.promoU) + " un";
-            
             document.getElementById('valSemDesc').innerText = "R$ " + resumo.normalV.toFixed(2);
-            let valFinal = (resumo.normalV - (resumo.normalV * (desc/100))) + resumo.promoV; // Desconto não aplica na promo
+            
+            let valFinal = (resumo.normalV - (resumo.normalV * (desc/100))) + resumo.promoV; 
             document.getElementById('valComDesc').innerText = "R$ " + valFinal.toFixed(2);
         };
 
-        // GERAÇÃO DO ROMANEIO EXCEL DUAS COLUNAS
         window.gerarExcelPedido = () => {
             const razao = document.getElementById('cliRazao').value || "Cliente_S_Nome";
             const cnpj = document.getElementById('cliCnpj').value || "Sem_CNPJ";
             const desc = document.getElementById('cliDesc').value || "0";
-            
             const wb = XLSX.utils.book_new();
             
-            // Função para desenhar a aba no padrão da planilha original
             const criarAba = (nomeAba, tipoCategoria) => {
-                // Filtra os produtos da categoria que tiveram alguma quantidade preenchida
-                let selecionados = produtosGlobais.filter(p => 
-                    (tipoCategoria === 'promo' ? p.isPromo : (p.catReal === tipoCategoria && !p.isPromo)) && p.calcTotalUnidades > 0
-                );
+                let selecionados = produtosGlobais.filter(p => (tipoCategoria === 'promo' ? p.isPromo : (p.catReal === tipoCategoria && !p.isPromo)) && p.calcTotalUnidades > 0);
                 if(selecionados.length === 0) return;
 
                 let aoa = [
                     [`ROMANEIO - ${nomeAba.toUpperCase()}`],
                     ["CLIENTE:", razao, "", "CNPJ:", cnpj],
                     ["DESCONTO APLICADO:", desc + "%", "", "DATA:", new Date().toLocaleDateString()],
-                    [],
-                    ["CÓDIGO", "PRODUTO", "QTD CX", "QTD UN", "TOTAL (R$)", "  ", "CÓDIGO", "PRODUTO", "QTD CX", "QTD UN", "TOTAL (R$)"]
+                    [], ["CÓDIGO", "PRODUTO", "QTD CX", "QTD UN", "TOTAL (R$)", "  ", "CÓDIGO", "PRODUTO", "QTD CX", "QTD UN", "TOTAL (R$)"]
                 ];
 
-                // Lógica de divisão em duas colunas (Esquerda e Direita)
                 let metade = Math.ceil(selecionados.length / 2);
                 for(let i = 0; i < metade; i++) {
-                    let esq = selecionados[i];
-                    let dir = selecionados[i + metade];
-                    
-                    let linha = [
-                        esq.codigo, esq.descricao, esq.calcQtdCx, esq.calcQtdUn, esq.calcSubtotal, "  ",
-                        dir ? dir.codigo : "", dir ? dir.descricao : "", dir ? dir.calcQtdCx : "", dir ? dir.calcQtdUn : "", dir ? dir.calcSubtotal : ""
-                    ];
-                    aoa.push(linha);
+                    let esq = selecionados[i]; let dir = selecionados[i + metade];
+                    aoa.push([esq.codigo, esq.descricao, esq.calcQtdCx, esq.calcQtdUn, esq.calcSubtotal, "  ", dir ? dir.codigo : "", dir ? dir.descricao : "", dir ? dir.calcQtdCx : "", dir ? dir.calcQtdUn : "", dir ? dir.calcSubtotal : ""]);
                 }
-
-                const ws = XLSX.utils.aoa_to_sheet(aoa);
-                XLSX.utils.book_append_sheet(wb, ws, nomeAba);
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), nomeAba);
             };
 
-            criarAba("SORVETES", "sorvete");
-            criarAba("SECOS", "seco");
-            criarAba("BALDES", "balde");
-            criarAba("PROMOCOES", "promo");
-
+            criarAba("SORVETES", "sorvete"); criarAba("SECOS", "seco"); criarAba("BALDES", "balde"); criarAba("PROMOCOES", "promo");
             if(wb.SheetNames.length === 0) return alert("Nenhum produto foi selecionado no pedido!");
-
-            // Salva o arquivo final
             XLSX.writeFile(wb, `PEDIDO_${razao.replace(/\s+/g, '_')}.xlsx`);
         };
-
         iniciar();
     </script>
 </body>
