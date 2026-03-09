@@ -92,7 +92,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, getDocs, collection, query, where, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, getDocs, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
         const firebaseConfig = { apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8", authDomain: "sistema-pedidos-3f2c2.firebaseapp.com", projectId: "sistema-pedidos-3f2c2", storageBucket: "sistema-pedidos-3f2c2.firebasestorage.app", messagingSenderId: "669786014126", appId: "1:669786014126:web:d0da498633a145d56a883f" };
         const db = getFirestore(initializeApp(firebaseConfig));
@@ -107,7 +107,7 @@
 
         window.toggleMenu = () => { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('show'); };
 
-        // Autocomplete de Filiais e Clientes Extra de Transferência
+        // Autocomplete de Filiais EXCLUSIVO do banco de usuários
         document.getElementById('cliRazao').addEventListener('input', (e) => {
             const encontrado = filiaisSalvas.find(c => c.razao.toUpperCase() === e.target.value.toUpperCase());
             if(encontrado) document.getElementById('cliCnpj').value = encontrado.cnpj;
@@ -124,31 +124,23 @@
         window.mudarAba = (cat) => { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.getElementById('btnTab' + cat.charAt(0).toUpperCase() + cat.slice(1)).classList.add('active'); document.getElementById('content_' + cat).classList.add('active'); };
 
         async function iniciar() {
-            // Busca o próprio usuário para achar o CNPJ da Base
             const userSnap = await getDoc(doc(db, "usuarios", userId));
             if (userSnap.exists()) window.lojaCnpj = userSnap.data().cnpj || "CNPJ NÃO CADASTRADO";
 
-            // Busca TODOS os usuários (lojas) para servir de Autocomplete
+            // Busca APENAS usuários (lojas) da base matriz. Lojista não pode criar filial manual.
             const allUsers = await getDocs(collection(db, "usuarios"));
             let dlistaNomes = document.getElementById('listaLojasDestino');
             let dlistaCnpj = document.getElementById('listaCnpjDestino');
             
             allUsers.forEach(u => {
-                if(u.id !== 'admin' && u.id !== userId) { // Não lista ele mesmo
+                if(u.id !== 'admin' && u.id !== userId) { 
                     let fData = { razao: u.data().nomeLoja, cnpj: u.data().cnpj || '' };
-                    filiaisSalvas.push(fData);
-                    dlistaNomes.innerHTML += `<option value="${fData.razao}">`;
-                    if(fData.cnpj) dlistaCnpj.innerHTML += `<option value="${fData.cnpj}">`;
+                    if(fData.cnpj) { // Adiciona à lista só se a loja destino tiver CNPJ cadastrado pelo admin
+                        filiaisSalvas.push(fData);
+                        dlistaNomes.innerHTML += `<option value="${fData.razao}">`;
+                        dlistaCnpj.innerHTML += `<option value="${fData.cnpj}">`;
+                    }
                 }
-            });
-
-            // Busca clientes de transferência manuais que a pessoa salvou
-            const qClientesManuais = query(collection(db, "clientes"), where("lojaId", "==", userId), where("tipo", "==", "transferencia"));
-            const manuaisSnap = await getDocs(qClientesManuais);
-            manuaisSnap.forEach(d => { 
-                filiaisSalvas.push(d.data()); 
-                dlistaNomes.innerHTML += `<option value="${d.data().razao}">`;
-                dlistaCnpj.innerHTML += `<option value="${d.data().cnpj}">`;
             });
 
             const planilhas = userSnap.exists() && userSnap.data().planilhas ? userSnap.data().planilhas : { sorvete: true, seco: false, balde: false };
@@ -214,17 +206,20 @@
             
             if(!razaoDestino || !cnpjDestino) return alert("⚠️ ATENÇÃO: Os campos Filial de Entrada e CNPJ da Filial não podem ficar em branco!");
 
+            // --- NOVA TRAVA: VERIFICA SE O CNPJ PERTENCE A UMA LOJA CADASTRADA ---
+            const cnpjLimpo = cnpjDestino.replace(/\D/g, '');
+            const lojaValida = filiaisSalvas.find(f => f.cnpj.replace(/\D/g, '') === cnpjLimpo);
+
+            if(!lojaValida) {
+                alert("⛔ OPERAÇÃO BLOQUEADA!\n\nSó é permitido transferir mercadorias para lojas da rede devidamente cadastradas.\nO CNPJ informado não pertence a nenhuma filial oficial do sistema.");
+                return;
+            }
+            // ----------------------------------------------------------------------
+
             btn.innerText = "⏳ SALVANDO DADOS E GERANDO... AGUARDE";
 
             try {
-                // SALVA FILIAL MANUAL SE NÃO EXISTIR NA LISTA GERAL
-                const cnpjLimpo = cnpjDestino.replace(/\D/g, '');
-                const idDestino = `${userId}_${cnpjLimpo}_tf`;
-                if(!filiaisSalvas.find(f => f.cnpj === cnpjDestino)) {
-                    await setDoc(doc(db, "clientes", idDestino), { lojaId: userId, razao: razaoDestino, cnpj: cnpjDestino, tipo: "transferencia" }, { merge: true });
-                }
-
-                // GRAVA O LOG NO HISTÓRICO PARA O ADMIN
+                // GRAVA O LOG NO HISTÓRICO PARA O ADMIN (Apenas lojas válidas chegam até aqui)
                 await addDoc(collection(db, "historico"), { lojaId: userId, nomeLoja: nomeLoja, acao: "Gerou Transferência", destino: razaoDestino, dataHora: serverTimestamp() });
 
                 const response = await fetch('./TRANSFERENCIA.xlsx');
