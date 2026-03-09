@@ -30,7 +30,7 @@
 
         /* ÁREA DE CONTEÚDO */
         .main-content { flex-grow: 1; padding: 30px; overflow-y: auto; background: #f4f6f9; }
-        .section-title { font-size: 24px; margin-bottom: 20px; color: #2c3e50; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+        .section-title { font-size: 24px; margin-bottom: 20px; color: #2c3e50; border-bottom: 2px solid #ddd; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;}
         .secao { display: none; animation: fadeIn 0.3s; }
         .secao.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -50,6 +50,8 @@
         .btn-secundario:hover { background: #138496; }
         .btn-sucesso { background: #28a745; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; transition: 0.2s;}
         .btn-sucesso:hover { background: #218838; }
+        .btn-perigo { background: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;}
+        .btn-perigo:hover { background: #c82333; }
         
         /* TABELAS */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
@@ -113,7 +115,10 @@
         </div>
 
         <div id="sec-lojas" class="secao">
-            <h2 class="section-title">Lojas e Utilizadores</h2>
+            <div class="section-title">
+                Lojas e Utilizadores
+                <button id="btnApagarTudo" class="btn-perigo" onclick="window.apagarTodasLojas()" style="font-size: 14px;">🗑️ Limpar Banco de Lojas</button>
+            </div>
             
             <div style="display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start;">
                 
@@ -124,7 +129,7 @@
                     <h3 style="margin-bottom: 10px;">Cadastro em Massa (Planilha)</h3>
                     <p style="font-size: 13px; color: #555; margin-bottom: 10px; line-height: 1.5;">
                         Suba um Excel apenas com as colunas: <b>NOME, CNPJ</b><br>
-                        <i style="color:#e3000f; font-size:12px;">*O sistema gerará o login automaticamente (ex: filial.tubarao) e a senha padrão <b>eskimo</b>.</i>
+                        <i style="color:#e3000f; font-size:12px;">*O sistema gerará o login automaticamente (ex: filial.pirapora) e a senha padrão <b>eskimo</b>.</i>
                     </p>
                     <input type="file" id="fileUsuarios" accept=".csv, .xlsx">
                     <button id="btnUploadUsuarios" class="btn-secundario" style="width: 100%;">⚡ Importar Lojas</button>
@@ -149,7 +154,7 @@
             <div class="card-panel" style="max-width: 600px;">
                 <h3>Atualização de Preços via Nome do Ficheiro</h3>
                 <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
-                    O sistema lerá o nome do ficheiro para saber a qual loja pertence (ex: <b>filial.dourados.xlsx</b>):<br>
+                    O sistema lerá o nome do ficheiro para saber a qual loja pertence (ex: <b>filial.pirapora.xlsx</b>):<br>
                     • Venda Padrão: <b>logindaloja.xlsx</b><br>
                     • Venda Promoção: <b>logindaloja_promo.xlsx</b><br>
                     • Transferência: <b>tf.xlsx</b>
@@ -180,7 +185,7 @@
             <input type="hidden" id="editId">
             
             <label>Razão Social / Nome da Filial:</label> 
-            <input type="text" id="editNome" placeholder="Ex: Eskimó Tubarão">
+            <input type="text" id="editNome" placeholder="Ex: Eskimó Loja de Fábrica Pirapora/MG">
             
             <label>Login de Acesso:</label> 
             <input type="text" id="editLogin" placeholder="Nome de usuário...">
@@ -257,7 +262,6 @@
         let editorItens = []; let itensExcluidos = [];
         let clientesData = {};
 
-        // === NAVEGAÇÃO ===
         window.mudarSecao = (secaoId) => {
             document.querySelectorAll('.secao').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-links button').forEach(el => el.classList.remove('active'));
@@ -271,7 +275,6 @@
 
         window.fecharModal = (id) => { document.getElementById(id).style.display = 'none'; };
 
-        // === MÁSCARAS E SUGESTÃO INTELIGENTE DE LOGIN ===
         const aplicaMascara = (e) => {
             let x = e.target.value.replace(/\D/g, '');
             if(x.length > 11) { x = x.replace(/^(\d{2})(\d)/, '$1.$2'); x = x.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3'); x = x.replace(/\.(\d{3})(\d)/, '.$1/$2'); x = x.replace(/(\d{4})(\d)/, '$1-$2'); }
@@ -280,19 +283,70 @@
         document.getElementById('editCnpj').addEventListener('input', aplicaMascara);
         document.getElementById('editCliCnpj').addEventListener('input', aplicaMascara);
 
-        document.getElementById('editNome').addEventListener('input', (e) => {
-            if(document.getElementById('editId').value === "NOVO") {
-                let nome = e.target.value.toLowerCase();
-                nome = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
-                nome = nome.replace(/eskimo/g, "").replace(/eskimó/g, "").replace(/sorvetes?/g, "").replace(/loja/g, "").trim(); 
-                nome = nome.replace(/[^a-z0-9]/g, ""); 
-                if(nome.length > 0) {
-                    document.getElementById('editLogin').value = "filial." + nome;
+        // === FUNÇÃO DE FORMATAÇÃO INTELIGENTE DE LOGIN ===
+        function formatarNomeLogin(nomeRaw) {
+            let nome = nomeRaw.toLowerCase();
+            nome = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Tira acento
+            nome = nome.replace(/\/[a-z]{2}\b/g, ""); // Tira estados (/mg, /sp, etc)
+            
+            // Tira palavras lixo
+            nome = nome.replace(/\b(eskimo|eskimó|loja de fabrica|loja|fabrica|sorvetes|sorvete|de)\b/g, " ");
+            nome = nome.replace(/[-–]/g, " "); 
+            
+            let palavras = nome.split(/\s+/).filter(p => p.length > 0);
+            
+            const romanos = /^(i{1,3}|iv|v|vi{1,3}|ix|x)$/;
+            let loginStr = "";
+            
+            if (palavras.length > 0) {
+                let ultima = palavras[palavras.length - 1];
+                if (romanos.test(ultima)) {
+                    let base = palavras.slice(0, -1).join("");
+                    loginStr = base + "." + ultima;
                 } else {
-                    document.getElementById('editLogin').value = "";
+                    loginStr = palavras.join("");
                 }
             }
+            return loginStr ? "filial." + loginStr : "";
+        }
+
+        // Aplica a formatação inteligente ao digitar no input
+        document.getElementById('editNome').addEventListener('input', (e) => {
+            if(document.getElementById('editId').value === "NOVO") {
+                document.getElementById('editLogin').value = formatarNomeLogin(e.target.value);
+            }
         });
+
+        // === BOTÃO: APAGAR TODAS AS LOJAS (CÃO DE GUARDA) ===
+        window.apagarTodasLojas = async () => {
+            if(!confirm("⚠️ ATENÇÃO EXTREMA: Isto vai apagar TODAS as lojas e tabelas de preços da base de dados (exceto o Admin)! Tem certeza que deseja prosseguir?")) return;
+            if(!confirm("Atenção: Esta ação NÃO PODE ser desfeita. Deseja mesmo limpar tudo?")) return;
+
+            const btn = document.getElementById('btnApagarTudo');
+            btn.innerText = "⏳ A limpar...";
+            btn.disabled = true;
+
+            try {
+                const snap = await getDocs(collection(db, "usuarios"));
+                let count = 0;
+                for(let d of snap.docs) {
+                    if(d.id !== 'admin') {
+                        await deleteDoc(doc(db, "usuarios", d.id));
+                        await deleteDoc(doc(db, "precos", d.id)); // Opcionalmente limpa a tabela de preços dessa loja
+                        count++;
+                    }
+                }
+                alert(`Limpeza concluída! ${count} lojas e seus preços foram apagados com sucesso.`);
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao tentar limpar o banco.");
+            }
+
+            btn.innerText = "🗑️ Limpar Banco de Lojas";
+            btn.disabled = false;
+            carregarLojas();
+            carregarDashboard();
+        };
 
         // === DASHBOARD ===
         async function carregarDashboard() {
@@ -361,7 +415,7 @@
             document.getElementById('tituloForm').innerText = "Editar Loja";
             document.getElementById('editId').value = id; 
             document.getElementById('editLogin').value = id; 
-            document.getElementById('editLogin').disabled = false; // AGORA É EDITÁVEL PARA MIGRAÇÃO
+            document.getElementById('editLogin').disabled = false; 
             document.getElementById('editNome').value = u.nomeLoja||""; 
             document.getElementById('editCnpj').value = u.cnpj||""; 
             document.getElementById('chkAdmin').checked = u.tipo === 'admin'; 
@@ -369,7 +423,7 @@
             document.getElementById('chkPromo').checked = plan.promo||false;
             document.getElementById('btnResetSenha').style.display = 'block';
             document.getElementById('dicaSenhaMsg').style.display = 'none';
-            document.getElementById('alertaMigracao').style.display = 'block'; // Aviso de migração
+            document.getElementById('alertaMigracao').style.display = 'block'; 
             document.getElementById('modalEditar').style.display = 'flex';
         };
 
@@ -384,7 +438,6 @@
             }
         };
 
-        // === BOTÃO SALVAR LOJA (COM INTELIGÊNCIA DE MIGRAÇÃO DE DADOS) ===
         document.getElementById('btnSalvarEdicao').onclick = async () => {
             const novoLogin = document.getElementById('editLogin').value.toLowerCase().trim();
             const oldLogin = document.getElementById('editId').value;
@@ -405,18 +458,14 @@
                 dados.senha = 'eskimo';
                 await setDoc(doc(db, "usuarios", novoLogin), dados, { merge: true }); 
             } else {
-                // SE O LOGIN FOI ALTERADO NA EDIÇÃO (MIGRAÇÃO DE DADOS)
                 if (oldLogin !== novoLogin) {
                     const userRefOld = doc(db, "usuarios", oldLogin);
                     const userSnapOld = await getDoc(userRefOld);
                     
                     if (userSnapOld.exists()) {
                         dados.senha = userSnapOld.data().senha;
-                        
-                        // 1. Cria o novo cadastro
                         await setDoc(doc(db, "usuarios", novoLogin), dados, { merge: true });
                         
-                        // 2. Migra a Tabela de Preços (Se existir)
                         const precoRefOld = doc(db, "precos", oldLogin);
                         const precoSnapOld = await getDoc(precoRefOld);
                         if (precoSnapOld.exists()) {
@@ -424,19 +473,16 @@
                             await deleteDoc(precoRefOld);
                         }
                         
-                        // 3. Migra os Clientes do CRM
                         const qClientes = query(collection(db, "clientes"), where("lojaId", "==", oldLogin));
                         const cliSnapOld = await getDocs(qClientes);
                         for (let cli of cliSnapOld.docs) {
                             await setDoc(doc(db, "clientes", cli.id), { lojaId: novoLogin }, { merge: true });
                         }
 
-                        // 4. Apaga o usuário antigo
                         await deleteDoc(userRefOld);
                         alert(`Login alterado com sucesso! A loja ${oldLogin} agora chama-se ${novoLogin}. Todos os preços e clientes foram migrados.`);
                     }
                 } else {
-                    // Edição Normal (Sem mudar o Login)
                     await setDoc(doc(db, "usuarios", oldLogin), dados, { merge: true }); 
                 }
             }
@@ -447,7 +493,7 @@
             carregarDashboard();
         };
 
-        // === IMPORTAÇÃO DE LOJAS EM MASSA ===
+        // === IMPORTAÇÃO DE LOJAS EM MASSA COM GERAÇÃO INTELIGENTE DE LOGIN ===
         document.getElementById('btnUploadUsuarios').onclick = async () => {
             const fileInput = document.getElementById('fileUsuarios'); if(fileInput.files.length === 0) return alert("Selecione a planilha de lojas!");
             const btn = document.getElementById('btnUploadUsuarios'); btn.innerText = "⏳ Criando Lojas..."; btn.disabled = true;
@@ -458,26 +504,32 @@
                     let count = 0;
                     for(let row of rawData) {
                         let cleanRow = {}; for(let key in row) cleanRow[key.toString().trim().toUpperCase()] = row[key];
+                        
                         let nome = (cleanRow['NOME'] || cleanRow['RAZÃO SOCIAL'] || '').toString().trim();
+                        
                         if(nome) {
                             let login = (cleanRow['LOGIN'] || '').toString().toLowerCase().trim();
+                            
                             if (!login) {
-                                let nomeLimpo = nome.toLowerCase();
-                                nomeLimpo = nomeLimpo.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
-                                nomeLimpo = nomeLimpo.replace(/eskimo/g, "").replace(/eskimó/g, "").replace(/sorvetes?/g, "").replace(/loja/g, "").trim(); 
-                                nomeLimpo = nomeLimpo.replace(/[^a-z0-9]/g, ""); 
-                                login = "filial." + nomeLimpo;
+                                login = formatarNomeLogin(nome); // Chama a nova função inteligente
                             }
+
                             if (login) {
                                 await setDoc(doc(db, "usuarios", login), { 
-                                    senha: 'eskimo', nomeLoja: nome, cnpj: (cleanRow['CNPJ']||'').toString().trim(), tipo: 'loja', planilhas: { sorvete: true, seco: true, balde: false, promo: false }
-                                }, { merge: true }); count++;
+                                    senha: 'eskimo', 
+                                    nomeLoja: nome, 
+                                    cnpj: (cleanRow['CNPJ']||'').toString().trim(), 
+                                    tipo: 'loja',
+                                    planilhas: { sorvete: true, seco: true, balde: false, promo: false }
+                                }, { merge: true });
+                                count++;
                             }
                         }
                     }
                     alert(`SUCESSO! ${count} lojas cadastradas/atualizadas na base.`); carregarLojas(); carregarDashboard();
                 } catch (err) { alert("Erro ao processar planilha."); }
-                btn.innerText = "⚡ Importar Lojas"; btn.disabled = false; fileInput.value = "";
+                btn.innerText = "⚡ Importar Lojas"; btn.disabled = false;
+                fileInput.value = "";
             }; reader.readAsArrayBuffer(fileInput.files[0]);
         };
 
