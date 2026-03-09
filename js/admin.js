@@ -3,10 +3,14 @@ import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc, dele
 
 const firebaseConfig = { apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8", authDomain: "sistema-pedidos-3f2c2.firebaseapp.com", projectId: "sistema-pedidos-3f2c2", storageBucket: "sistema-pedidos-3f2c2.firebasestorage.app", messagingSenderId: "669786014126", appId: "1:669786014126:web:d0da498633a145d56a883f" };
 const db = getFirestore(initializeApp(firebaseConfig));
+
 if(localStorage.getItem('tipo') !== 'admin') window.location.href = 'index.html';
 
-let usuariosData = {}; let editorItens = []; let itensExcluidos = []; let clientesData = {};
-let historicoGlobal = {}; // Guarda os JSONs das planilhas para restaurar
+let usuariosData = {}; 
+let editorItens = []; 
+let itensExcluidos = []; 
+let clientesData = {};
+let historicoGlobal = {}; // <- A variável que faltava!
 
 window.mudarSecao = (secaoId) => {
     document.querySelectorAll('.secao').forEach(el => el.classList.remove('active'));
@@ -72,31 +76,47 @@ window.apagarTodasLojas = async () => {
     btn.innerText = "🗑️ Limpar Banco de Lojas"; btn.disabled = false; carregarLojas(); carregarDashboard();
 };
 
+// === DASHBOARD E HISTÓRICO COM PROTEÇÃO DE ERRO ===
 async function carregarDashboard() {
-    const [snapLojas, snapCli, snapHist] = await Promise.all([ getDocs(collection(db, "usuarios")), getDocs(collection(db, "clientes")), getDocs(query(collection(db, "historico"), orderBy("dataHora", "desc"), limit(50))) ]);
-    document.getElementById('dashTotLojas').innerText = (snapLojas.size > 0 ? snapLojas.size - 1 : 0);
-    document.getElementById('dashTotClientes').innerText = snapCli.size;
-    document.getElementById('dashTotAcoes').innerText = snapHist.size;
-    let tbody = document.querySelector('#tabelaHistorico tbody'); tbody.innerHTML = '';
-    if(snapHist.size === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Nenhuma atividade registada ainda.</td></tr>'; return; }
-    
-    historicoGlobal = {};
-    snapHist.forEach(d => {
-        let data = d.data(); let dataStr = 'Data Indisponível';
-        historicoGlobal[d.id] = data;
-        if(data.dataHora) { if(typeof data.dataHora.toDate === 'function') dataStr = data.dataHora.toDate().toLocaleString('pt-BR'); else if(data.dataHora.seconds) dataStr = new Date(data.dataHora.seconds * 1000).toLocaleString('pt-BR'); }
+    try {
+        const [snapLojas, snapCli, snapHist] = await Promise.all([ 
+            getDocs(collection(db, "usuarios")), 
+            getDocs(collection(db, "clientes")), 
+            getDocs(query(collection(db, "historico"), orderBy("dataHora", "desc"), limit(50))) 
+        ]);
         
-        let acoesBtn = "-";
-        if(data.dadosPlanilha) {
-            acoesBtn = `<button class="btn-small btn-edit" onclick="window.visualizarLog('${d.id}')">👁️ Ver</button>
-                        <button class="btn-small btn-sucesso" style="margin:0;" onclick="window.regenerarPlanilha('${d.id}')">⬇️ Baixar</button>`;
-        }
+        document.getElementById('dashTotLojas').innerText = (snapLojas.size > 0 ? snapLojas.size - 1 : 0);
+        document.getElementById('dashTotClientes').innerText = snapCli.size;
+        document.getElementById('dashTotAcoes').innerText = snapHist.size;
+        
+        let tbody = document.querySelector('#tabelaHistorico tbody'); tbody.innerHTML = '';
+        if(snapHist.size === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Nenhuma atividade registada ainda.</td></tr>'; return; }
+        
+        historicoGlobal = {};
+        snapHist.forEach(d => {
+            let data = d.data(); let dataStr = 'Data Indisponível';
+            historicoGlobal[d.id] = data;
+            
+            if(data.dataHora) { 
+                if(typeof data.dataHora.toDate === 'function') dataStr = data.dataHora.toDate().toLocaleString('pt-BR'); 
+                else if(data.dataHora.seconds) dataStr = new Date(data.dataHora.seconds * 1000).toLocaleString('pt-BR'); 
+            }
+            
+            let acoesBtn = "-";
+            if(data.dadosPlanilha) {
+                acoesBtn = `<button class="btn-small btn-edit" onclick="window.visualizarLog('${d.id}')">👁️ Ver</button>
+                            <button class="btn-small btn-sucesso" style="margin:0;" onclick="window.regenerarPlanilha('${d.id}')">⬇️ Baixar</button>`;
+            }
 
-        tbody.innerHTML += `<tr><td>${dataStr}</td><td><b>${data.nomeLoja || data.lojaId}</b></td><td style="color: ${data.acao.includes('Venda') ? 'green' : 'blue'}; font-weight:bold;">${data.acao}</td><td>${data.destino || '-'}</td><td>${acoesBtn}</td></tr>`;
-    });
+            tbody.innerHTML += `<tr><td>${dataStr}</td><td><b>${data.nomeLoja || data.lojaId}</b></td><td style="color: ${data.acao.includes('Venda') ? 'green' : 'blue'}; font-weight:bold;">${data.acao}</td><td>${data.destino || '-'}</td><td>${acoesBtn}</td></tr>`;
+        });
+    } catch (error) {
+        console.error("Erro no Dashboard:", error);
+        document.querySelector('#tabelaHistorico tbody').innerHTML = `<tr><td colspan="5" style="color:red; text-align:center; padding: 20px;">Erro ao ligar ao banco de dados. Verifique a sua conexão.</td></tr>`;
+    }
 }
 
-// === LÓGICA DE BACKUP DE PLANILHAS (VISUALIZAÇÃO E DOWNLOAD) ===
+// === LÓGICA DE RECRIAÇÃO DA PLANILHA (VIA ESQUELETO JSON) ===
 window.visualizarLog = (logId) => {
     const log = historicoGlobal[logId];
     if(!log || !log.dadosPlanilha) return;
@@ -112,9 +132,9 @@ window.visualizarLog = (logId) => {
                  <p><b>Total Caixas:</b> ${dados.resumo.totalCaixas} cx | <b>Total Peças:</b> ${dados.resumo.totalPecas} un</p><hr>`;
     }
     
-    html += `<table style="width:100%; text-align:left; font-size:12px;"><tr><th>Cód</th><th>Produto</th><th>Qtd Cx</th><th>Qtd Un</th></tr>`;
+    html += `<table style="width:100%; text-align:left; font-size:12px;"><tr><th style="padding-bottom:5px;">Cód</th><th style="padding-bottom:5px;">Produto</th><th style="padding-bottom:5px;">Qtd Cx</th><th style="padding-bottom:5px;">Qtd Un</th></tr>`;
     dados.itens.forEach(i => {
-        html += `<tr><td>${i.codigo}</td><td>${i.descricao}</td><td>${i.calcQtdCx}</td><td>${i.calcQtdUn}</td></tr>`;
+        html += `<tr><td style="padding:4px 0; border-bottom:1px solid #eee;">${i.codigo}</td><td style="border-bottom:1px solid #eee;">${i.descricao}</td><td style="border-bottom:1px solid #eee;">${i.calcQtdCx}</td><td style="border-bottom:1px solid #eee;">${i.calcQtdUn}</td></tr>`;
     });
     html += `</table>`;
 
@@ -136,7 +156,7 @@ window.regenerarPlanilha = async (logId) => {
     try {
         const templateName = isVenda ? './PEDIDO.xlsx' : './TRANSFERENCIA.xlsx';
         const response = await fetch(templateName);
-        if(!response.ok) throw new Error("Ficheiro template não encontrado no servidor.");
+        if(!response.ok) throw new Error("Arquivo modelo não encontrado no servidor.");
         const buffer = await response.arrayBuffer(); const wb = new ExcelJS.Workbook(); await wb.xlsx.load(buffer);
 
         const preencherAba = (nomeAba, funcFiltro, tipoAba) => {
@@ -207,7 +227,7 @@ async function carregarLojas() {
 
 window.abrirNovoUsuario = () => { 
     document.getElementById('modalEditar').style.display='flex'; document.getElementById('tituloForm').innerText = "Cadastro de Loja"; document.getElementById('editId').value="NOVO"; document.getElementById('editLogin').value=""; document.getElementById('editLogin').disabled=false; document.getElementById('editCnpj').value=""; document.getElementById('editNome').value=""; 
-    document.getElementById('chkAdmin').checked = false; document.getElementById('chkVenda').checked = true; // Venda padrão ativo
+    document.getElementById('chkAdmin').checked = false; document.getElementById('chkVenda').checked = true;
     document.getElementById('chkBalde').checked = false; document.getElementById('chkPromo').checked = false; document.getElementById('btnResetSenha').style.display = 'none'; document.getElementById('dicaSenhaMsg').style.display = 'block'; document.getElementById('alertaMigracao').style.display = 'none';
 };
 
@@ -421,22 +441,23 @@ window.restaurarBackup = async () => {
     }; reader.readAsText(fileInput.files[0]);
 };
 
+// === PESQUISA LOG ADMIN ===
+document.getElementById('pesquisaLogAdmin').addEventListener('input', function() {
+    let filtro = this.value.toLowerCase();
+    let linhas = document.querySelectorAll('#tabelaHistorico tbody tr');
+    linhas.forEach(linha => {
+        if (linha.querySelector('td[colspan]')) return;
+        let textoLinha = linha.textContent.toLowerCase();
+        linha.style.display = textoLinha.includes(filtro) ? '' : 'none';
+    });
+});
+
 document.getElementById('pesquisaLoja').addEventListener('input', function() {
     let filtro = this.value.toLowerCase();
     let linhas = document.querySelectorAll('#tabelaLojas tbody tr');
     linhas.forEach(linha => {
         let textoLinha = linha.textContent.toLowerCase();
         if (textoLinha.includes(filtro)) { linha.style.display = ''; } else { linha.style.display = 'none'; }
-    });
-});
-// === PESQUISA DO LOG ADMIN ===
-document.getElementById('pesquisaLogAdmin').addEventListener('input', function() {
-    let filtro = this.value.toLowerCase();
-    let linhas = document.querySelectorAll('#tabelaHistorico tbody tr');
-    linhas.forEach(linha => {
-        if (linha.querySelector('td[colspan]')) return; // Ignora linha de carregamento
-        let textoLinha = linha.textContent.toLowerCase();
-        linha.style.display = textoLinha.includes(filtro) ? '' : 'none';
     });
 });
 
