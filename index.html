@@ -16,18 +16,19 @@
     </style>
 </head>
 <body>
-    <div class="card">
+    <form id="loginForm" class="card">
         <h1>Portal Eskimó</h1>
-        <input type="text" id="user" placeholder="Usuário">
-        <input type="password" id="pass" placeholder="Senha">
-        <button id="btnLogin">Entrar</button>
+        <input type="text" id="user" placeholder="Usuário" required>
+        <input type="password" id="pass" placeholder="Senha" required>
+        <button type="submit" id="btnLogin">Entrar</button>
         <p id="msg"></p>
-    </div>
+    </form>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
+        // Suas chaves de conexão diretas com o Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8",
             authDomain: "sistema-pedidos-3f2c2.firebaseapp.com",
@@ -40,30 +41,48 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        document.getElementById('btnLogin').onclick = async () => {
+        document.getElementById('loginForm').onsubmit = async (e) => {
+            e.preventDefault(); // Impede a página de piscar à toa
+            
             const u = document.getElementById('user').value.toLowerCase().trim();
             const p = document.getElementById('pass').value;
             const msg = document.getElementById('msg');
+            const btn = document.getElementById('btnLogin');
+
+            // Feedback visual enquanto carrega
+            btn.innerText = "Aguarde...";
+            btn.disabled = true;
+            msg.style.display = 'none';
 
             try {
-                // Cria admin padrão no primeiro acesso
+                // Cria o admin padrão caso seja o primeiro acesso na base nova
                 if(u === 'admin' && p === 'admin') {
                     await setDoc(doc(db, "usuarios", "admin"), { senha: "admin", nomeLoja: "Matriz", tipo: "admin" }, { merge: true });
                 }
 
                 const snap = await getDoc(doc(db, "usuarios", u));
+                
                 if(snap.exists() && snap.data().senha === p) {
+                    
+                    // --- AQUI ESTÁ A CORREÇÃO PRINCIPAL ---
+                    // Salvamos todas as credenciais na memória do navegador
                     localStorage.setItem('user', u);
                     localStorage.setItem('nome', snap.data().nomeLoja);
-                    // Redirecionamento forçado para evitar cache do Cloudflare
+                    localStorage.setItem('tipo', snap.data().tipo); // Esta é a chave que libera a tela admin
+                    
+                    // Redireciona para a tela certa
                     window.location.href = snap.data().tipo === "admin" ? "admin.html" : "loja.html";
                 } else {
                     msg.style.display = 'block';
                     msg.innerText = "Usuário ou senha incorretos.";
+                    btn.innerText = "Entrar";
+                    btn.disabled = false;
                 }
-            } catch (e) {
+            } catch (error) {
                 msg.style.display = 'block';
-                msg.innerText = "Erro de conexão: " + e.code;
+                msg.innerText = "Erro de conexão: " + error.code;
+                btn.innerText = "Entrar";
+                btn.disabled = false;
             }
         };
     </script>
