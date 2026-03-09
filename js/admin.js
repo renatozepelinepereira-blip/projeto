@@ -37,17 +37,57 @@ document.getElementById('editNome').addEventListener('input', (e) => { if(docume
 
 // Dashboard
 async function carregarDashboard() {
-    const [snapLojas, snapCli, snapHist] = await Promise.all([ getDocs(collection(db, "usuarios")), getDocs(collection(db, "clientes")), getDocs(query(collection(db, "historico"), orderBy("dataHora", "desc"), limit(50))) ]);
-    document.getElementById('dashTotLojas').innerText = snapLojas.size - 1;
-    document.getElementById('dashTotClientes').innerText = snapCli.size;
-    document.getElementById('dashTotAcoes').innerText = snapHist.size;
-    let tbody = document.querySelector('#tabelaHistorico tbody'); tbody.innerHTML = ''; historicoGlobal = {};
-    snapHist.forEach(d => {
-        let data = d.data(); historicoGlobal[d.id] = data;
-        let dStr = data.dataHora ? (data.dataHora.toDate ? data.dataHora.toDate() : new Date(data.dataHora.seconds*1000)).toLocaleString('pt-BR') : 'Data Indisp.';
-        let btn = data.dadosPlanilha ? `<button class="btn-small btn-edit" onclick="window.visualizarLog('${d.id}')">👁️ Ver</button><button class="btn-small btn-sucesso" style="margin:0" onclick="window.regenerarPlanilha('${d.id}')">⬇️ Baixar</button>` : "-";
-        tbody.innerHTML += `<tr><td>${dStr}</td><td><b>${data.nomeLoja || data.lojaId}</b></td><td>${data.acao}</td><td>${data.destino || '-'}</td><td>${btn}</td></tr>`;
-    });
+    try {
+        const [snapLojas, snapCli, snapHist] = await Promise.all([ 
+            getDocs(collection(db, "usuarios")), 
+            getDocs(collection(db, "clientes")), 
+            getDocs(query(collection(db, "historico"), orderBy("dataHora", "desc"), limit(50))) 
+        ]);
+        
+        document.getElementById('dashTotLojas').innerText = (snapLojas.size > 0 ? snapLojas.size - 1 : 0);
+        document.getElementById('dashTotClientes').innerText = snapCli.size;
+        document.getElementById('dashTotAcoes').innerText = snapHist.size;
+        
+        let tbody = document.querySelector('#tabelaHistorico tbody'); 
+        tbody.innerHTML = '';
+        if(snapHist.size === 0) { 
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Nenhuma atividade registrada ainda.</td></tr>'; 
+            return; 
+        }
+        
+        historicoGlobal = {};
+        snapHist.forEach(d => {
+            let data = d.data(); 
+            let dataStr = 'Data Indisponível';
+            historicoGlobal[d.id] = data;
+            
+            if(data.dataHora) { 
+                if(typeof data.dataHora.toDate === 'function') dataStr = data.dataHora.toDate().toLocaleString('pt-BR'); 
+                else if(data.dataHora.seconds) dataStr = new Date(data.dataHora.seconds * 1000).toLocaleString('pt-BR'); 
+            }
+            
+            let acoesBtn = "-";
+            if(data.dadosPlanilha) {
+                // Aqui os botões ficam lado a lado, apenas com ícones e o 'title' para a mensagem
+                acoesBtn = `
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn-small btn-edit" onclick="window.visualizarLog('${d.id}')" title="Visualizar detalhes da planilha">👁️</button>
+                        <button class="btn-small btn-sucesso" style="margin:0;" onclick="window.regenerarPlanilha('${d.id}')" title="Baixar planilha Excel novamente">⬇️</button>
+                    </div>`;
+            }
+
+            tbody.innerHTML += `<tr>
+                <td>${dataStr}</td>
+                <td><b>${data.nomeLoja || data.lojaId}</b></td>
+                <td style="color: ${data.acao.includes('Venda') ? 'green' : 'blue'}; font-weight:bold;">${data.acao}</td>
+                <td>${data.destino || '-'}</td>
+                <td>${acoesBtn}</td>
+            </tr>`;
+        });
+    } catch (error) {
+        console.error("Erro no Dashboard:", error);
+        document.querySelector('#tabelaHistorico tbody').innerHTML = `<tr><td colspan="5" style="color:red; text-align:center; padding: 20px;">Erro ao carregar dados.</td></tr>`;
+    }
 }
 
 // Filtro Log Admin
