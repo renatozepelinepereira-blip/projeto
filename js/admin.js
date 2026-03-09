@@ -6,6 +6,7 @@ const db = getFirestore(initializeApp(firebaseConfig));
 if(localStorage.getItem('tipo') !== 'admin') window.location.href = 'index.html';
 
 let usuariosData = {}; let editorItens = []; let itensExcluidos = []; let clientesData = {};
+let historicoGlobal = {}; // Guarda os JSONs das planilhas para restaurar
 
 window.mudarSecao = (secaoId) => {
     document.querySelectorAll('.secao').forEach(el => el.classList.remove('active'));
@@ -18,6 +19,16 @@ window.mudarSecao = (secaoId) => {
 };
 
 window.fecharModal = (id) => { document.getElementById(id).style.display = 'none'; };
+
+window.toggleLog = () => {
+    const box = document.getElementById('containerTabelaHistorico');
+    const btn = document.getElementById('btnToggleLog');
+    if (box.style.display === 'none') {
+        box.style.display = 'block'; btn.innerText = '👁️ Ocultar Log';
+    } else {
+        box.style.display = 'none'; btn.innerText = '👁️ Mostrar Log';
+    }
+};
 
 const aplicaMascara = (e) => {
     let x = e.target.value.replace(/\D/g, '');
@@ -62,19 +73,124 @@ window.apagarTodasLojas = async () => {
 };
 
 async function carregarDashboard() {
-    const [snapLojas, snapCli, snapHist] = await Promise.all([ getDocs(collection(db, "usuarios")), getDocs(collection(db, "clientes")), getDocs(query(collection(db, "historico"), orderBy("dataHora", "desc"), limit(30))) ]);
+    const [snapLojas, snapCli, snapHist] = await Promise.all([ getDocs(collection(db, "usuarios")), getDocs(collection(db, "clientes")), getDocs(query(collection(db, "historico"), orderBy("dataHora", "desc"), limit(50))) ]);
     document.getElementById('dashTotLojas').innerText = (snapLojas.size > 0 ? snapLojas.size - 1 : 0);
     document.getElementById('dashTotClientes').innerText = snapCli.size;
     document.getElementById('dashTotAcoes').innerText = snapHist.size;
     let tbody = document.querySelector('#tabelaHistorico tbody'); tbody.innerHTML = '';
-    if(snapHist.size === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">Nenhuma atividade registada ainda.</td></tr>'; return; }
+    if(snapHist.size === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Nenhuma atividade registada ainda.</td></tr>'; return; }
+    
+    historicoGlobal = {};
     snapHist.forEach(d => {
         let data = d.data(); let dataStr = 'Data Indisponível';
+        historicoGlobal[d.id] = data;
         if(data.dataHora) { if(typeof data.dataHora.toDate === 'function') dataStr = data.dataHora.toDate().toLocaleString('pt-BR'); else if(data.dataHora.seconds) dataStr = new Date(data.dataHora.seconds * 1000).toLocaleString('pt-BR'); }
-        tbody.innerHTML += `<tr><td>${dataStr}</td><td><b>${data.nomeLoja || data.lojaId}</b></td><td style="color: ${data.acao.includes('Venda') ? 'green' : 'blue'}; font-weight:bold;">${data.acao}</td><td>${data.destino || '-'}</td></tr>`;
+        
+        let acoesBtn = "-";
+        if(data.dadosPlanilha) {
+            acoesBtn = `<button class="btn-small btn-edit" onclick="window.visualizarLog('${d.id}')">👁️ Ver</button>
+                        <button class="btn-small btn-sucesso" style="margin:0;" onclick="window.regenerarPlanilha('${d.id}')">⬇️ Baixar</button>`;
+        }
+
+        tbody.innerHTML += `<tr><td>${dataStr}</td><td><b>${data.nomeLoja || data.lojaId}</b></td><td style="color: ${data.acao.includes('Venda') ? 'green' : 'blue'}; font-weight:bold;">${data.acao}</td><td>${data.destino || '-'}</td><td>${acoesBtn}</td></tr>`;
     });
 }
 
+// === LÓGICA DE BACKUP DE PLANILHAS (VISUALIZAÇÃO E DOWNLOAD) ===
+window.visualizarLog = (logId) => {
+    const log = historicoGlobal[logId];
+    if(!log || !log.dadosPlanilha) return;
+    
+    const dados = JSON.parse(log.dadosPlanilha);
+    let html = `<p><b>Tipo:</b> ${dados.tipo.toUpperCase()}</p>`;
+    
+    if(dados.tipo === 'venda') {
+        html += `<p><b>Cliente:</b> ${dados.razao} | <b>CNPJ:</b> ${dados.cnpj}</p>
+                 <p><b>Total Unidades:</b> ${dados.totalU} un | <b>Valor Líquido:</b> R$ ${dados.totalV.toFixed(2)}</p><hr>`;
+    } else {
+        html += `<p><b>Destino:</b> ${dados.razaoDestino} | <b>CNPJ Destino:</b> ${dados.cnpjDestino}</p>
+                 <p><b>Total Caixas:</b> ${dados.resumo.totalCaixas} cx | <b>Total Peças:</b> ${dados.resumo.totalPecas} un</p><hr>`;
+    }
+    
+    html += `<table style="width:100%; text-align:left; font-size:12px;"><tr><th>Cód</th><th>Produto</th><th>Qtd Cx</th><th>Qtd Un</th></tr>`;
+    dados.itens.forEach(i => {
+        html += `<tr><td>${i.codigo}</td><td>${i.descricao}</td><td>${i.calcQtdCx}</td><td>${i.calcQtdUn}</td></tr>`;
+    });
+    html += `</table>`;
+
+    document.getElementById('conteudoDetalhesLog').innerHTML = html;
+    document.getElementById('btnRegerarPlanilhaModal').onclick = () => window.regenerarPlanilha(logId);
+    document.getElementById('modalDetalhesLog').style.display = 'flex';
+};
+
+window.regenerarPlanilha = async (logId) => {
+    const log = historicoGlobal[logId];
+    if(!log || !log.dadosPlanilha) return alert("Dados corrompidos ou não encontrados.");
+    
+    const dados = JSON.parse(log.dadosPlanilha);
+    const isVenda = dados.tipo === 'venda';
+    const btn = document.getElementById('btnRegerarPlanilhaModal');
+    let textoOriginal = btn.innerText;
+    btn.innerText = "⏳ Gerando Planilha..."; btn.disabled = true;
+
+    try {
+        const templateName = isVenda ? './PEDIDO.xlsx' : './TRANSFERENCIA.xlsx';
+        const response = await fetch(templateName);
+        if(!response.ok) throw new Error("Ficheiro template não encontrado no servidor.");
+        const buffer = await response.arrayBuffer(); const wb = new ExcelJS.Workbook(); await wb.xlsx.load(buffer);
+
+        const preencherAba = (nomeAba, funcFiltro, tipoAba) => {
+            const sheet = wb.getWorksheet(nomeAba); if(!sheet) return; 
+            let selecionados = dados.itens.filter(funcFiltro);
+            if(selecionados.length === 0) return;
+
+            if(isVenda) {
+                sheet.getCell('E6').value = dados.razao; sheet.getCell('J6').value = dados.cnpj; sheet.getCell('F7').value = dados.totalU; sheet.getCell('L7').value = dados.totalV; 
+                let catName = nomeAba.split(' ')[1].toLowerCase();
+                let descKey = catName==='sorvete'?'sorvete':catName==='seco'?'seco':'balde';
+                sheet.getCell('D8').value = (dados.descontos[descKey] || 0) + "%"; sheet.getCell('F8').value = dados.prazo;
+                
+                let linhaAtual = 10; let metade = Math.ceil(selecionados.length / 2);
+                for(let i = 0; i < metade; i++) {
+                    let esq = selecionados[i]; let dir = selecionados[i + metade];
+                    sheet.getCell(`C${linhaAtual}`).value = esq.codigo; sheet.getCell(`D${linhaAtual}`).value = esq.calcQtdCx; sheet.getCell(`E${linhaAtual}`).value = esq.calcTotalUnidades; sheet.getCell(`F${linhaAtual}`).value = esq.descricao; sheet.getCell(`G${linhaAtual}`).value = esq.precoFinal; 
+                    if(dir) { sheet.getCell(`I${linhaAtual}`).value = dir.codigo; sheet.getCell(`J${linhaAtual}`).value = dir.calcQtdCx; sheet.getCell(`K${linhaAtual}`).value = dir.calcTotalUnidades; sheet.getCell(`L${linhaAtual}`).value = dir.descricao; sheet.getCell(`M${linhaAtual}`).value = dir.precoFinal; }
+                    linhaAtual++;
+                }
+            } else {
+                let qtdTotalUnidadeAba = 0; let valorTotalAba = 0;
+                selecionados.forEach(p => { qtdTotalUnidadeAba += p.calcTotalUnidades; valorTotalAba += p.calcSubtotal; });
+
+                if (tipoAba === 'FATURAMENTO') { sheet.getCell('D7').value = dados.cnpjOrigem; sheet.getCell('I7').value = dados.cnpjDestino; sheet.getCell('E8').value = qtdTotalUnidadeAba; sheet.getCell('J8').value = valorTotalAba; 
+                } else if (tipoAba === 'ROMANEIO') { sheet.getCell('E7').value = dados.cnpjOrigem; sheet.getCell('K7').value = dados.razaoDestino.replace(/_/g, ' '); sheet.getCell('D8').value = dados.resumo.totalCaixas; sheet.getCell('G8').value = dados.resumo.totalPecas; sheet.getCell('L8').value = dados.resumo.valorTotal; }
+
+                let linhaAtual = 10; 
+                for(let i = 0; i < selecionados.length; i++) {
+                    let item = selecionados[i]; sheet.getCell(`C${linhaAtual}`).value = item.codigo;
+                    if (tipoAba === 'FATURAMENTO') { sheet.getCell(`D${linhaAtual}`).value = item.calcTotalUnidades; sheet.getCell(`E${linhaAtual}`).value = item.descricao; sheet.getCell(`F${linhaAtual}`).value = item.precoFinal; 
+                    } else if (tipoAba === 'ROMANEIO') { sheet.getCell(`D${linhaAtual}`).value = item.calcQtdCx; sheet.getCell(`E${linhaAtual}`).value = item.calcTotalUnidades; sheet.getCell(`F${linhaAtual}`).value = item.descricao; }
+                    linhaAtual++;
+                }
+            }
+        };
+
+        if(isVenda) {
+            preencherAba("ROMANEIO SORVETE", p => (p.catReal === 'sorvete' && !p.isPromo) || (p.isPromo && p.catReal === 'promo'));
+            preencherAba("ROMANEIO SECO", p => p.catReal === 'seco' && !p.isPromo);
+            preencherAba("ROMANEIO BALDE", p => p.catReal === 'balde' && !p.isPromo);
+            const outBuffer = await wb.xlsx.writeBuffer(); saveAs(new Blob([outBuffer]), `REGERADO_PEDIDO_${dados.razao.replace(/\s+/g, '_').toUpperCase()}.xlsx`);
+        } else {
+            preencherAba("FATURAMENTO - PROD", p => ['sorvete', 'balde'].includes(p.catReal), "FATURAMENTO"); 
+            preencherAba("FATURAMENTO - SECO", p => p.catReal === 'seco', "FATURAMENTO"); 
+            preencherAba("ROMANEIO", p => ['sorvete', 'seco', 'balde'].includes(p.catReal), "ROMANEIO");
+            const outBuffer = await wb.xlsx.writeBuffer(); saveAs(new Blob([outBuffer]), `REGERADO_TRANSFERENCIA_${dados.razaoDestino.replace(/\s+/g, '_').toUpperCase()}.xlsx`);
+        }
+
+    } catch (e) { console.error(e); alert("Erro ao recriar a planilha a partir do backup."); }
+    btn.innerText = textoOriginal; btn.disabled = false;
+};
+
+// === LOJAS E CRIAÇÃO ===
 async function carregarLojas() {
     const snap = await getDocs(collection(db, "usuarios"));
     const tbody = document.querySelector('#tabelaLojas tbody'); tbody.innerHTML = ''; usuariosData = {};
@@ -99,7 +215,7 @@ window.editarLoja = (id) => {
     const u = usuariosData[id]; const plan = u.planilhas || {};
     document.getElementById('tituloForm').innerText = "Editar Loja"; document.getElementById('editId').value = id; document.getElementById('editLogin').value = id; document.getElementById('editLogin').disabled = false; document.getElementById('editNome').value = u.nomeLoja||""; document.getElementById('editCnpj').value = u.cnpj||""; 
     document.getElementById('chkAdmin').checked = u.tipo === 'admin'; 
-    document.getElementById('chkVenda').checked = plan.venda !== false; // Venda padrão ativo, a não ser que esteja como false
+    document.getElementById('chkVenda').checked = plan.venda !== false; 
     document.getElementById('chkBalde').checked = plan.balde||false; document.getElementById('chkPromo').checked = plan.promo||false; document.getElementById('btnResetSenha').style.display = 'block'; document.getElementById('dicaSenhaMsg').style.display = 'none'; document.getElementById('alertaMigracao').style.display = 'block'; document.getElementById('modalEditar').style.display = 'flex';
 };
 
@@ -151,7 +267,6 @@ document.getElementById('btnUploadUsuarios').onclick = async () => {
                     let login = (cleanRow['LOGIN'] || '').toString().toLowerCase().trim();
                     if (!login) { login = formatarNomeLogin(nome); }
                     if (login) { 
-                        // IMPORTAÇÃO EM MASSA: Venda sempre ativa por padrão
                         await setDoc(doc(db, "usuarios", login), { senha: 'eskimo', nomeLoja: nome, cnpj: (cleanRow['CNPJ']||'').toString().trim(), tipo: 'loja', planilhas: { venda: true, sorvete: true, seco: true, balde: false, promo: false } }, { merge: true }); count++; 
                     }
                 }
