@@ -35,9 +35,9 @@
         <div class="grid">
             <div>
                 <div class="card" style="margin-bottom: 20px;">
-                    <h2>Importar Preços (CSV)</h2>
-                    <p style="font-size: 13px; color: #666; margin-bottom: 10px;">O nome do arquivo .csv deve ser o Login da loja. Colunas obrigatórias: CODIGO, PRODUTO, ENGRADADO, PRECO, CATEGORIA.</p>
-                    <input type="file" id="fileCsv" accept=".csv" multiple>
+                    <h2>Importar Preços</h2>
+                    <p style="font-size: 13px; color: #666; margin-bottom: 10px;"><b>NOVIDADE:</b> Agora você pode subir a planilha <b>.xlsx</b> direto do Excel! O nome do arquivo DEVE ser o login da loja (ex: <i>dourados.xlsx</i>).</p>
+                    <input type="file" id="fileCsv" accept=".csv, .xlsx" multiple>
                     <button id="btnUpload" style="background: #28a745;">Processar e Salvar no Banco</button>
                 </div>
 
@@ -54,7 +54,7 @@
                     <input type="hidden" id="editId">
                     
                     <label>Login do Usuário:</label>
-                    <input type="text" id="editLogin" placeholder="Ex: cd_dourados" disabled>
+                    <input type="text" id="editLogin" placeholder="Ex: dourados" disabled>
                     
                     <label>Nome da Filial:</label>
                     <input type="text" id="editNome" placeholder="Nome da Filial">
@@ -101,7 +101,6 @@
 
         let usuariosData = {};
 
-        // Carrega Lista
         async function carregarLojas() {
             const snap = await getDocs(collection(db, "usuarios"));
             const lista = document.getElementById('listaLojas');
@@ -110,7 +109,7 @@
             
             snap.forEach(d => {
                 usuariosData[d.id] = d.data();
-                const isAdmin = d.data().tipo === 'admin' ? '<span style="color:red; font-size:10px; border:1px solid red; padding:2px;">ADMIN</span>' : '';
+                const isAdmin = d.data().tipo === 'admin' ? '<span style="color:red; font-size:10px; border:1px solid red; padding:2px; margin-left:5px;">ADMIN</span>' : '';
                 lista.innerHTML += `<li>
                     <span><b>${d.id}</b> - ${d.data().nomeLoja} ${isAdmin}</span>
                     <div>
@@ -140,7 +139,7 @@
             document.getElementById('tituloForm').innerText = "Editar Usuário: " + id;
             document.getElementById('editId').value = id;
             document.getElementById('editLogin').value = id;
-            document.getElementById('editLogin').disabled = true; // Não deixa mudar o login
+            document.getElementById('editLogin').disabled = true; 
             document.getElementById('editNome').value = u.nomeLoja || "";
             document.getElementById('editSenha').value = u.senha || "";
             document.getElementById('chkAdmin').checked = u.tipo === 'admin';
@@ -160,7 +159,6 @@
             } 
         };
 
-        // Salvar/Criar Usuário
         document.getElementById('btnSalvarEdicao').onclick = async () => {
             const idMode = document.getElementById('editId').value;
             const login = document.getElementById('editLogin').value.toLowerCase().trim();
@@ -183,7 +181,7 @@
             carregarLojas();
         };
 
-        // Upload CSV Turbo (Limpa espaços em branco e lê categorias)
+        // SUPER UPLOAD (Aceita Excel puro, limpa R$, vírgulas e espaços)
         document.getElementById('btnUpload').onclick = async () => {
             const files = document.getElementById('fileCsv').files;
             if(files.length === 0) return alert("Selecione os arquivos!");
@@ -191,7 +189,8 @@
             document.getElementById('btnUpload').innerText = "Processando... Aguarde";
             
             for(let f of files) {
-                const lojaId = f.name.replace(".csv", "").toLowerCase().trim();
+                // Tira a extensão (.csv ou .xlsx) para descobrir o nome da loja
+                const lojaId = f.name.replace(/\.[^/.]+$/, "").toLowerCase().trim();
                 const reader = new FileReader();
                 reader.onload = async (e) => {
                     const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
@@ -201,29 +200,49 @@
                     let count = 0;
 
                     for(let row of rawData) {
-                        // Limpa os cabeçalhos caso o Excel tenha colocado espaços (ex: " PRODUTO ")
+                        // Limpa os espaços dos cabeçalhos
                         let cleanRow = {};
                         for(let key in row) { cleanRow[key.toString().trim().toUpperCase()] = row[key]; }
 
                         let cod = cleanRow['CODIGO'] || cleanRow['CÓDIGO'];
                         let prod = cleanRow['PRODUTO'];
                         let eng = parseInt(cleanRow['ENGRADADO']) || 1;
-                        let precoStr = cleanRow['PRECO'] || cleanRow['PREÇO'];
-                        let preco = parseFloat(String(precoStr).replace(',', '.')); // Aceita vírgula ou ponto
                         let cat = cleanRow['CATEGORIA'] ? String(cleanRow['CATEGORIA']).toUpperCase().trim() : 'SORVETE';
+                        
+                        // LIMPEZA EXTREMA DO PREÇO
+                        let precoVal = cleanRow['PRECO'] || cleanRow['PREÇO'];
+                        let preco = 0;
+                        
+                        if(typeof precoVal === 'number') {
+                            preco = precoVal;
+                        } else {
+                            let precoStr = String(precoVal || "0");
+                            if(precoStr.includes(',')) {
+                                // Tira o R$, tira espaço, tira pontos de milhar e troca vírgula por ponto
+                                precoStr = precoStr.replace(/R\$/gi, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
+                            } else {
+                                // Se já for formato americano, só tira o R$ e espaços
+                                precoStr = precoStr.replace(/R\$/gi, '').replace(/\s/g, '');
+                            }
+                            preco = parseFloat(precoStr);
+                        }
 
-                        if(cod && prod && !isNaN(preco)) {
+                        if(cod && prod && !isNaN(preco) && preco > 0) {
                             precos[cod.toString()] = preco;
-                            // Salva no catálogo mestre
                             await setDoc(doc(db, "produtos", cod.toString()), {
                                 codigo: cod.toString(), descricao: prod, engradado: eng, categoria: cat
                             }, { merge: true });
                             count++;
                         }
                     }
-                    // Salva a tabela da loja
-                    await setDoc(doc(db, "precos", lojaId), precos);
-                    alert(`Arquivo ${f.name}: ${count} produtos processados!`);
+                    
+                    if(count > 0) {
+                        await setDoc(doc(db, "precos", lojaId), precos);
+                        alert(`SUCESSO! ${count} produtos salvos para o usuário "${lojaId}".`);
+                    } else {
+                        alert(`⚠️ Nenhum produto salvo. Verifique se as colunas estão certas no arquivo ${f.name}`);
+                    }
+                    
                     document.getElementById('btnUpload').innerText = "Processar e Salvar no Banco";
                 };
                 reader.readAsArrayBuffer(f);
