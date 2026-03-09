@@ -6,6 +6,8 @@
     <title>Dashboard Admin - Eskimó</title>
     <link rel="stylesheet" href="./css/admin.css">
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </head>
 <body>
 
@@ -35,11 +37,14 @@
             </div>
 
             <div class="card-panel">
-                <h3>Últimas Atividades (Log do Sistema)</h3>
-                <div style="max-height: 400px; overflow-y: auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin: 0;">Últimas Atividades (Log do Sistema)</h3>
+                    <button id="btnToggleLog" onclick="window.toggleLog()" class="btn-secundario" style="background: #6c757d; margin: 0; padding: 6px 12px; font-size: 12px;">👁️ Ocultar Log</button>
+                </div>
+                <div id="containerTabelaHistorico" style="max-height: 400px; overflow-y: auto;">
                     <table id="tabelaHistorico">
-                        <thead><tr><th>Data / Hora</th><th>Loja/Filial</th><th>Ação Realizada</th><th>Destino (Cliente/Filial)</th></tr></thead>
-                        <tbody><tr><td colspan="4" style="text-align:center;">A carregar histórico...</td></tr></tbody>
+                        <thead><tr><th>Data / Hora</th><th>Loja/Filial</th><th>Ação</th><th>Destino</th><th>Backup da Planilha</th></tr></thead>
+                        <tbody><tr><td colspan="5" style="text-align:center;">A carregar histórico...</td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -50,26 +55,18 @@
                 Lojas e Utilizadores
                 <button id="btnApagarTudo" class="btn-perigo" onclick="window.apagarTodasLojas()" style="font-size: 14px;">🗑️ Limpar Banco de Lojas</button>
             </div>
-            
             <div style="display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start;">
                 <div class="card-panel">
                     <h3 style="color: #e3000f; margin-bottom: 15px;">Nova Loja Manual</h3>
                     <button onclick="abrirNovoUsuario()" class="btn-primario" style="background: #28a745; margin-bottom: 30px; font-size: 15px;">+ Criar Loja Manualmente</button>
-
                     <h3 style="margin-bottom: 10px;">Cadastro em Massa (Planilha)</h3>
-                    <p style="font-size: 13px; color: #555; margin-bottom: 10px; line-height: 1.5;">
-                        Suba um Excel apenas com as colunas: <b>NOME, CNPJ</b><br>
-                        <i style="color:#e3000f; font-size:12px;">*O sistema gerará o login automaticamente e a senha padrão <b>eskimo</b>.</i>
-                    </p>
+                    <p style="font-size: 13px; color: #555; margin-bottom: 10px; line-height: 1.5;">Suba um Excel apenas com as colunas: <b>NOME, CNPJ</b><br><i style="color:#e3000f; font-size:12px;">*O sistema gerará o login automaticamente e a senha padrão <b>eskimo</b>.</i></p>
                     <input type="file" id="fileUsuarios" accept=".csv, .xlsx">
                     <button id="btnUploadUsuarios" class="btn-secundario" style="width: 100%;">⚡ Importar Lojas</button>
                 </div>
-
                 <div class="card-panel">
                     <h3 style="margin-bottom: 15px;">Lista de Lojas Cadastradas</h3>
-                    
                     <input type="text" id="pesquisaLoja" placeholder="🔍 Pesquisar por nome, login ou CNPJ..." style="margin-bottom: 15px; border-color: #0056b3; background: #f8fbff;">
-                    
                     <div style="max-height: 550px; overflow-y: auto;">
                         <table id="tabelaLojas">
                             <thead><tr><th>Login</th><th>Razão Social / Filial</th><th>CNPJ</th><th>Ações de Gestão</th></tr></thead>
@@ -84,12 +81,7 @@
             <h2 class="section-title">Importação Geral de Tabelas</h2>
             <div class="card-panel" style="max-width: 600px;">
                 <h3>Atualização de Preços via Nome do Ficheiro</h3>
-                <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
-                    O sistema lerá o nome do ficheiro para saber a qual loja pertence (ex: <b>filial.pirapora.xlsx</b>):<br>
-                    • Venda Padrão: <b>logindaloja.xlsx</b><br>
-                    • Venda Promoção: <b>logindaloja_promo.xlsx</b><br>
-                    • Transferência: <b>tf.xlsx</b>
-                </p>
+                <p style="font-size: 13px; color: #666; margin-bottom: 15px;">O sistema lerá o nome do ficheiro para saber a qual loja pertence (ex: <b>filial.pirapora.xlsx</b>):<br>• Venda Padrão: <b>logindaloja.xlsx</b><br>• Venda Promoção: <b>logindaloja_promo.xlsx</b><br>• Transferência: <b>tf.xlsx</b></p>
                 <input type="file" id="fileCsv" accept=".csv, .xlsx" multiple>
                 <button id="btnUpload" class="btn-sucesso">Subir Tabelas para o Banco</button>
             </div>
@@ -113,18 +105,12 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <div class="card-panel">
                     <h3 style="color: #28a745; margin-bottom: 15px;">Exportar Backup (Download)</h3>
-                    <p style="font-size: 14px; color: #555; margin-bottom: 15px; line-height: 1.5;">
-                        Cria um ficheiro <b>.json</b> com uma cópia completa e exata da sua base de dados atual.
-                    </p>
+                    <p style="font-size: 14px; color: #555; margin-bottom: 15px; line-height: 1.5;">Cria um ficheiro <b>.json</b> com uma cópia completa e exata da sua base de dados atual.</p>
                     <button id="btnGerarBackup" class="btn-sucesso" style="width: 100%; padding: 15px; font-size: 16px;" onclick="window.gerarBackup()">⬇️ Fazer Download do Backup</button>
                 </div>
-
                 <div class="card-panel">
                     <h3 style="color: #e3000f; margin-bottom: 15px;">Restaurar Backup (Upload)</h3>
-                    <p style="font-size: 14px; color: #555; margin-bottom: 15px; line-height: 1.5;">
-                        Selecione um ficheiro de backup (.json) gerado anteriormente para restaurar o sistema.<br><br>
-                        ⚠️ <b>ATENÇÃO:</b> A restauração irá sobrescrever os seus dados atuais.
-                    </p>
+                    <p style="font-size: 14px; color: #555; margin-bottom: 15px; line-height: 1.5;">Selecione um ficheiro de backup (.json) gerado anteriormente para restaurar o sistema.<br><br>⚠️ <b>ATENÇÃO:</b> A restauração irá sobrescrever os seus dados atuais.</p>
                     <input type="file" id="fileBackup" accept=".json">
                     <button id="btnRestaurarBackup" class="btn-perigo" style="width: 100%; padding: 15px; font-size: 16px; margin-top:0;" onclick="window.restaurarBackup()">⬆️ Restaurar Sistema</button>
                 </div>
@@ -141,16 +127,10 @@
             <span class="dica-login" id="dicaSenhaMsg">A senha padrão será "eskimo". O usuário será forçado a trocar no 1º login.</span>
             <span class="alerta-migracao" id="alertaMigracao">⚠️ Alterar o login transferirá automaticamente todos os preços e clientes para o novo nome!</span>
             <label>CNPJ da Loja (Opcional):</label> <input type="text" id="editCnpj" placeholder="00.000.000/0000-00" maxlength="18">
-            
             <h3 style="font-size: 14px; margin-top: 10px;">Acessos do Sistema</h3>
-            <div class="checkbox-group">
-                <label><input type="checkbox" id="chkAdmin"> Dar Permissão de Administrador</label>
-                <label style="border: 1px solid #28a745;"><input type="checkbox" id="chkVenda"> Liberar Módulo de Venda</label>
-            </div>
-            
+            <div class="checkbox-group"><label><input type="checkbox" id="chkAdmin"> Dar Permissão de Administrador</label><label style="border: 1px solid #28a745;"><input type="checkbox" id="chkVenda"> Liberar Módulo de Venda</label></div>
             <h3 style="font-size: 14px; margin-top: 10px;">Abas Extras (Sorvete e Seco já são padrão)</h3>
             <div class="checkbox-group"><label><input type="checkbox" id="chkBalde"> Liberar Baldes</label><label style="border: 1px solid #ffc107;"><input type="checkbox" id="chkPromo"> Liberar PROMOÇÃO</label></div>
-            
             <button id="btnResetSenha" onclick="window.resetarSenha()" style="background:#ffc107; color:#000; border:none; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; width:100%; margin-bottom:15px; display:none;">🔑 Resetar Senha para 'eskimo'</button>
             <button id="btnSalvarEdicao" class="btn-primario">Salvar Loja</button>
             <button onclick="window.fecharModal('modalEditar')" class="btn-primario" style="background:#666; margin-top:10px;">Cancelar</button>
@@ -164,10 +144,7 @@
             <div class="upload-interno-box">
                 <h3 style="font-size: 15px; margin-bottom: 5px; color:#0056b3;">Carregar Planilha Específica para: <span id="txtNomeTabelaAtual"></span></h3>
                 <p style="font-size: 12px; color: #555; margin-bottom: 10px;">O nome do ficheiro será ignorado. Os dados substituirão os preços apenas desta loja aberta.</p>
-                <div style="display: flex; gap: 10px;">
-                    <input type="file" id="fileCsvModal" accept=".csv, .xlsx" style="margin-bottom:0;">
-                    <button id="btnUploadModal" class="btn-secundario" style="white-space: nowrap;">⬆️ Importar</button>
-                </div>
+                <div style="display: flex; gap: 10px;"><input type="file" id="fileCsvModal" accept=".csv, .xlsx" style="margin-bottom:0;"><button id="btnUploadModal" class="btn-secundario" style="white-space: nowrap;">⬆️ Importar</button></div>
             </div>
             <button onclick="window.adicionarItemEditor()" class="btn-secundario" style="background:#28a745; margin-bottom:15px;">+ Novo Produto Manual</button>
             <div id="listaEdicaoPrecos" style="max-height: 350px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 20px; border-radius: 6px;"></div>
@@ -187,6 +164,15 @@
             <select id="editCliTipo"><option value="venda">Venda</option><option value="transferencia">Transferência</option></select>
             <button id="btnSalvarCliente" class="btn-primario">Salvar Cliente</button>
             <button onclick="window.fecharModal('modalEditarCliente')" class="btn-primario" style="background:#666; margin-top:10px;">Cancelar</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalDetalhesLog">
+        <div class="modal-content" style="width: 700px;">
+            <h2 style="color: #0056b3; margin-bottom: 15px;">Detalhes da Planilha Gerada</h2>
+            <div id="conteudoDetalhesLog" style="font-size: 14px; background: #f9f9f9; padding: 15px; border-radius: 6px; border: 1px solid #eee; margin-bottom: 15px; max-height: 400px; overflow-y: auto;"></div>
+            <button id="btnRegerarPlanilhaModal" class="btn-sucesso">⬇️ Baixar Esta Planilha Novamente</button>
+            <button onclick="window.fecharModal('modalDetalhesLog')" class="btn-primario" style="background:#666; margin-top:10px;">Fechar</button>
         </div>
     </div>
 
