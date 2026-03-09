@@ -93,7 +93,6 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-        // NOVO: Adicionado deleteField para limpar o campo sem quebrar a loja toda
         import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc, deleteField } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -132,7 +131,6 @@
             });
         }
 
-        // LÓGICA DO EDITOR DE PREÇOS COM VISIBILIDADE
         window.abrirPrecos = async (userId) => {
             document.getElementById('modalEditar').style.display = 'none';
             const u = usuariosData[userId];
@@ -180,7 +178,7 @@
         }
 
         window.removerItemEditor = (index) => {
-            itensExcluidos.push(editorItens[index].cod); // Guarda quem foi apagado para limpar do banco
+            itensExcluidos.push(editorItens[index].cod); 
             editorItens.splice(index, 1);
             renderEditor();
         };
@@ -197,7 +195,6 @@
             renderEditor();
         };
 
-        // SALVA ALTERAÇÕES (Múltipla Escolha)
         async function dispararSalvamento(paraTodas) {
             const tabelaId = document.getElementById('editTabelaId').value;
             let btnId = paraTodas ? 'btnSalvarTodas' : 'btnSalvarPrecos';
@@ -206,22 +203,19 @@
             let updates = {};
             let batchProdutos = [];
             
-            // Separa os que ficam/atualizam
             editorItens.forEach(i => {
                 if(i.preco > 0) {
                     updates[i.cod] = { preco: i.preco, visivel: i.visivel };
                     batchProdutos.push(i);
                 }
             });
-            // Separa os que foram excluídos
+            
             itensExcluidos.forEach(cod => { updates[cod] = deleteField(); });
 
-            // 1. Atualiza Catálogo Mestre
             for(let item of batchProdutos) {
                 await setDoc(doc(db, "produtos", item.cod), { codigo: item.cod, descricao: item.desc, engradado: item.eng, categoria: item.cat }, { merge: true });
             }
 
-            // 2. Dispara pros Lojistas
             if(paraTodas) {
                 if(!confirm("Tem certeza? Todos os usuários receberão essas alterações, exclusões e ocultações!")) {
                     document.getElementById(btnId).innerText = "🌍 Aplicar para TODAS as Lojas";
@@ -232,7 +226,7 @@
                 snap.forEach(d => { if(d.data().tipo !== 'admin') alvo.push(d.id); });
                 
                 for(let u of alvo) {
-                    await setDoc(doc(db, "precos", u), updates, { merge: true }); // Merge garante que não apague produtos que a loja tem e que não estavam na tela
+                    await setDoc(doc(db, "precos", u), updates, { merge: true });
                 }
                 alert("Aplicado para TODAS as lojas e para a tabela Padrão!");
             } else {
@@ -247,7 +241,6 @@
         document.getElementById('btnSalvarPrecos').onclick = () => dispararSalvamento(false);
         document.getElementById('btnSalvarTodas').onclick = () => dispararSalvamento(true);
 
-        // Upload CSV atualizado para criar objetos visíveis
         document.getElementById('btnUpload').onclick = async () => {
             const files = document.getElementById('fileCsv').files;
             if(files.length === 0) return alert("Selecione os arquivos!");
@@ -268,7 +261,7 @@
                         let preco = parseFloat(precoStr.replace(/R\$/gi, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
 
                         if(cod && prod && preco > 0) {
-                            precos[cod.toString()] = { preco: preco, visivel: true }; // Novo Padrão de Objeto
+                            precos[cod.toString()] = { preco: preco, visivel: true }; 
                             if(!lojaId.includes('_promo')) {
                                 await setDoc(doc(db, "produtos", cod.toString()), { codigo: cod.toString(), descricao: prod, engradado: eng, categoria: cat }, { merge: true });
                             }
@@ -284,7 +277,6 @@
             }
         };
 
-        // Outros controles (Novo e Editar) mantidos
         window.abrirNovoUsuario = () => { document.getElementById('modalEditar').style.display='block'; document.getElementById('editId').value="NOVO"; document.getElementById('editLogin').disabled=false; };
         window.editar = (id) => { 
             const u = usuariosData[id]; const plan = u.planilhas || {};
