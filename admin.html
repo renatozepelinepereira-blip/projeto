@@ -9,7 +9,6 @@
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
         body { background: #f4f6f9; color: #333; display: flex; height: 100vh; overflow: hidden; }
         
-        /* MENU LATERAL (SIDEBAR) */
         .sidebar { width: 260px; background: #2c3e50; color: white; display: flex; flex-direction: column; transition: 0.3s; }
         .sidebar-header { padding: 20px; text-align: center; background: #e3000f; border-bottom: 2px solid #b3000c; }
         .sidebar-header h2 { font-size: 20px; }
@@ -19,49 +18,43 @@
         .logout-btn { background: #c0392b !important; color: white !important; margin-top: auto; }
         .logout-btn:hover { background: #a93226 !important; }
 
-        /* ÁREA DE CONTEÚDO */
         .main-content { flex-grow: 1; padding: 30px; overflow-y: auto; }
         .section-title { font-size: 24px; margin-bottom: 20px; color: #2c3e50; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
         .secao { display: none; animation: fadeIn 0.3s; }
         .secao.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* CARDS DO DASHBOARD */
         .dash-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
         .card-stat { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid #e3000f; }
         .card-stat h3 { color: #666; font-size: 14px; margin-bottom: 10px; text-transform: uppercase; }
         .card-stat .valor { font-size: 32px; font-weight: bold; color: #2c3e50; }
 
-        /* PAINEIS GERAIS */
         .card-panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        input[type="text"], input[type="password"], input[type="file"], input[type="number"], select { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; }
+        input[type="text"], input[type="file"], input[type="number"], select { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; }
         .btn-primario { background: #e3000f; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.2s; }
         .btn-primario:hover { background: #b3000c; }
         .btn-secundario { background: #17a2b8; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .btn-secundario:hover { background: #138496; }
         .btn-sucesso { background: #28a745; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
         
-        /* TABELAS */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
         th { background: #f8f9fa; color: #333; padding: 12px; text-align: left; border-bottom: 2px solid #ddd; }
         td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
         .badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; color: white; }
         .bg-venda { background: #28a745; } .bg-tf { background: #0056b3; }
 
-        /* BOTOES PEQUENOS */
         .btn-small { padding: 6px 10px; font-size: 12px; border: none; border-radius: 4px; cursor: pointer; color: white; margin-right: 5px; }
         .btn-edit { background: #007bff; } .btn-edit:hover { background: #0056b3; }
         .btn-preco { background: #ffc107; color: #000; } .btn-preco:hover { background: #e0a800; }
         .btn-del { background: #dc3545; } .btn-del:hover { background: #c82333; }
 
-        /* MODAIS */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
         .modal-content { background: white; padding: 25px; border-radius: 8px; width: 500px; max-width: 90%; max-height: 90vh; overflow-y: auto; }
         .checkbox-group { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
         .checkbox-group label { display: flex; align-items: center; gap: 5px; cursor: pointer; background: #f4f4f4; padding: 8px 12px; border-radius: 6px; }
         
-        /* BLOCO DE UPLOAD INTERNO */
         .upload-interno-box { background: #f0f8ff; padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px dashed #0056b3; }
+        .dica-login { font-size: 12px; color: #28a745; margin-top: -12px; margin-bottom: 10px; display: block; }
     </style>
 </head>
 <body>
@@ -106,14 +99,17 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <div class="card-panel">
                     <h3>Cadastro em Massa (Planilha)</h3>
-                    <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Colunas necessárias: <b>LOGIN, SENHA, NOME, CNPJ</b> (opcional: SORVETE, SECO, BALDE, PROMO = 'SIM')</p>
+                    <p style="font-size: 13px; color: #555; margin-bottom: 10px; line-height: 1.5;">
+                        Crie uma planilha Excel apenas com as colunas: <b>LOGIN, NOME, CNPJ</b><br>
+                        <i style="color:#e3000f; font-size:12px;">*Todos os usuários criados terão as abas de Sorvete e Seco liberadas e a senha padrão <b>eskimo</b>.</i>
+                    </p>
                     <input type="file" id="fileUsuarios" accept=".csv, .xlsx">
-                    <button id="btnUploadUsuarios" class="btn-secundario" style="width: 100%;">Importar Planilha de Lojas</button>
+                    <button id="btnUploadUsuarios" class="btn-secundario" style="width: 100%;">⚡ Importar Planilha de Lojas</button>
                 </div>
 
                 <div class="card-panel">
                     <h3 style="margin-bottom: 10px;">Lojas Cadastradas</h3>
-                    <button onclick="abrirNovoUsuario()" class="btn-primario" style="margin-bottom: 15px;">+ Criar Loja Manualmente</button>
+                    <button onclick="abrirNovoUsuario()" class="btn-primario" style="margin-bottom: 15px; background: #28a745;">+ Criar Loja Manualmente</button>
                     <div style="max-height: 300px; overflow-y: auto;">
                         <table id="tabelaLojas">
                             <thead><tr><th>Login</th><th>Nome / CNPJ</th><th>Ações</th></tr></thead>
@@ -157,26 +153,32 @@
 
     <div class="modal-overlay" id="modalEditar">
         <div class="modal-content">
-            <h2 id="tituloForm" style="margin-bottom: 15px; color: #e3000f;">Editar Usuário</h2>
+            <h2 id="tituloForm" style="margin-bottom: 15px; color: #e3000f;">Cadastro de Loja</h2>
             <input type="hidden" id="editId">
-            <label>Login de Acesso:</label> <input type="text" id="editLogin" placeholder="Ex: dourados" disabled>
-            <label>Razão Social da Loja:</label> <input type="text" id="editNome" placeholder="Eskimó Dourados">
-            <label>CNPJ da Loja (Opcional):</label> <input type="text" id="editCnpj" placeholder="00.000.000/0000-00" maxlength="18">
-            <label>Senha de Acesso:</label> <input type="text" id="editSenha" placeholder="Senha">
+            
+            <label>Razão Social / Nome da Filial:</label> 
+            <input type="text" id="editNome" placeholder="Ex: Eskimó Tubarão">
+            
+            <label>Login de Acesso:</label> 
+            <input type="text" id="editLogin" placeholder="Gerado automaticamente..." disabled>
+            <span class="dica-login" id="dicaSenhaMsg">A senha padrão será "eskimo". O usuário será forçado a trocar no 1º login.</span>
+            
+            <label>CNPJ da Loja (Opcional):</label> 
+            <input type="text" id="editCnpj" placeholder="00.000.000/0000-00" maxlength="18">
             
             <h3 style="font-size: 14px; margin-top: 10px;">Acessos do Sistema</h3>
-            <div class="checkbox-group"><label><input type="checkbox" id="chkAdmin"> Dar Permissão de Admin</label></div>
+            <div class="checkbox-group"><label><input type="checkbox" id="chkAdmin"> Dar Permissão de Administrador</label></div>
 
-            <h3 style="font-size: 14px; margin-top: 10px;">Abas Visíveis (Venda / Transferência)</h3>
+            <h3 style="font-size: 14px; margin-top: 10px;">Abas Extras (Sorvete e Seco já são padrão)</h3>
             <div class="checkbox-group">
-                <label><input type="checkbox" id="chkSorvete"> Sorvetes</label>
-                <label><input type="checkbox" id="chkSeco"> Secos</label>
-                <label><input type="checkbox" id="chkBalde"> Baldes</label>
-                <label style="border: 1px solid #ffc107;"><input type="checkbox" id="chkPromo"> PROMOÇÃO</label>
+                <label><input type="checkbox" id="chkBalde"> Liberar Baldes</label>
+                <label style="border: 1px solid #ffc107;"><input type="checkbox" id="chkPromo"> Liberar PROMOÇÃO</label>
             </div>
 
-            <button id="btnSalvarEdicao" class="btn-primario">Salvar Configurações</button>
-            <button onclick="fecharModal('modalEditar')" class="btn-primario" style="background:#666; margin-top:10px;">Cancelar</button>
+            <button id="btnResetSenha" onclick="window.resetarSenha()" style="background:#ffc107; color:#000; border:none; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; width:100%; margin-bottom:15px; display:none;">🔑 Resetar Senha para 'eskimo'</button>
+
+            <button id="btnSalvarEdicao" class="btn-primario">Salvar Loja</button>
+            <button onclick="window.fecharModal('modalEditar')" class="btn-primario" style="background:#666; margin-top:10px;">Cancelar</button>
         </div>
     </div>
 
@@ -192,11 +194,11 @@
                 <button id="btnUploadModal" class="btn-secundario" style="width: 100%;">⬆️ Importar Tabela Aqui</button>
             </div>
 
-            <button onclick="adicionarItemEditor()" class="btn-secundario" style="background:#28a745; margin-bottom:15px;">+ Novo Produto Manual</button>
+            <button onclick="window.adicionarItemEditor()" class="btn-secundario" style="background:#28a745; margin-bottom:15px;">+ Novo Produto Manual</button>
             
             <div id="listaEdicaoPrecos" style="max-height: 350px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 20px;"></div>
             <button id="btnSalvarPrecos" class="btn-sucesso">💾 Salvar Alterações Manuais</button>
-            <button onclick="fecharModal('modalPrecos')" class="btn-primario" style="background:#666; margin-top:10px;">Fechar</button>
+            <button onclick="window.fecharModal('modalPrecos')" class="btn-primario" style="background:#666; margin-top:10px;">Fechar</button>
         </div>
     </div>
 
@@ -213,7 +215,7 @@
                 <option value="transferencia">Transferência</option>
             </select>
             <button id="btnSalvarCliente" class="btn-primario">Salvar Cliente</button>
-            <button onclick="fecharModal('modalEditarCliente')" class="btn-primario" style="background:#666; margin-top:10px;">Cancelar</button>
+            <button onclick="window.fecharModal('modalEditarCliente')" class="btn-primario" style="background:#666; margin-top:10px;">Cancelar</button>
         </div>
     </div>
 
@@ -243,7 +245,7 @@
 
         window.fecharModal = (id) => { document.getElementById(id).style.display = 'none'; };
 
-        // === MÁSCARAS ===
+        // === MÁSCARAS E SUGESTÃO INTELIGENTE DE LOGIN ===
         const aplicaMascara = (e) => {
             let x = e.target.value.replace(/\D/g, '');
             if(x.length > 11) { x = x.replace(/^(\d{2})(\d)/, '$1.$2'); x = x.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3'); x = x.replace(/\.(\d{3})(\d)/, '.$1/$2'); x = x.replace(/(\d{4})(\d)/, '$1-$2'); }
@@ -251,6 +253,16 @@
         };
         document.getElementById('editCnpj').addEventListener('input', aplicaMascara);
         document.getElementById('editCliCnpj').addEventListener('input', aplicaMascara);
+
+        document.getElementById('editNome').addEventListener('input', (e) => {
+            if(document.getElementById('editId').value === "NOVO") {
+                let nome = e.target.value.toLowerCase();
+                nome = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Tira acento
+                nome = nome.replace(/eskimo/g, "").replace(/eskimó/g, "").replace(/sorvetes?/g, "").replace(/loja/g, "").trim(); // Remove palavras
+                nome = nome.replace(/[^a-z0-9]/g, ""); // Tira os espaços para o login ficar colado (ex: saopaulo)
+                document.getElementById('editLogin').value = nome;
+            }
+        });
 
         // === DASHBOARD ===
         async function carregarDashboard() {
@@ -273,7 +285,7 @@
             });
         }
 
-        // === LOJAS ===
+        // === LOJAS E CRIAÇÃO ===
         async function carregarLojas() {
             const snap = await getDocs(collection(db, "usuarios"));
             const tbody = document.querySelector('#tabelaLojas tbody');
@@ -296,22 +308,97 @@
             });
         }
 
-        window.abrirNovoUsuario = () => { document.getElementById('modalEditar').style.display='flex'; document.getElementById('editId').value="NOVO"; document.getElementById('editLogin').value=""; document.getElementById('editLogin').disabled=false; document.getElementById('editCnpj').value=""; document.getElementById('editNome').value=""; document.getElementById('editSenha').value=""; };
+        window.abrirNovoUsuario = () => { 
+            document.getElementById('modalEditar').style.display='flex'; 
+            document.getElementById('tituloForm').innerText = "Cadastro de Loja";
+            document.getElementById('editId').value="NOVO"; 
+            document.getElementById('editLogin').value=""; 
+            document.getElementById('editLogin').disabled=false; 
+            document.getElementById('editCnpj').value=""; 
+            document.getElementById('editNome').value=""; 
+            document.getElementById('btnResetSenha').style.display = 'none';
+            document.getElementById('dicaSenhaMsg').style.display = 'block';
+        };
+
         window.editarLoja = (id) => { 
             const u = usuariosData[id]; const plan = u.planilhas || {};
-            document.getElementById('editId').value = id; document.getElementById('editLogin').value = id; document.getElementById('editLogin').disabled = true; document.getElementById('editNome').value = u.nomeLoja||""; document.getElementById('editCnpj').value = u.cnpj||""; document.getElementById('editSenha').value = u.senha||"";
+            document.getElementById('tituloForm').innerText = "Editar Loja";
+            document.getElementById('editId').value = id; 
+            document.getElementById('editLogin').value = id; 
+            document.getElementById('editLogin').disabled = true; 
+            document.getElementById('editNome').value = u.nomeLoja||""; 
+            document.getElementById('editCnpj').value = u.cnpj||""; 
             document.getElementById('chkAdmin').checked = u.tipo === 'admin'; 
-            document.getElementById('chkSorvete').checked = plan.sorvete !== false; document.getElementById('chkSeco').checked = plan.seco||false; document.getElementById('chkBalde').checked = plan.balde||false; document.getElementById('chkPromo').checked = plan.promo||false;
+            document.getElementById('chkBalde').checked = plan.balde||false; 
+            document.getElementById('chkPromo').checked = plan.promo||false;
+            document.getElementById('btnResetSenha').style.display = 'block';
+            document.getElementById('dicaSenhaMsg').style.display = 'none';
             document.getElementById('modalEditar').style.display = 'flex';
         };
+
         window.excluirLoja = async (id) => { if(confirm("Atenção: Excluir loja "+id+"?")){ await deleteDoc(doc(db, "usuarios", id)); carregarLojas(); carregarDashboard(); } };
         
+        window.resetarSenha = async () => {
+            const id = document.getElementById('editId').value;
+            if (id === "NOVO") return;
+            if (confirm(`Tem a certeza que deseja repor a senha de ${id} para 'eskimo'?`)) {
+                await setDoc(doc(db, "usuarios", id), { senha: "eskimo" }, { merge: true });
+                alert("Senha redefinida com sucesso! No próximo login a loja deverá criar uma nova senha.");
+            }
+        };
+
         document.getElementById('btnSalvarEdicao').onclick = async () => {
             const login = document.getElementById('editLogin').value.toLowerCase().trim();
             if(!login) return alert("Login não pode estar vazio!");
-            const dados = { senha: document.getElementById('editSenha').value, nomeLoja: document.getElementById('editNome').value, cnpj: document.getElementById('editCnpj').value, tipo: document.getElementById('chkAdmin').checked ? "admin" : "loja",
-                planilhas: { sorvete: document.getElementById('chkSorvete').checked, seco: document.getElementById('chkSeco').checked, balde: document.getElementById('chkBalde').checked, promo: document.getElementById('chkPromo').checked } };
-            await setDoc(doc(db, "usuarios", login), dados, { merge: true }); window.fecharModal('modalEditar'); carregarLojas(); carregarDashboard();
+            
+            const isNovo = document.getElementById('editId').value === "NOVO";
+            
+            let dados = { 
+                nomeLoja: document.getElementById('editNome').value, 
+                cnpj: document.getElementById('editCnpj').value, 
+                tipo: document.getElementById('chkAdmin').checked ? "admin" : "loja",
+                planilhas: { sorvete: true, seco: true, balde: document.getElementById('chkBalde').checked, promo: document.getElementById('chkPromo').checked } 
+            };
+
+            // Se for criação nova, força a senha eskimo. Se for edição, a senha não é alterada aqui.
+            if(isNovo) dados.senha = 'eskimo';
+
+            await setDoc(doc(db, "usuarios", login), dados, { merge: true }); 
+            window.fecharModal('modalEditar'); carregarLojas(); carregarDashboard();
+        };
+
+        // === IMPORTAÇÃO DE LOJAS EM MASSA (NOVA LÓGICA) ===
+        document.getElementById('btnUploadUsuarios').onclick = async () => {
+            const fileInput = document.getElementById('fileUsuarios'); if(fileInput.files.length === 0) return alert("Selecione a planilha de lojas!");
+            const btn = document.getElementById('btnUploadUsuarios'); btn.innerText = "⏳ Criando Lojas..."; btn.disabled = true;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'}); const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+                    let count = 0;
+                    for(let row of rawData) {
+                        let cleanRow = {}; for(let key in row) cleanRow[key.toString().trim().toUpperCase()] = row[key];
+                        
+                        let login = (cleanRow['LOGIN'] || '').toString().toLowerCase().trim(); 
+                        let nome = (cleanRow['NOME'] || cleanRow['RAZÃO SOCIAL'] || '').toString().trim();
+                        
+                        if(login && nome) {
+                            // Cria as lojas já com a senha padrão e as abas obrigatórias liberadas
+                            await setDoc(doc(db, "usuarios", login), { 
+                                senha: 'eskimo', 
+                                nomeLoja: nome, 
+                                cnpj: (cleanRow['CNPJ']||'').toString().trim(), 
+                                tipo: 'loja',
+                                planilhas: { sorvete: true, seco: true, balde: false, promo: false }
+                            }, { merge: true });
+                            count++;
+                        }
+                    }
+                    alert(`SUCESSO! ${count} lojas cadastradas/atualizadas na base.`); carregarLojas(); carregarDashboard();
+                } catch (err) { alert("Erro ao processar planilha."); }
+                btn.innerText = "⚡ Importar Planilha de Lojas"; btn.disabled = false;
+                fileInput.value = "";
+            }; reader.readAsArrayBuffer(fileInput.files[0]);
         };
 
         // === CLIENTES (CRM) ===
@@ -340,7 +427,6 @@
 
         // === EDITOR DE PREÇOS ===
         window.abrirPrecos = async (tabelaId) => {
-            document.getElementById('tituloPrecos').innerText = `Editando Tabela: ${tabelaId.toUpperCase()}`;
             document.getElementById('txtNomeTabelaAtual').innerText = tabelaId.toUpperCase();
             document.getElementById('editTabelaId').value = tabelaId;
             document.getElementById('listaEdicaoPrecos').innerHTML = '<p>A carregar preços...</p>';
@@ -388,7 +474,7 @@
             alert("Preços atualizados com sucesso!"); window.fecharModal('modalPrecos'); document.getElementById('btnSalvarPrecos').innerText = "💾 Salvar Alterações Manuais";
         };
 
-        // === NOVA FUNÇÃO: UPLOAD DENTRO DO MODAL ===
+        // === UPLOAD ESPECÍFICO DENTRO DO MODAL DE PREÇOS ===
         document.getElementById('btnUploadModal').onclick = async () => {
             const fileInput = document.getElementById('fileCsvModal');
             if(fileInput.files.length === 0) return alert("Selecione uma planilha!");
@@ -397,9 +483,7 @@
             const btn = document.getElementById('btnUploadModal');
             btn.innerText = "⏳ Processando..."; btn.disabled = true;
 
-            const f = fileInput.files[0];
             const reader = new FileReader();
-            
             reader.onload = async (e) => {
                 try {
                     const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
@@ -427,20 +511,18 @@
                     if(count > 0) {
                         await setDoc(doc(db, "precos", tabelaId), precos);
                         alert(`SUCESSO! ${count} produtos salvos diretamente na tabela "${tabelaId}".`);
-                        window.abrirPrecos(tabelaId); // Recarrega a visualização
+                        window.abrirPrecos(tabelaId); 
                     } else {
                         alert("⚠️ ERRO: Nenhum produto lido. Verifique se as colunas estão corretas.");
                     }
-                } catch (err) {
-                    console.error(err); alert("Erro ao processar planilha.");
-                }
+                } catch (err) { alert("Erro ao processar planilha."); }
                 btn.innerText = "⬆️ Importar Tabela Aqui"; btn.disabled = false;
                 fileInput.value = ""; 
             };
-            reader.readAsArrayBuffer(f);
+            reader.readAsArrayBuffer(fileInput.files[0]);
         };
 
-        // === IMPORTAÇÕES GERAIS ===
+        // === IMPORTAÇÃO GERAL (VÁRIAS TABELAS PELO NOME DO FICHEIRO) ===
         document.getElementById('btnUpload').onclick = async () => {
             const files = document.getElementById('fileCsv').files; if(files.length === 0) return alert("Selecione os arquivos de preço!");
             const btn = document.getElementById('btnUpload'); btn.innerText = "⏳ Processando... Aguarde"; btn.disabled = true;
@@ -466,31 +548,6 @@
                     }; reader.readAsArrayBuffer(f);
                 }
             }, 50);
-        };
-
-        document.getElementById('btnUploadUsuarios').onclick = async () => {
-            const fileInput = document.getElementById('fileUsuarios'); if(fileInput.files.length === 0) return alert("Selecione a planilha de lojas!");
-            const btn = document.getElementById('btnUploadUsuarios'); btn.innerText = "⏳ Criando Lojas..."; btn.disabled = true;
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                try {
-                    const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'}); const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
-                    let count = 0;
-                    for(let row of rawData) {
-                        let cleanRow = {}; for(let key in row) cleanRow[key.toString().trim().toUpperCase()] = row[key];
-                        let login = (cleanRow['LOGIN'] || '').toString().toLowerCase().trim(); let senha = (cleanRow['SENHA'] || '').toString().trim(); let nome = (cleanRow['NOME'] || cleanRow['RAZÃO SOCIAL'] || '').toString().trim();
-                        if(login && senha && nome) {
-                            let sSorv = (cleanRow['SORVETE']||'').toString().toUpperCase().trim(); let sSeco = (cleanRow['SECO']||'').toString().toUpperCase().trim(); let sBald = (cleanRow['BALDE']||'').toString().toUpperCase().trim(); let sProm = (cleanRow['PROMO']||'').toString().toUpperCase().trim();
-                            await setDoc(doc(db, "usuarios", login), { senha: senha, nomeLoja: nome, cnpj: (cleanRow['CNPJ']||'').toString().trim(), tipo: (cleanRow['TIPO']||'').toString().toLowerCase() === 'admin' ? 'admin' : 'loja',
-                                planilhas: { sorvete: sSorv !== 'NAO' && sSorv !== 'NÃO' && sSorv !== 'FALSE' && sSorv !== '0', seco: sSeco === 'SIM' || sSeco === 'TRUE' || sSeco === '1', balde: sBald === 'SIM' || sBald === 'TRUE' || sBald === '1', promo: sProm === 'SIM' || sProm === 'TRUE' || sProm === '1' }
-                            }, { merge: true });
-                            count++;
-                        }
-                    }
-                    alert(`SUCESSO! ${count} lojas cadastradas/atualizadas.`); carregarLojas(); carregarDashboard();
-                } catch (err) { alert("Erro ao processar planilha."); }
-                btn.innerText = "Importar Planilha de Lojas"; btn.disabled = false;
-            }; reader.readAsArrayBuffer(fileInput.files[0]);
         };
 
         // INÍCIO
