@@ -1,0 +1,21 @@
+* { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 0; }
+body { background: #f4f4f9; padding: 20px; color: #333; }
+.container { max-width: 1000px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+h1, h2 { color: #e3000f; margin-bottom: 20px; }
+
+/* UI de Login e Cards */
+.card { border: 1px solid #eee; padding: 20px; border-radius: 8px; border-top: 4px solid #e3000f; background: #fff; margin-bottom: 20px; }
+input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; }
+
+/* Botões */
+button { background: #e3000f; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.2s; }
+button:hover { background: #b3000c; }
+.btn-sair { background: #444; width: auto; padding: 8px 15px; }
+
+/* Tabelas e Abas */
+table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+th { background: #e3000f; color: white; padding: 12px; text-align: left; }
+td { padding: 10px; border-bottom: 1px solid #eee; }
+.tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; }
+.tab-btn { background: none; border: none; padding: 10px 20px; cursor: pointer; color: #666; }
+.tab-btn.active { color: #e3000f; border-bottom: 3px solid #e3000f; font-weight: bold; }

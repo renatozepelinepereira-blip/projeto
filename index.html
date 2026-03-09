@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Eskimó</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div style="display:flex; justify-content:center; align-items:center; height:90vh;">
+        <form id="loginForm" class="card" style="width:350px; border: 1px solid #ddd; padding: 20px; border-radius: 8px;">
+            <h1 style="text-align: center; color: #e3000f;">Portal Eskimó</h1>
+            
+            <label for="user">Usuário:</label>
+            <input type="text" id="user" name="username" placeholder="Usuário" required>
+            
+            <label for="pass">Senha:</label>
+            <input type="password" id="pass" name="password" placeholder="Senha" required>
+            
+            <button type="submit" id="btnLogin">Entrar</button>
+            
+            <p id="msg" style="color:red; display:none; text-align:center; margin-top:10px; font-weight:bold;"></p>
+        </form>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8",
+            authDomain: "sistema-pedidos-3f2c2.firebaseapp.com",
+            projectId: "sistema-pedidos-3f2c2",
+            storageBucket: "sistema-pedidos-3f2c2.firebasestorage.app",
+            messagingSenderId: "669786014126",
+            appId: "1:669786014126:web:d0da498633a145d56a883f"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Capturamos o evento de "submit" do formulário
+        document.getElementById('loginForm').onsubmit = async (e) => {
+            e.preventDefault(); // Impede a página de recarregar
+            
+            const u = document.getElementById('user').value.toLowerCase().trim();
+            const p = document.getElementById('pass').value;
+            const msgErro = document.getElementById('msg');
+            msgErro.style.display = 'none';
+
+            try {
+                // Cria o admin se necessário
+                if(u === 'admin' && p === 'admin') {
+                    await setDoc(doc(db, "usuarios", "admin"), { senha: "admin", nomeLoja: "Matriz", tipo: "admin" }, { merge: true });
+                }
+
+                const snap = await getDoc(doc(db, "usuarios", u));
+
+                if(snap.exists() && snap.data().senha === p) {
+                    localStorage.setItem('user', u);
+                    localStorage.setItem('nome', snap.data().nomeLoja);
+                    
+                    // Alerta visual antes de mudar
+                    console.log("Sucesso! Tentando ir para admin.html...");
+                    window.location.assign("admin.html"); 
+                } else {
+                    msgErro.style.display = 'block';
+                    msgErro.innerText = "Usuário ou senha inválidos.";
+                }
+            } catch (error) {
+                console.error("ERRO DETECTADO:", error);
+                msgErro.style.display = 'block';
+                msgErro.innerText = "Falha: " + error.code;
+                
+                // Se o erro for "auth/unauthorized-domain", sabemos que é o link do Cloudflare
+                if(error.code === 'auth/unauthorized-domain' || error.message.includes('domain')) {
+                    alert("Domínio não autorizado! Adicione " + window.location.hostname + " no Firebase console.");
+                }
+            }
+        };
+    </script>
+</body>
+</html>

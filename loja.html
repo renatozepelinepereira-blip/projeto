@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Pedidos - Eskimó</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header style="display:flex; justify-content:space-between; align-items:center;">
+            <h1><span id="txtLoja"></span></h1>
+            <button onclick="localStorage.clear(); window.location.href='index.html'" class="btn-sair">Sair</button>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" id="btnPed">Pedido</button>
+            <button class="tab-btn" id="btnProm">Minhas Promoções</button>
+        </div>
+
+        <div id="divPed">
+            <input type="text" id="cli" placeholder="Razão Social Cliente">
+            <table id="tbl">
+                <thead><tr><th>Cód</th><th>Produto</th><th>Preço</th><th>Eng.</th><th>Uni.</th><th>Total</th></tr></thead>
+                <tbody id="corpo"></tbody>
+            </table>
+            <h2 style="text-align:right; margin-top:15px;">Total: R$ <span id="valTotal">0.00</span></h2>
+            <button id="btnExcel" style="width:auto; float:right;">Gerar Excel</button>
+        </div>
+
+        <div id="divProm" style="display:none; max-width:400px; margin:auto;">
+            <div class="card">
+                <h3>Cadastrar Promoção</h3>
+                <input type="text" id="pCod" placeholder="Código">
+                <input type="text" id="pNom" placeholder="Nome">
+                <input type="number" id="pPre" placeholder="Preço">
+                <button id="btnSaveProm">Salvar Localmente</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db } from "./js/config.js";
+        import { doc, getDoc, getDocs, collection, setDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+        const user = localStorage.getItem('user');
+        document.getElementById('txtLoja').innerText = localStorage.getItem('nome');
+        
+        let prods = [];
+        async function carregar() {
+            const pSnap = await getDoc(doc(db, "precos", user));
+            const meusPrecos = pSnap.exists() ? pSnap.data() : {};
+            const mSnap = await getDocs(collection(db, "produtos"));
+            const tbody = document.getElementById('corpo');
+            tbody.innerHTML = ''; prods = [];
+
+            mSnap.forEach(d => {
+                const item = d.data();
+                if(meusPrecos[item.codigo] || item.loja === user) {
+                    const preco = meusPrecos[item.codigo] || item.preco;
+                    prods.push({...item, preco: preco});
+                    const i = prods.length - 1;
+                    tbody.innerHTML += `<tr>
+                        <td>${item.codigo}</td><td>${item.descricao}</td><td>R$ ${preco.toFixed(2)}</td>
+                        <td><input type="number" id="e_${i}" value="0" oninput="window.calc()" style="width:60px;"></td>
+                        <td><input type="number" id="u_${i}" value="0" oninput="window.calc()" style="width:60px;"></td>
+                        <td id="t_${i}">0.00</td>
+                    </tr>`;
+                }
+            });
+        }
+        window.calc = () => {
+            let total = 0;
+            prods.forEach((p, i) => {
+                const q = (parseInt(document.getElementById(`e_${i}`).value)||0) * (p.engradado||1) + (parseInt(document.getElementById(`u_${i}`).value)||0);
+                const sub = q * p.preco;
+                document.getElementById(`t_${i}`).innerText = sub.toFixed(2);
+                total += sub;
+            });
+            document.getElementById('valTotal').innerText = total.toFixed(2);
+        };
+        carregar();
+
+        document.getElementById('btnPed').onclick = () => { document.getElementById('divPed').style.display='block'; document.getElementById('divProm').style.display='none'; carregar(); };
+        document.getElementById('btnProm').onclick = () => { document.getElementById('divPed').style.display='none'; document.getElementById('divProm').style.display='block'; };
+
+        document.getElementById('btnSaveProm').onclick = async () => {
+            await setDoc(doc(db, "produtos", document.getElementById('pCod').value), { 
+                codigo: document.getElementById('pCod').value, descricao: document.getElementById('pNom').value, 
+                preco: parseFloat(document.getElementById('pPre').value), engradado: 1, loja: user 
+            });
+            alert("Promoção salva!");
+        };
+    </script>
+</body>
+</html>

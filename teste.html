@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Teste de Conexão - Eskimó</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Teste de Conexão Direta</h1>
+        <div id="status" style="padding:20px; text-align:center; font-weight:bold; color:orange;">Tentando conectar ao Firebase...</div>
+        <ul id="lista-teste"></ul>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+        // CONFIGURAÇÃO DIRETA (SEM DEPENDER DE PASTA JS)
+        const firebaseConfig = {
+          apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8",
+          authDomain: "sistema-pedidos-3f2c2.firebaseapp.com",
+          projectId: "sistema-pedidos-3f2c2",
+          storageBucket: "sistema-pedidos-3f2c2.firebasestorage.app",
+          messagingSenderId: "669786014126",
+          appId: "1:669786014126:web:d0da498633a145d56a883f"
+        };
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+            const status = document.getElementById('status');
+
+            // Tenta buscar qualquer usuário
+            const snap = await getDocs(collection(db, "usuarios"));
+            status.innerText = "Conexão estabelecida com sucesso! ✅";
+            status.style.color = "green";
+
+            const lista = document.getElementById('lista-teste');
+            snap.forEach(d => {
+                lista.innerHTML += `<li>Usuário encontrado: ${d.id}</li>`;
+            });
+        } catch (e) {
+            document.getElementById('status').innerText = "ERRO CRÍTICO: " + e.message;
+            document.getElementById('status').style.color = "red";
+        }
+    </script>
+</body>
+</html>
