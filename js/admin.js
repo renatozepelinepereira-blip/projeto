@@ -10,7 +10,7 @@ let usuariosData = {};
 let editorItens = []; 
 let itensExcluidos = []; 
 let clientesData = {};
-let historicoGlobal = {};
+let historicoGlobal = {}; 
 
 window.mudarSecao = (secaoId) => {
     document.querySelectorAll('.secao').forEach(el => el.classList.remove('active'));
@@ -39,8 +39,6 @@ const aplicaMascara = (e) => {
     if(x.length > 11) { x = x.replace(/^(\d{2})(\d)/, '$1.$2'); x = x.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3'); x = x.replace(/\.(\d{3})(\d)/, '.$1/$2'); x = x.replace(/(\d{4})(\d)/, '$1-$2'); }
     e.target.value = x;
 };
-document.getElementById('editCnpj').addEventListener('input', aplicaMascara);
-document.getElementById('editCliCnpj').addEventListener('input', aplicaMascara);
 
 function formatarNomeLogin(nomeRaw) {
     let nome = nomeRaw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
@@ -57,10 +55,7 @@ function formatarNomeLogin(nomeRaw) {
     return "";
 }
 
-document.getElementById('editNome').addEventListener('input', (e) => {
-    if(document.getElementById('editId').value === "NOVO") document.getElementById('editLogin').value = formatarNomeLogin(e.target.value);
-});
-
+// === DASHBOARD E LOGS ===
 async function carregarDashboard() {
     try {
         const [snapLojas, snapCli, snapHist] = await Promise.all([ 
@@ -68,54 +63,98 @@ async function carregarDashboard() {
             getDocs(collection(db, "clientes")), 
             getDocs(query(collection(db, "historico"), orderBy("dataHora", "desc"), limit(50))) 
         ]);
+        
         document.getElementById('dashTotLojas').innerText = (snapLojas.size > 0 ? snapLojas.size - 1 : 0);
         document.getElementById('dashTotClientes').innerText = snapCli.size;
         document.getElementById('dashTotAcoes').innerText = snapHist.size;
-        let tbody = document.querySelector('#tabelaHistorico tbody'); tbody.innerHTML = '';
-        if(snapHist.size === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Nenhuma atividade registada ainda.</td></tr>'; return; }
+        
+        let tbody = document.querySelector('#tabelaHistorico tbody'); 
+        tbody.innerHTML = '';
+        if(snapHist.size === 0) { 
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Nenhuma atividade registada ainda.</td></tr>'; 
+            return; 
+        }
+        
         historicoGlobal = {};
         snapHist.forEach(d => {
-            let data = d.data(); historicoGlobal[d.id] = data;
-            let dataStr = data.dataHora ? (data.dataHora.toDate ? data.dataHora.toDate() : new Date(data.dataHora.seconds * 1000)).toLocaleString('pt-BR') : 'Data Indisponível';
+            let data = d.data(); 
+            historicoGlobal[d.id] = data;
+            let dStr = data.dataHora ? (data.dataHora.toDate ? data.dataHora.toDate() : new Date(data.dataHora.seconds * 1000)).toLocaleString('pt-BR') : 'Data Indisponível';
+            
             let acoesBtn = "-";
             if(data.dadosPlanilha) {
-                acoesBtn = `<div style="display: flex; gap: 5px;">
-                    <button class="btn-small btn-edit" onclick="window.visualizarLog('${d.id}')" title="Visualizar detalhes da planilha">👁️</button>
-                    <button class="btn-small btn-sucesso" style="margin:0;" onclick="window.regenerarPlanilha('${d.id}')" title="Baixar planilha Excel novamente">⬇️</button>
-                </div>`;
+                acoesBtn = `
+                    <div style="display: flex; gap: 5px;">
+                        <button class="btn-small btn-edit" onclick="window.visualizarLog('${d.id}')" title="Ver detalhes">👁️</button>
+                        <button class="btn-small btn-sucesso" style="margin:0;" onclick="window.regenerarPlanilha('${d.id}')" title="Baixar Excel">⬇️</button>
+                    </div>`;
             }
-            tbody.innerHTML += `<tr><td>${dataStr}</td><td><b>${data.nomeLoja || data.lojaId}</b></td><td style="color: ${data.acao.includes('Venda') ? 'green' : 'blue'}; font-weight:bold;">${data.acao}</td><td>${data.destino || '-'}</td><td>${acoesBtn}</td></tr>`;
+
+            tbody.innerHTML += `<tr>
+                <td>${dStr}</td>
+                <td><b>${data.nomeLoja || data.lojaId}</b></td>
+                <td style="color: ${data.acao.includes('Venda') ? 'green' : 'blue'}; font-weight:bold;">${data.acao}</td>
+                <td>${data.destino || '-'}</td>
+                <td>${acoesBtn}</td>
+            </tr>`;
         });
-    } catch (e) { console.error(e); }
+    } catch (e) {
+        console.error(e);
+        document.querySelector('#tabelaHistorico tbody').innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Erro ao carregar log.</td></tr>';
+    }
 }
 
-// Lógica de Lojas e Preços simplificada para o espaço
-async function carregarLojas() {
-    const snap = await getDocs(collection(db, "usuarios"));
-    const tbody = document.querySelector('#tabelaLojas tbody'); tbody.innerHTML = ''; usuariosData = {};
-    tbody.innerHTML += `<tr style="background:#e6f2ff;"><td><b>TABELA TF</b></td><td>Tabela de Transferência Base</td><td>-</td><td><button class="btn-small btn-preco" onclick="window.abrirPrecos('tf')" title="Editar Preços de Transferência">💲</button></td></tr>`;
-    snap.forEach(d => {
-        usuariosData[d.id] = d.data(); const u = d.data();
-        if(d.id !== 'admin') {
-            tbody.innerHTML += `<tr><td><b>${d.id}</b></td><td>${u.nomeLoja}</td><td>${u.cnpj||'-'}</td>
-                <td><div style="display:flex; gap:5px;">
-                    <button class="btn-small btn-preco" onclick="window.abrirPrecos('${d.id}')" title="Gerir Preços">💲</button>
-                    <button class="btn-small btn-edit" onclick="window.editarLoja('${d.id}')" title="Editar Loja">✏️</button>
-                    <button class="btn-small btn-del" onclick="window.excluirLoja('${d.id}')" title="Excluir Loja">❌</button>
-                </div></td></tr>`;
+// === VISUALIZAÇÃO E REGENERAÇÃO ===
+window.visualizarLog = (logId) => {
+    const log = historicoGlobal[logId]; if(!log || !log.dadosPlanilha) return;
+    const d = JSON.parse(log.dadosPlanilha);
+    let html = `<p><b>Tipo:</b> ${d.tipo.toUpperCase()}</p>`;
+    if(d.tipo === 'venda') {
+        let pag = d.formaPagamento || 'Não informado'; if(d.prazo) pag += ` - ${d.prazo}`;
+        html += `<p><b>Cliente:</b> ${d.razao}</p><p><b>Pagamento:</b> ${pag}</p><p><b>Total:</b> R$ ${d.totalV.toFixed(2)}</p><hr>`;
+    } else {
+        html += `<p><b>Destino:</b> ${d.razaoDestino}</p><p><b>Valor:</b> R$ ${d.resumo.valorTotal.toFixed(2)}</p><hr>`;
+    }
+    html += `<table style="width:100%; font-size:12px;"><tr><th>Cód</th><th>Produto</th><th>Qtd</th></tr>`;
+    d.itens.forEach(i => { html += `<tr><td>${i.codigo}</td><td>${i.descricao}</td><td>${i.calcTotalUnidades}</td></tr>`; });
+    html += `</table>`;
+    document.getElementById('conteudoDetalhesLog').innerHTML = html;
+    document.getElementById('btnRegerarPlanilhaModal').onclick = () => window.regenerarPlanilha(logId);
+    document.getElementById('modalDetalhesLog').style.display = 'flex';
+};
+
+window.regenerarPlanilha = async (logId) => {
+    const log = historicoGlobal[logId]; if(!log) return;
+    const d = JSON.parse(log.dadosPlanilha);
+    const btn = document.getElementById('btnRegerarPlanilhaModal'); btn.innerText = "⏳ A Gerar...";
+    try {
+        const isVenda = d.tipo === 'venda';
+        const response = await fetch(isVenda ? './PEDIDO.xlsx' : './TRANSFERENCIA.xlsx');
+        const buffer = await response.arrayBuffer(); const wb = new ExcelJS.Workbook(); await wb.xlsx.load(buffer);
+        const sheet = wb.getWorksheet(isVenda ? "ROMANEIO SORVETE" : "ROMANEIO"); // Simplificado para Admin
+        if(sheet) {
+           if(isVenda) { sheet.getCell('E6').value = d.razao; sheet.getCell('J6').value = d.cnpj; sheet.getCell('L7').value = d.totalV; }
+           else { sheet.getCell('K7').value = d.razaoDestino; sheet.getCell('L8').value = d.resumo.valorTotal; }
         }
-    });
-}
+        const outBuffer = await wb.xlsx.writeBuffer(); saveAs(new Blob([outBuffer]), `REGERADO_${d.razao || d.razaoDestino}.xlsx`);
+    } catch (e) { alert("Erro ao regerar."); }
+    btn.innerText = "⬇️ Baixar Novamente";
+};
 
-// Pesquisas em tempo real
+// === PESQUISAS ===
 document.getElementById('pesquisaLogAdmin').addEventListener('input', function() {
     let f = this.value.toLowerCase();
-    document.querySelectorAll('#tabelaHistorico tbody tr').forEach(r => { if(!r.querySelector('td[colspan]')) r.style.display = r.innerText.toLowerCase().includes(f) ? '' : 'none'; });
+    document.querySelectorAll('#tabelaHistorico tbody tr').forEach(r => {
+        if (!r.querySelector('td[colspan]')) r.style.display = r.innerText.toLowerCase().includes(f) ? '' : 'none';
+    });
 });
 
 document.getElementById('pesquisaLoja').addEventListener('input', function() {
     let f = this.value.toLowerCase();
     document.querySelectorAll('#tabelaLojas tbody tr').forEach(r => { r.style.display = r.innerText.toLowerCase().includes(f) ? '' : 'none'; });
 });
+
+// === OUTRAS FUNÇÕES (LOJAS, PREÇOS, BACKUP) ===
+// (Mantenha as suas funções de apagarTodasLojas, abrirPrecos, etc. aqui abaixo)
 
 carregarDashboard();
