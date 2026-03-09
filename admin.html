@@ -10,24 +10,19 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </head>
 <body>
-
     <div class="sidebar">
-        <div class="sidebar-header">
-            <div class="logo-icon">🍨</div>
-            <h2>Eskimó Admin</h2>
-        </div>
+        <div class="sidebar-header"><div class="logo-icon">🍨</div><h2>Eskimó Admin</h2></div>
         <div class="nav-links">
             <button onclick="mudarSecao('dashboard')" class="active" id="nav-dashboard"><i>📊</i> <span>Dashboard</span></button>
             <button onclick="mudarSecao('lojas')" id="nav-lojas"><i>🏪</i> <span>Gestão de Lojas</span></button>
             <button onclick="mudarSecao('precos')" id="nav-precos"><i>💲</i> <span>Tabelas de Preços</span></button>
             <button onclick="mudarSecao('clientes')" id="nav-clientes"><i>👥</i> <span>Base de Clientes</span></button>
             <button onclick="mudarSecao('backup')" id="nav-backup"><i>💾</i> <span>Backup do Sistema</span></button>
-            <button onclick="localStorage.clear(); window.location.href='index.html'" class="logout-btn"><i>🚪</i> <span>Sair do Sistema</span></button>
+            <button onclick="localStorage.clear(); window.location.href='index.html'" class="logout-btn"><i>🚪</i> <span>Sair</span></button>
         </div>
     </div>
 
     <div class="main-content">
-        
         <div id="sec-dashboard" class="secao active">
             <h2 class="section-title">Visão Geral do Sistema</h2>
             <div class="dash-cards">
@@ -35,18 +30,15 @@
                 <div class="card-stat"><h3>Clientes/Destinos</h3><div class="valor" id="dashTotClientes">0</div></div>
                 <div class="card-stat"><h3>Planilhas Geradas</h3><div class="valor" id="dashTotAcoes">0</div></div>
             </div>
-
             <div class="card-panel">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h3 style="margin: 0;">Últimas Atividades (Log do Sistema)</h3>
-                    <button id="btnToggleLog" onclick="window.toggleLog()" class="btn-secundario" style="background: #6c757d; margin: 0; padding: 6px 12px; font-size: 12px;">👁️ Ocultar Log</button>
+                    <h3 style="margin: 0;">Últimas Atividades</h3>
+                    <button id="btnToggleLog" onclick="window.toggleLog()" class="btn-secundario" style="background: #6c757d; padding: 6px 12px; font-size: 12px;">👁️ Ocultar Log</button>
                 </div>
-                
                 <input type="text" id="pesquisaLogAdmin" placeholder="🔍 Pesquisar por loja, destino, ação ou data..." style="margin-bottom: 15px; width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; border-color: #e3000f; background: #f8fbff;">
-                
                 <div id="containerTabelaHistorico" style="max-height: 400px; overflow-y: auto;">
                     <table id="tabelaHistorico">
-                        <thead><tr><th>Data / Hora</th><th>Loja/Filial</th><th>Ação</th><th>Destino</th><th>Backup da Planilha</th></tr></thead>
+                        <thead><tr><th>Data / Hora</th><th>Loja/Filial</th><th>Ação</th><th>Destino</th><th>Backup</th></tr></thead>
                         <tbody><tr><td colspan="5" style="text-align:center;">A carregar histórico...</td></tr></tbody>
                     </table>
                 </div>
@@ -54,66 +46,90 @@
         </div>
 
         <div id="sec-lojas" class="secao">
-            <div class="section-title">
-                Lojas e Utilizadores
-                <button id="btnApagarTudo" class="btn-perigo" onclick="window.apagarTodasLojas()" style="font-size: 14px;">🗑️ Limpar Banco de Lojas</button>
-            </div>
+            <div class="section-title">Lojas e Utilizadores <button class="btn-perigo" onclick="window.apagarTodasLojas()">🗑️ Limpar Banco</button></div>
             <div style="display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start;">
                 <div class="card-panel">
-                    <h3 style="color: #e3000f; margin-bottom: 15px;">Nova Loja Manual</h3>
-                    <button onclick="abrirNovoUsuario()" class="btn-primario" style="background: #28a745; margin-bottom: 30px; font-size: 15px;">+ Criar Loja Manualmente</button>
-                    <h3 style="margin-bottom: 10px;">Cadastro em Massa (Planilha)</h3>
-                    <p style="font-size: 13px; color: #555; margin-bottom: 10px; line-height: 1.5;">Suba um Excel apenas com as colunas: <b>NOME, CNPJ</b></p>
+                    <button onclick="abrirNovoUsuario()" class="btn-primario" style="background: #28a745; margin-bottom: 30px;">+ Criar Loja Manual</button>
+                    <h3>Importação em Massa</h3>
                     <input type="file" id="fileUsuarios" accept=".csv, .xlsx">
                     <button id="btnUploadUsuarios" class="btn-secundario" style="width: 100%;">⚡ Importar Lojas</button>
                 </div>
                 <div class="card-panel">
-                    <h3 style="margin-bottom: 15px;">Lista de Lojas Cadastradas</h3>
-                    <input type="text" id="pesquisaLoja" placeholder="🔍 Pesquisar por nome, login ou CNPJ..." style="margin-bottom: 15px; border-color: #0056b3; background: #f8fbff;">
-                    <div style="max-height: 550px; overflow-y: auto;">
-                        <table id="tabelaLojas">
-                            <thead><tr><th>Login</th><th>Razão Social / Filial</th><th>CNPJ</th><th>Ações de Gestão</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
+                    <input type="text" id="pesquisaLoja" placeholder="🔍 Pesquisar loja por nome ou login..." style="margin-bottom: 15px;">
+                    <div style="max-height: 550px; overflow-y: auto;"><table id="tabelaLojas"><thead><tr><th>Login</th><th>Razão Social</th><th>CNPJ</th><th>Ações</th></tr></thead><tbody></tbody></table></div>
                 </div>
             </div>
         </div>
 
         <div id="sec-precos" class="secao">
-            <h2 class="section-title">Importação Geral de Tabelas</h2>
+            <h2 class="section-title">Tabelas de Preços</h2>
             <div class="card-panel" style="max-width: 600px;">
-                <h3>Atualização de Preços via Nome do Ficheiro</h3>
                 <input type="file" id="fileCsv" accept=".csv, .xlsx" multiple>
-                <button id="btnUpload" class="btn-sucesso">Subir Tabelas para o Banco</button>
+                <button id="btnUpload" class="btn-sucesso">Subir Tabelas</button>
             </div>
         </div>
 
         <div id="sec-clientes" class="secao">
-            <h2 class="section-title">Base de Clientes (CRM)</h2>
-            <div class="card-panel">
-                <div style="max-height: 500px; overflow-y: auto;">
-                    <table id="tabelaClientes">
-                        <thead><tr><th>Tipo</th><th>Razão Social / Nome</th><th>CNPJ</th><th>Prazo</th><th>Loja Cadastrante</th><th>Ações</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
+            <h2 class="section-title">Base de Clientes</h2>
+            <div class="card-panel"><div style="max-height: 500px; overflow-y: auto;"><table id="tabelaClientes"><thead><tr><th>Tipo</th><th>Razão Social</th><th>CNPJ</th><th>Prazo</th><th>Ações</th></tr></thead><tbody></tbody></table></div></div>
         </div>
 
         <div id="sec-backup" class="secao">
-            <h2 class="section-title">Backup e Segurança</h2>
+            <h2 class="section-title">Backup Geral</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div class="card-panel">
-                    <h3 style="color: #28a745; margin-bottom: 15px;">Exportar Backup (Download)</h3>
-                    <button id="btnGerarBackup" class="btn-sucesso" style="width: 100%; padding: 15px; font-size: 16px;" onclick="window.gerarBackup()">⬇️ Fazer Download do Backup</button>
-                </div>
-                <div class="card-panel">
-                    <h3 style="color: #e3000f; margin-bottom: 15px;">Restaurar Backup (Upload)</h3>
-                    <input type="file" id="fileBackup" accept=".json">
-                    <button id="btnRestaurarBackup" class="btn-perigo" style="width: 100%; padding: 15px; font-size: 16px; margin-top:0;" onclick="window.restaurarBackup()">⬆️ Restaurar Sistema</button>
-                </div>
+                <div class="card-panel"><button class="btn-sucesso" style="width:100%;" onclick="window.gerarBackup()">⬇️ Download do Backup (.json)</button></div>
+                <div class="card-panel"><input type="file" id="fileBackup" accept=".json"><button class="btn-perigo" style="width:100%;" onclick="window.restaurarBackup()">⬆️ Restaurar Sistema</button></div>
             </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalEditar">
+        <div class="modal-content">
+            <h2 id="tituloForm">Cadastro de Loja</h2>
+            <input type="hidden" id="editId">
+            <label>Razão Social:</label> <input type="text" id="editNome">
+            <label>Login:</label> <input type="text" id="editLogin">
+            <label>CNPJ:</label> <input type="text" id="editCnpj">
+            <h3>Acessos</h3>
+            <div class="checkbox-group">
+                <label><input type="checkbox" id="chkAdmin"> Admin</label>
+                <label style="border-color:#28a745"><input type="checkbox" id="chkVenda"> Módulo Venda</label>
+            </div>
+            <h3>Abas Extras</h3>
+            <div class="checkbox-group">
+                <label><input type="checkbox" id="chkBalde"> Baldes</label>
+                <label style="border-color:#ffc107"><input type="checkbox" id="chkPromo"> Promoção</label>
+            </div>
+            <button id="btnResetSenha" onclick="window.resetarSenha()" style="background:#ffc107; margin-bottom:10px; display:none;">🔑 Resetar Senha para 'eskimo'</button>
+            <button id="btnSalvarEdicao" class="btn-primario">Salvar Loja</button>
+            <button onclick="window.fecharModal('modalEditar')" class="btn-primario" style="background:#666; margin-top:10px;">Cancelar</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalPrecos">
+        <div class="modal-content" style="width: 800px;">
+            <h2 id="tituloPrecos">Editor de Preços</h2>
+            <input type="hidden" id="editTabelaId">
+            <div class="upload-interno-box">
+                <input type="file" id="fileCsvModal" accept=".csv, .xlsx">
+                <button id="btnUploadModal" class="btn-primario" style="background:#0056b3">⬆️ Importar nesta Loja</button>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="font-size: 16px;">Preços Cadastrados</h3>
+                <button onclick="window.adicionarItemEditor()" class="btn-secundario" style="background:#28a745; margin:0;">+ Novo Produto</button>
+            </div>
+            <div id="listaEdicaoPrecos" style="max-height: 350px; overflow-y: auto; border: 1px solid #ddd; margin-bottom: 20px; border-radius: 6px;"></div>
+            <button id="btnSalvarPrecos" class="btn-sucesso">💾 Salvar Alterações</button>
+            <button onclick="window.fecharModal('modalPrecos')" class="btn-primario" style="background:#666; margin-top:10px;">Fechar</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalDetalhesLog">
+        <div class="modal-content" style="width: 700px;">
+            <h2 style="color: #0056b3">Detalhes da Planilha</h2>
+            <div id="conteudoDetalhesLog" style="font-size: 14px; background: #f9f9f9; padding: 15px; border-radius: 6px; margin-bottom: 15px; max-height: 400px; overflow-y: auto;"></div>
+            <button id="btnRegerarPlanilhaModal" class="btn-sucesso">⬇️ Baixar Novamente</button>
+            <button onclick="window.fecharModal('modalDetalhesLog')" class="btn-primario" style="background:#666; margin-top:10px;">Fechar</button>
         </div>
     </div>
 
