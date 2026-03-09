@@ -100,8 +100,8 @@
                 <div class="card-panel">
                     <h3>Cadastro em Massa (Planilha)</h3>
                     <p style="font-size: 13px; color: #555; margin-bottom: 10px; line-height: 1.5;">
-                        Crie uma planilha Excel apenas com as colunas: <b>LOGIN, NOME, CNPJ</b><br>
-                        <i style="color:#e3000f; font-size:12px;">*Todos os usuários criados terão as abas de Sorvete e Seco liberadas e a senha padrão <b>eskimo</b>.</i>
+                        Crie uma planilha Excel apenas com as colunas: <b>NOME, CNPJ</b><br>
+                        <i style="color:#e3000f; font-size:12px;">*O sistema gerará o login automaticamente (ex: filial.tubarao) e a senha padrão <b>eskimo</b>.</i>
                     </p>
                     <input type="file" id="fileUsuarios" accept=".csv, .xlsx">
                     <button id="btnUploadUsuarios" class="btn-secundario" style="width: 100%;">⚡ Importar Planilha de Lojas</button>
@@ -126,9 +126,9 @@
             <div class="card-panel" style="max-width: 600px;">
                 <h3>Atualização de Preços via Nome do Ficheiro</h3>
                 <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
-                    O sistema lerá o nome do ficheiro para saber a qual loja pertence:<br>
-                    • Venda Padrão: <b>nomedaloja.xlsx</b><br>
-                    • Venda Promoção: <b>nomedaloja_promo.xlsx</b><br>
+                    O sistema lerá o nome do ficheiro para saber a qual loja pertence (ex: <b>filial.dourados.xlsx</b>):<br>
+                    • Venda Padrão: <b>logindaloja.xlsx</b><br>
+                    • Venda Promoção: <b>logindaloja_promo.xlsx</b><br>
                     • Transferência: <b>tf.xlsx</b>
                 </p>
                 <input type="file" id="fileCsv" accept=".csv, .xlsx" multiple>
@@ -259,8 +259,12 @@
                 let nome = e.target.value.toLowerCase();
                 nome = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Tira acento
                 nome = nome.replace(/eskimo/g, "").replace(/eskimó/g, "").replace(/sorvetes?/g, "").replace(/loja/g, "").trim(); // Remove palavras
-                nome = nome.replace(/[^a-z0-9]/g, ""); // Tira os espaços para o login ficar colado (ex: saopaulo)
-                document.getElementById('editLogin').value = nome;
+                nome = nome.replace(/[^a-z0-9]/g, ""); // Tira os espaços para o login ficar colado
+                if(nome.length > 0) {
+                    document.getElementById('editLogin').value = "filial." + nome;
+                } else {
+                    document.getElementById('editLogin').value = "";
+                }
             }
         });
 
@@ -313,9 +317,12 @@
             document.getElementById('tituloForm').innerText = "Cadastro de Loja";
             document.getElementById('editId').value="NOVO"; 
             document.getElementById('editLogin').value=""; 
-            document.getElementById('editLogin').disabled=false; 
+            document.getElementById('editLogin').disabled=true; // Bloqueado pois é auto-gerado
             document.getElementById('editCnpj').value=""; 
             document.getElementById('editNome').value=""; 
+            document.getElementById('chkAdmin').checked = false;
+            document.getElementById('chkBalde').checked = false;
+            document.getElementById('chkPromo').checked = false;
             document.getElementById('btnResetSenha').style.display = 'none';
             document.getElementById('dicaSenhaMsg').style.display = 'block';
         };
@@ -349,7 +356,7 @@
 
         document.getElementById('btnSalvarEdicao').onclick = async () => {
             const login = document.getElementById('editLogin').value.toLowerCase().trim();
-            if(!login) return alert("Login não pode estar vazio!");
+            if(!login) return alert("O Login não pôde ser gerado. Digite um nome de loja válido.");
             
             const isNovo = document.getElementById('editId').value === "NOVO";
             
@@ -360,14 +367,13 @@
                 planilhas: { sorvete: true, seco: true, balde: document.getElementById('chkBalde').checked, promo: document.getElementById('chkPromo').checked } 
             };
 
-            // Se for criação nova, força a senha eskimo. Se for edição, a senha não é alterada aqui.
             if(isNovo) dados.senha = 'eskimo';
 
             await setDoc(doc(db, "usuarios", login), dados, { merge: true }); 
             window.fecharModal('modalEditar'); carregarLojas(); carregarDashboard();
         };
 
-        // === IMPORTAÇÃO DE LOJAS EM MASSA (NOVA LÓGICA) ===
+        // === IMPORTAÇÃO DE LOJAS EM MASSA COM GERAÇÃO INTELIGENTE DE LOGIN ===
         document.getElementById('btnUploadUsuarios').onclick = async () => {
             const fileInput = document.getElementById('fileUsuarios'); if(fileInput.files.length === 0) return alert("Selecione a planilha de lojas!");
             const btn = document.getElementById('btnUploadUsuarios'); btn.innerText = "⏳ Criando Lojas..."; btn.disabled = true;
@@ -379,19 +385,30 @@
                     for(let row of rawData) {
                         let cleanRow = {}; for(let key in row) cleanRow[key.toString().trim().toUpperCase()] = row[key];
                         
-                        let login = (cleanRow['LOGIN'] || '').toString().toLowerCase().trim(); 
                         let nome = (cleanRow['NOME'] || cleanRow['RAZÃO SOCIAL'] || '').toString().trim();
                         
-                        if(login && nome) {
-                            // Cria as lojas já com a senha padrão e as abas obrigatórias liberadas
-                            await setDoc(doc(db, "usuarios", login), { 
-                                senha: 'eskimo', 
-                                nomeLoja: nome, 
-                                cnpj: (cleanRow['CNPJ']||'').toString().trim(), 
-                                tipo: 'loja',
-                                planilhas: { sorvete: true, seco: true, balde: false, promo: false }
-                            }, { merge: true });
-                            count++;
+                        if(nome) {
+                            let login = (cleanRow['LOGIN'] || '').toString().toLowerCase().trim();
+                            
+                            // Se a planilha não tiver a coluna LOGIN, o sistema cria a sugestão inteligente
+                            if (!login) {
+                                let nomeLimpo = nome.toLowerCase();
+                                nomeLimpo = nomeLimpo.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
+                                nomeLimpo = nomeLimpo.replace(/eskimo/g, "").replace(/eskimó/g, "").replace(/sorvetes?/g, "").replace(/loja/g, "").trim(); 
+                                nomeLimpo = nomeLimpo.replace(/[^a-z0-9]/g, ""); 
+                                login = "filial." + nomeLimpo;
+                            }
+
+                            if (login) {
+                                await setDoc(doc(db, "usuarios", login), { 
+                                    senha: 'eskimo', 
+                                    nomeLoja: nome, 
+                                    cnpj: (cleanRow['CNPJ']||'').toString().trim(), 
+                                    tipo: 'loja',
+                                    planilhas: { sorvete: true, seco: true, balde: false, promo: false }
+                                }, { merge: true });
+                                count++;
+                            }
                         }
                     }
                     alert(`SUCESSO! ${count} lojas cadastradas/atualizadas na base.`); carregarLojas(); carregarDashboard();
