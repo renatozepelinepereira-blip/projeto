@@ -2,80 +2,98 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Pedidos - Eskimó</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <title>Matriz - Eskimó</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
         body { background: #f8f9fa; padding: 20px; color: #333; }
-        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 12px; border-top: 5px solid #e3000f; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e3000f; padding-bottom: 15px; margin-bottom: 20px; }
-        h1, h2 { color: #e3000f; }
-        .client-box { background: #f4f4f4; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 15px; border-left: 4px solid #e3000f; }
-        .client-box input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px; }
-        .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; flex-wrap: wrap; }
-        .tab-btn { background: none; border: none; padding: 10px 20px; cursor: pointer; color: #666; font-size: 16px; display: none; }
-        .tab-btn.active { color: #e3000f; border-bottom: 3px solid #e3000f; font-weight: bold; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 30px; border-radius: 12px; border-top: 5px solid #e3000f; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e3000f; padding-bottom: 15px; margin-bottom: 25px; }
+        h1, h2, h3 { color: #e3000f; margin-bottom: 15px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .card { border: 1px solid #eee; padding: 20px; border-radius: 8px; background: #fff; }
+        input[type="text"], input[type="password"], input[type="file"], input[type="number"] { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; }
+        button { background: #e3000f; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; }
+        button:hover { background: #b3000c; }
+        .btn-small { width: auto; padding: 6px 12px; font-size: 12px; margin: 0 5px; }
+        .btn-edit { background: #007bff; } .btn-edit:hover { background: #0056b3; }
+        .btn-preco { background: #ffc107; color: #000; } .btn-preco:hover { background: #e0a800; }
+        .btn-del { background: #dc3545; } .btn-del:hover { background: #c82333; }
+        ul { list-style: none; }
+        li { padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .checkbox-group { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        .checkbox-group label { display: flex; align-items: center; gap: 5px; cursor: pointer; background: #f4f4f4; padding: 8px 12px; border-radius: 6px; }
+        .modal { display: none; background: #fff; border: 2px solid #e3000f; padding: 20px; border-radius: 8px; margin-top: 20px; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th { background: #e3000f; color: white; padding: 12px; text-align: left; }
-        td { padding: 8px; border-bottom: 1px solid #eee; vertical-align: middle; }
-        td input[type="number"] { width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 4px; }
-        .resumo-box { background: #fff; border: 2px solid #e3000f; padding: 20px; border-radius: 8px; margin-top: 20px; }
-        .resumo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; text-align: center; margin-bottom: 15px; }
-        .resumo-item { background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #eee; }
-        .resumo-item span { display: block; font-size: 20px; font-weight: bold; color: #e3000f; }
-        .total-final { font-size: 24px; text-align: right; border-top: 2px dashed #ccc; padding-top: 15px; margin-top: 10px; }
-        button { background: #444; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
-        .btn-gerar { background: #28a745; width: 100%; padding: 15px; font-size: 18px; font-weight: bold; margin-top: 20px; border-radius: 8px; }
-        .btn-gerar:hover { background: #218838; }
+        th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Filial: <span id="txtLoja"></span></h1>
-            <button onclick="localStorage.clear(); window.location.href='index.html'">Sair do Sistema</button>
+            <h1>Painel Administrativo</h1>
+            <button onclick="localStorage.clear(); window.location.href='index.html'" style="width:auto; background:#444;">Sair</button>
         </header>
 
-        <div class="client-box">
-            <div><label><b>Razão Social do Cliente</b></label><input type="text" id="cliRazao" placeholder="Nome da empresa"></div>
-            <div><label><b>CNPJ</b></label><input type="text" id="cliCnpj" placeholder="00.000.000/0000-00"></div>
-            <div><label><b>Desconto (%)</b></label><input type="number" id="cliDesc" value="0" min="0" max="100" oninput="window.calcularTudo()"></div>
-        </div>
+        <div class="grid">
+            <div>
+                <div class="card" style="margin-bottom: 20px;">
+                    <h2>Importar Planilhas (.xlsx ou .csv)</h2>
+                    <input type="file" id="fileCsv" accept=".csv, .xlsx" multiple>
+                    <button id="btnUpload" style="background: #28a745;">Subir Planilha para o Banco</button>
+                </div>
 
-        <div class="tabs" id="tabContainer">
-            <button class="tab-btn" id="btnTabSorvete" onclick="window.mudarAba('sorvete')">🍨 Sorvetes</button>
-            <button class="tab-btn" id="btnTabSeco" onclick="window.mudarAba('seco')">📦 Secos</button>
-            <button class="tab-btn" id="btnTabBalde" onclick="window.mudarAba('balde')">🪣 Baldes</button>
-            <button class="tab-btn" id="btnTabPromo" onclick="window.mudarAba('promo')" style="color:#e0a800;">⭐ PROMOÇÕES</button>
-        </div>
-
-        <div id="content_sorvete" class="tab-content"><table id="tbl_sorvete"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
-        <div id="content_seco" class="tab-content"><table id="tbl_seco"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
-        <div id="content_balde" class="tab-content"><table id="tbl_balde"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
-        <div id="content_promo" class="tab-content"><table id="tbl_promo"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço Promo</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
-
-        <div class="resumo-box">
-            <h2>Resumo do Pedido</h2>
-            <div class="resumo-grid">
-                <div class="resumo-item">Itens Normais<span id="resQtdNormal">0 un</span><b id="resValNormal">R$ 0,00</b></div>
-                <div class="resumo-item" style="border-color:#ffc107;">Promoções<span id="resQtdPromo">0 un</span><b id="resValPromo">R$ 0,00</b></div>
-                <div class="resumo-item" style="background: #ffe6e6;">Total Unidades<span id="resQtdTotal">0 un</span></div>
+                <div class="card">
+                    <h2>Usuários Cadastrados</h2>
+                    <button onclick="window.abrirNovoUsuario()" style="background: #17a2b8;">+ Novo Usuário</button>
+                    <ul id="listaLojas"></ul>
+                </div>
             </div>
-            <div class="total-final">
-                <div style="font-size: 16px; color: #666;">Total sem Desconto (Normais): <s id="valSemDesc">R$ 0,00</s></div>
-                <div style="color: #28a745;"><b>Valor Final c/ Desconto + Promos: <span id="valComDesc">R$ 0,00</span></b></div>
+
+            <div>
+                <div class="card modal" id="modalEditar">
+                    <h2 id="tituloForm">Editar Usuário</h2>
+                    <input type="hidden" id="editId">
+                    <input type="text" id="editLogin" placeholder="Login da loja" disabled>
+                    <input type="text" id="editNome" placeholder="Razão Social / Nome da Filial">
+                    <input type="text" id="editSenha" placeholder="Senha">
+                    
+                    <h3>Tabela de Preços e Acessos</h3>
+                    <div class="checkbox-group">
+                        <label style="background:#e3000f; color:white;"><input type="checkbox" id="chkPadrao"> USAR TABELA PADRÃO</label>
+                        <label><input type="checkbox" id="chkAdmin"> É Admin</label>
+                    </div>
+
+                    <h3>Abas Visíveis na Loja</h3>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" id="chkSorvete"> Sorvetes</label>
+                        <label><input type="checkbox" id="chkSeco"> Secos</label>
+                        <label><input type="checkbox" id="chkBalde"> Baldes</label>
+                        <label style="border: 1px solid #ffc107;"><input type="checkbox" id="chkPromo"> PROMOÇÃO</label>
+                    </div>
+
+                    <button id="btnSalvarEdicao">Salvar Configurações</button>
+                    <button onclick="document.getElementById('modalEditar').style.display='none'" style="background:#666;">Cancelar</button>
+                </div>
+
+                <div class="card modal" id="modalPrecos">
+                    <h2 id="tituloPrecos">Editor de Preços</h2>
+                    <button onclick="window.adicionarItemEditor()" style="background:#17a2b8; margin-bottom:15px;">+ Novo Produto</button>
+                    <input type="hidden" id="editTabelaId">
+                    
+                    <div id="listaEdicaoPrecos" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 20px;"></div>
+                    
+                    <button id="btnSalvarPrecos" style="background:#28a745;">💾 Salvar Somente Nesta Loja</button>
+                    <button id="btnSalvarTodas" style="background:#dc3545;">🌍 Aplicar para TODAS as Lojas</button>
+                    <button onclick="document.getElementById('modalPrecos').style.display='none'" style="background:#666;">Cancelar</button>
+                </div>
             </div>
-            
-            <button class="btn-gerar" onclick="window.gerarExcelPedido()">⬇️ GERAR PEDIDO EM EXCEL</button>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc, deleteField } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8",
@@ -87,179 +105,196 @@
         };
 
         const db = getFirestore(initializeApp(firebaseConfig));
-        const userId = localStorage.getItem('user');
-        document.getElementById('txtLoja').innerText = localStorage.getItem('nome') || userId;
-        
-        let produtosGlobais = [];
+        if(localStorage.getItem('tipo') !== 'admin') window.location.href = 'index.html';
 
-        window.mudarAba = (cat) => {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.getElementById('btnTab' + cat.charAt(0).toUpperCase() + cat.slice(1)).classList.add('active');
-            document.getElementById('content_' + cat).classList.add('active');
-        };
+        let usuariosData = {};
+        let editorItens = [];
+        let itensExcluidos = [];
 
-        async function iniciar() {
-            const userSnap = await getDoc(doc(db, "usuarios", userId));
-            const planilhas = userSnap.exists() && userSnap.data().planilhas ? userSnap.data().planilhas : { sorvete: true, seco: false, balde: false, promo: false, padrao: false };
+        async function carregarLojas() {
+            const snap = await getDocs(collection(db, "usuarios"));
+            const lista = document.getElementById('listaLojas');
+            lista.innerHTML = '';
+            usuariosData = {};
             
-            let primeiraAba = null;
-            if(planilhas.sorvete) { document.getElementById('btnTabSorvete').style.display = 'block'; primeiraAba = primeiraAba || 'sorvete'; }
-            if(planilhas.seco) { document.getElementById('btnTabSeco').style.display = 'block'; primeiraAba = primeiraAba || 'seco'; }
-            if(planilhas.balde) { document.getElementById('btnTabBalde').style.display = 'block'; primeiraAba = primeiraAba || 'balde'; }
-            if(planilhas.promo) { document.getElementById('btnTabPromo').style.display = 'block'; primeiraAba = primeiraAba || 'promo'; }
-            if(primeiraAba) window.mudarAba(primeiraAba);
-
-            const tabelaId = planilhas.padrao ? 'padrao' : userId;
-            const [precoSnap, promoSnap, prodSnap] = await Promise.all([
-                getDoc(doc(db, "precos", tabelaId)),
-                planilhas.promo ? getDoc(doc(db, "precos", userId + "_promo")) : Promise.resolve({ exists: () => false }),
-                getDocs(collection(db, "produtos"))
-            ]);
-
-            const meusPrecos = precoSnap.exists() ? precoSnap.data() : {};
-            const precosPromo = promoSnap.exists() ? promoSnap.data() : {};
-
-            prodSnap.forEach(d => {
-                const item = d.data();
-                const objPromo = precosPromo[item.codigo];
-                const objNormal = meusPrecos[item.codigo];
-
-                if(planilhas.promo && objPromo !== undefined) {
-                    let visivel = typeof objPromo === 'object' ? (objPromo.visivel !== false) : true;
-                    let preco = typeof objPromo === 'object' ? objPromo.preco : objPromo;
-                    if(visivel) produtosGlobais.push({ ...item, precoFinal: preco, isPromo: true, catReal: 'promo' });
-                } else if (objNormal !== undefined) {
-                    let visivel = typeof objNormal === 'object' ? (objNormal.visivel !== false) : true;
-                    let preco = typeof objNormal === 'object' ? objNormal.preco : objNormal;
-                    if(visivel) produtosGlobais.push({ ...item, precoFinal: preco, isPromo: false, catReal: (item.categoria || 'sorvete').toLowerCase().trim() });
-                }
-            });
-
-            renderizarTabelas();
-        }
-
-        function renderizarTabelas() {
-            produtosGlobais.forEach((p, i) => {
-                let cat = p.isPromo ? 'promo' : p.catReal;
-                if(!['sorvete', 'seco', 'balde', 'promo'].includes(cat)) cat = 'sorvete';
-                
-                const tbody = document.querySelector(`#tbl_${cat} tbody`);
-                if(tbody) {
-                    tbody.innerHTML += `<tr id="tr_${i}">
-                        <td>${p.codigo}</td><td>${p.descricao}</td><td>${p.engradado}</td><td style="${p.isPromo?'color:orange;font-weight:bold;':''}">R$ ${p.precoFinal.toFixed(2)}</td>
-                        <td><input type="number" id="eng_${i}" value="0" min="0" oninput="window.calcularTudo()"></td>
-                        <td><input type="number" id="uni_${i}" value="0" min="0" oninput="window.calcularTudo()"></td>
-                        <td id="sub_${i}" style="font-weight:bold;">R$ 0.00</td>
-                    </tr>`;
-                }
+            snap.forEach(d => {
+                usuariosData[d.id] = d.data();
+                const u = d.data();
+                lista.innerHTML += `<li>
+                    <span><b>${d.id}</b> - ${u.nomeLoja} ${u.planilhas?.padrao ? '<b style="color:orange; font-size:10px;">[PADRÃO]</b>' : ''}</span>
+                    <div>
+                        <button class="btn-small btn-preco" onclick="window.abrirPrecos('${d.id}')">💲 Preços</button>
+                        <button class="btn-small btn-edit" onclick="window.editar('${d.id}')">Editar</button>
+                        <button class="btn-small btn-del" onclick="window.excluir('${d.id}')">X</button>
+                    </div>
+                </li>`;
             });
         }
 
-        window.calcularTudo = () => {
-            let desc = parseFloat(document.getElementById('cliDesc').value) || 0;
-            let resumo = { normalU:0, normalV:0, promoU:0, promoV:0 };
-
-            produtosGlobais.forEach((p, i) => {
-                let inputEng = document.getElementById(`eng_${i}`);
-                if(!inputEng) return;
-                let qtd = ((parseInt(inputEng.value)||0) * p.engradado) + (parseInt(document.getElementById(`uni_${i}`).value)||0);
-                let sub = qtd * p.precoFinal;
-
-                document.getElementById(`sub_${i}`).innerText = `R$ ${sub.toFixed(2)}`;
-                p.calcQtdCx = parseInt(inputEng.value)||0; p.calcQtdUn = parseInt(document.getElementById(`uni_${i}`).value)||0;
-                p.calcTotalUnidades = qtd; p.calcSubtotal = sub;
-
-                if(p.isPromo) { resumo.promoU += qtd; resumo.promoV += sub; } else { resumo.normalU += qtd; resumo.normalV += sub; }
-            });
-
-            document.getElementById('resQtdNormal').innerText = resumo.normalU + " un"; document.getElementById('resValNormal').innerText = "R$ " + resumo.normalV.toFixed(2);
-            document.getElementById('resQtdPromo').innerText = resumo.promoU + " un"; document.getElementById('resValPromo').innerText = "R$ " + resumo.promoV.toFixed(2);
-            document.getElementById('resQtdTotal').innerText = (resumo.normalU + resumo.promoU) + " un";
-            document.getElementById('valSemDesc').innerText = "R$ " + resumo.normalV.toFixed(2);
+        window.abrirPrecos = async (userId) => {
+            document.getElementById('modalEditar').style.display = 'none';
+            const u = usuariosData[userId];
+            const tabelaId = (u.planilhas && u.planilhas.padrao) ? 'padrao' : userId;
             
-            let valFinal = (resumo.normalV - (resumo.normalV * (desc/100))) + resumo.promoV; 
-            document.getElementById('valComDesc').innerText = "R$ " + valFinal.toFixed(2);
-        };
+            document.getElementById('tituloPrecos').innerText = `Editando: ${tabelaId.toUpperCase()}`;
+            document.getElementById('editTabelaId').value = tabelaId;
+            document.getElementById('listaEdicaoPrecos').innerHTML = '<p>Carregando...</p>';
+            document.getElementById('modalPrecos').style.display = 'block';
 
-        window.gerarExcelPedido = async () => {
-            const razao = document.getElementById('cliRazao').value || "Cliente Não Informado";
-            const cnpj = document.getElementById('cliCnpj').value || "Sem CNPJ";
-            const desc = document.getElementById('cliDesc').value || "0";
-
-            document.querySelector('.btn-gerar').innerText = "⏳ GERANDO PEDIDO... AGUARDE";
+            editorItens = [];
+            itensExcluidos = [];
 
             try {
-                // Puxa o arquivo oficial de modelo
-                const response = await fetch('./PEDIDO.xlsx');
-                if(!response.ok) {
-                    alert("⚠️ Erro: O arquivo modelo 'PEDIDO.xlsx' não foi encontrado. Suba ele na raiz do Cloudflare!");
-                    document.querySelector('.btn-gerar').innerText = "⬇️ GERAR PEDIDO EM EXCEL";
-                    return;
-                }
-                const buffer = await response.arrayBuffer();
+                const [prodSnap, precoSnap] = await Promise.all([getDocs(collection(db, "produtos")), getDoc(doc(db, "precos", tabelaId))]);
+                const precosAtuais = precoSnap.exists() ? precoSnap.data() : {};
                 
-                const wb = new ExcelJS.Workbook();
-                await wb.xlsx.load(buffer);
-
-                const preencherAba = (nomeAba, tipoCategoria) => {
-                    const sheet = wb.getWorksheet(nomeAba);
-                    if(!sheet) return; 
-
-                    let selecionados = produtosGlobais.filter(p => (tipoCategoria === 'promo' ? p.isPromo : (p.catReal === tipoCategoria && !p.isPromo)) && p.calcTotalUnidades > 0);
-                    if(selecionados.length === 0) return;
-
-                    // Ajuste estas células C2, C3 etc de acordo com o seu Excel
-                    sheet.getCell('C2').value = razao;       
-                    sheet.getCell('C3').value = cnpj;        
-                    sheet.getCell('G2').value = new Date().toLocaleDateString(); 
-                    sheet.getCell('G3').value = desc + "%";  
-
-                    // Inicia na linha 6 (Mude este número se o cabeçalho for maior/menor)
-                    let linhaAtual = 6; 
-                    let metade = Math.ceil(selecionados.length / 2);
-
-                    for(let i = 0; i < metade; i++) {
-                        let esq = selecionados[i]; 
-                        let dir = selecionados[i + metade];
-
-                        // Lado Esquerdo - Colunas C, D, E, F, G
-                        sheet.getCell(`C${linhaAtual}`).value = esq.codigo;
-                        sheet.getCell(`D${linhaAtual}`).value = esq.calcQtdCx;
-                        sheet.getCell(`E${linhaAtual}`).value = esq.calcQtdUn;
-                        sheet.getCell(`F${linhaAtual}`).value = esq.descricao;
-                        sheet.getCell(`G${linhaAtual}`).value = esq.precoFinal; // Valor Unitário
-
-                        // Lado Direito - Colunas I, J, K, L, M
-                        if(dir) {
-                            sheet.getCell(`I${linhaAtual}`).value = dir.codigo;
-                            sheet.getCell(`J${linhaAtual}`).value = dir.calcQtdCx;
-                            sheet.getCell(`K${linhaAtual}`).value = dir.calcQtdUn;
-                            sheet.getCell(`L${linhaAtual}`).value = dir.descricao;
-                            sheet.getCell(`M${linhaAtual}`).value = dir.precoFinal; // Valor Unitário
-                        }
-
-                        linhaAtual++;
+                prodSnap.forEach(p => {
+                    const cod = p.id;
+                    if(precosAtuais[cod] !== undefined) {
+                        let pData = precosAtuais[cod];
+                        let val = typeof pData === 'object' ? pData.preco : pData;
+                        let vis = typeof pData === 'object' ? (pData.visivel !== false) : true;
+                        
+                        editorItens.push({ cod: cod, desc: p.data().descricao, cat: p.data().categoria, eng: p.data().engradado, preco: val, visivel: vis });
                     }
-                };
-
-                // Executa as abas
-                preencherAba("ROMANEIO SORVETE", "sorvete");
-                preencherAba("ROMANEIO SECO", "seco");
-                preencherAba("ROMANEIO BALDE", "balde");
-
-                const outBuffer = await wb.xlsx.writeBuffer();
-                saveAs(new Blob([outBuffer]), `PEDIDO_${razao.replace(/\s+/g, '_').toUpperCase()}.xlsx`);
-                
-            } catch (error) {
-                console.error("Erro ao gerar Excel:", error);
-                alert("Ocorreu um erro ao processar a planilha. Verifique se o PEDIDO.xlsx está no Cloudflare.");
-            }
-
-            document.querySelector('.btn-gerar').innerText = "⬇️ GERAR PEDIDO EM EXCEL";
+                });
+                renderEditor();
+            } catch (e) { document.getElementById('listaEdicaoPrecos').innerHTML = '<p style="color:red;">Erro ao carregar.</p>'; }
         };
 
-        iniciar();
+        function renderEditor() {
+            let html = `<table><tr><th style="width:10%">Cód</th><th>Produto</th><th style="width:20%">Preço R$</th><th style="width:10%">Visível</th><th style="width:10%">Ação</th></tr>`;
+            editorItens.forEach((item, i) => {
+                html += `<tr>
+                    <td style="font-size:12px;">${item.cod}</td>
+                    <td style="font-size:12px;">${item.desc}</td>
+                    <td><input type="number" step="0.01" value="${item.preco}" onchange="editorItens[${i}].preco = parseFloat(this.value)" style="padding:4px; margin:0;"></td>
+                    <td style="text-align:center;"><input type="checkbox" ${item.visivel ? 'checked' : ''} onchange="editorItens[${i}].visivel = this.checked"></td>
+                    <td><button class="btn-del btn-small" onclick="window.removerItemEditor(${i})">X</button></td>
+                </tr>`;
+            });
+            html += '</table>';
+            document.getElementById('listaEdicaoPrecos').innerHTML = html;
+        }
+
+        window.removerItemEditor = (index) => {
+            itensExcluidos.push(editorItens[index].cod); 
+            editorItens.splice(index, 1);
+            renderEditor();
+        };
+
+        window.adicionarItemEditor = () => {
+            const cod = prompt("Código do Produto:");
+            if(!cod || editorItens.find(i => i.cod === cod)) return alert("Código inválido ou já existe.");
+            const desc = prompt("Descrição (Nome):");
+            const cat = prompt("Categoria (SORVETE, SECO ou BALDE):", "SORVETE");
+            const eng = parseInt(prompt("Quantidade no Engradado/Caixa:", "1")) || 1;
+            const preco = parseFloat(prompt("Preço R$:", "0.00")) || 0;
+            
+            editorItens.unshift({ cod, desc, cat, eng, preco, visivel: true });
+            renderEditor();
+        };
+
+        async function dispararSalvamento(paraTodas) {
+            const tabelaId = document.getElementById('editTabelaId').value;
+            let btnId = paraTodas ? 'btnSalvarTodas' : 'btnSalvarPrecos';
+            document.getElementById(btnId).innerText = "Salvando...";
+
+            let updates = {};
+            let batchProdutos = [];
+            
+            editorItens.forEach(i => {
+                if(i.preco > 0) {
+                    updates[i.cod] = { preco: i.preco, visivel: i.visivel };
+                    batchProdutos.push(i);
+                }
+            });
+            
+            itensExcluidos.forEach(cod => { updates[cod] = deleteField(); });
+
+            for(let item of batchProdutos) {
+                await setDoc(doc(db, "produtos", item.cod), { codigo: item.cod, descricao: item.desc, engradado: item.eng, categoria: item.cat }, { merge: true });
+            }
+
+            if(paraTodas) {
+                if(!confirm("Tem certeza? Todos os usuários receberão essas alterações, exclusões e ocultações!")) {
+                    document.getElementById(btnId).innerText = "🌍 Aplicar para TODAS as Lojas";
+                    return;
+                }
+                const snap = await getDocs(collection(db, "usuarios"));
+                let alvo = ["padrao"];
+                snap.forEach(d => { if(d.data().tipo !== 'admin') alvo.push(d.id); });
+                
+                for(let u of alvo) {
+                    await setDoc(doc(db, "precos", u), updates, { merge: true });
+                }
+                alert("Aplicado para TODAS as lojas e para a tabela Padrão!");
+            } else {
+                await setDoc(doc(db, "precos", tabelaId), updates, { merge: true });
+                alert("Preços atualizados com sucesso!");
+            }
+
+            document.getElementById('modalPrecos').style.display = 'none';
+            document.getElementById(btnId).innerText = paraTodas ? "🌍 Aplicar para TODAS as Lojas" : "💾 Salvar Somente Nesta Loja";
+        }
+
+        document.getElementById('btnSalvarPrecos').onclick = () => dispararSalvamento(false);
+        document.getElementById('btnSalvarTodas').onclick = () => dispararSalvamento(true);
+
+        document.getElementById('btnUpload').onclick = async () => {
+            const files = document.getElementById('fileCsv').files;
+            if(files.length === 0) return alert("Selecione os arquivos!");
+            for(let f of files) {
+                const lojaId = f.name.replace(/\.[^/.]+$/, "").toLowerCase().trim();
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+                    const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+                    let precos = {}; let count = 0;
+                    for(let row of rawData) {
+                        let cleanRow = {}; for(let key in row) cleanRow[key.toString().trim().toUpperCase()] = row[key];
+                        let cod = cleanRow['CODIGO'] || cleanRow['CÓDIGO'];
+                        let prod = cleanRow['PRODUTO'];
+                        let eng = parseInt(cleanRow['ENGRADADO']) || 1;
+                        let cat = cleanRow['CATEGORIA'] ? String(cleanRow['CATEGORIA']).toUpperCase().trim() : 'SORVETE';
+                        let precoStr = String(cleanRow['PRECO'] || cleanRow['PREÇO'] || "0");
+                        let preco = parseFloat(precoStr.replace(/R\$/gi, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
+
+                        if(cod && prod && preco > 0) {
+                            precos[cod.toString()] = { preco: preco, visivel: true }; 
+                            if(!lojaId.includes('_promo')) {
+                                await setDoc(doc(db, "produtos", cod.toString()), { codigo: cod.toString(), descricao: prod, engradado: eng, categoria: cat }, { merge: true });
+                            }
+                            count++;
+                        }
+                    }
+                    if(count > 0) {
+                        await setDoc(doc(db, "precos", lojaId), precos);
+                        alert(`SUCESSO! ${count} produtos salvos na tabela "${lojaId}".`);
+                    }
+                };
+                reader.readAsArrayBuffer(f);
+            }
+        };
+
+        window.abrirNovoUsuario = () => { document.getElementById('modalEditar').style.display='block'; document.getElementById('editId').value="NOVO"; document.getElementById('editLogin').disabled=false; };
+        window.editar = (id) => { 
+            const u = usuariosData[id]; const plan = u.planilhas || {};
+            document.getElementById('editId').value = id; document.getElementById('editLogin').value = id; document.getElementById('editLogin').disabled = true;
+            document.getElementById('editNome').value = u.nomeLoja||""; document.getElementById('editSenha').value = u.senha||"";
+            document.getElementById('chkAdmin').checked = u.tipo === 'admin'; document.getElementById('chkPadrao').checked = plan.padrao||false;
+            document.getElementById('chkSorvete').checked = plan.sorvete !== false; document.getElementById('chkSeco').checked = plan.seco||false;
+            document.getElementById('chkBalde').checked = plan.balde||false; document.getElementById('chkPromo').checked = plan.promo||false;
+            document.getElementById('modalEditar').style.display = 'block';
+        };
+        window.excluir = async (id) => { if(confirm("Excluir usuário "+id+"?")){ await deleteDoc(doc(db, "usuarios", id)); carregarLojas();} };
+        document.getElementById('btnSalvarEdicao').onclick = async () => {
+            const login = document.getElementById('editLogin').value.toLowerCase().trim();
+            const dados = { senha: document.getElementById('editSenha').value, nomeLoja: document.getElementById('editNome').value, tipo: document.getElementById('chkAdmin').checked ? "admin" : "loja",
+                planilhas: { padrao: document.getElementById('chkPadrao').checked, sorvete: document.getElementById('chkSorvete').checked, seco: document.getElementById('chkSeco').checked, balde: document.getElementById('chkBalde').checked, promo: document.getElementById('chkPromo').checked } };
+            await setDoc(doc(db, "usuarios", login), dados, { merge: true }); document.getElementById('modalEditar').style.display = 'none'; carregarLojas();
+        };
+        carregarLojas();
     </script>
 </body>
 </html>
