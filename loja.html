@@ -3,37 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <title>Pedidos - Eskimó</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
         body { background: #f8f9fa; padding: 20px; color: #333; }
-        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 12px; border-top: 5px solid #e3000f; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
         header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e3000f; padding-bottom: 15px; margin-bottom: 20px; }
-        h1, h2, h3 { color: #e3000f; }
-        
-        /* Dados do Cliente */
+        h1, h2 { color: #e3000f; }
         .client-box { background: #f4f4f4; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 15px; border-left: 4px solid #e3000f; }
         .client-box input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px; }
-        
-        /* Abas Dinâmicas */
-        .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; }
+        .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; flex-wrap: wrap; }
         .tab-btn { background: none; border: none; padding: 10px 20px; cursor: pointer; color: #666; font-size: 16px; display: none; }
         .tab-btn.active { color: #e3000f; border-bottom: 3px solid #e3000f; font-weight: bold; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        
-        /* Tabela */
         table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         th { background: #e3000f; color: white; padding: 12px; text-align: left; }
         td { padding: 8px; border-bottom: 1px solid #eee; vertical-align: middle; }
         td input[type="number"] { width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 4px; }
-        
-        /* Resumo Final */
         .resumo-box { background: #fff; border: 2px solid #e3000f; padding: 20px; border-radius: 8px; margin-top: 20px; }
         .resumo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; text-align: center; margin-bottom: 15px; }
         .resumo-item { background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #eee; }
         .resumo-item span { display: block; font-size: 20px; font-weight: bold; color: #e3000f; }
         .total-final { font-size: 24px; text-align: right; border-top: 2px dashed #ccc; padding-top: 15px; margin-top: 10px; }
         button { background: #444; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+        .btn-gerar { background: #28a745; width: 100%; padding: 15px; font-size: 18px; font-weight: bold; margin-top: 20px; border-radius: 8px; }
+        .btn-gerar:hover { background: #218838; }
     </style>
 </head>
 <body>
@@ -44,42 +39,36 @@
         </header>
 
         <div class="client-box">
-            <div>
-                <label><b>Razão Social do Cliente</b></label>
-                <input type="text" id="cliRazao" placeholder="Nome da empresa">
-            </div>
-            <div>
-                <label><b>CNPJ</b></label>
-                <input type="text" id="cliCnpj" placeholder="00.000.000/0000-00">
-            </div>
-            <div>
-                <label><b>Desconto (%)</b></label>
-                <input type="number" id="cliDesc" value="0" min="0" max="100" oninput="window.calcularTudo()">
-            </div>
+            <div><label><b>Razão Social do Cliente</b></label><input type="text" id="cliRazao" placeholder="Nome da empresa"></div>
+            <div><label><b>CNPJ</b></label><input type="text" id="cliCnpj" placeholder="00.000.000/0000-00"></div>
+            <div><label><b>Desconto (%)</b></label><input type="number" id="cliDesc" value="0" min="0" max="100" oninput="window.calcularTudo()"></div>
         </div>
 
         <div class="tabs" id="tabContainer">
             <button class="tab-btn" id="btnTabSorvete" onclick="window.mudarAba('sorvete')">🍨 Sorvetes</button>
             <button class="tab-btn" id="btnTabSeco" onclick="window.mudarAba('seco')">📦 Secos</button>
             <button class="tab-btn" id="btnTabBalde" onclick="window.mudarAba('balde')">🪣 Baldes</button>
+            <button class="tab-btn" id="btnTabPromo" onclick="window.mudarAba('promo')" style="color:#e0a800;">⭐ PROMOÇÕES</button>
         </div>
 
         <div id="content_sorvete" class="tab-content"><table id="tbl_sorvete"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
         <div id="content_seco" class="tab-content"><table id="tbl_seco"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
         <div id="content_balde" class="tab-content"><table id="tbl_balde"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+        <div id="content_promo" class="tab-content"><table id="tbl_promo"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço Promo</th><th>Qtd Engradado</th><th>Qtd Unidade</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
 
         <div class="resumo-box">
             <h2>Resumo do Pedido</h2>
             <div class="resumo-grid">
-                <div class="resumo-item">Sorvetes<span id="resQtdSorvete">0 un</span><b id="resValSorvete">R$ 0,00</b></div>
-                <div class="resumo-item">Secos<span id="resQtdSeco">0 un</span><b id="resValSeco">R$ 0,00</b></div>
-                <div class="resumo-item">Baldes<span id="resQtdBalde">0 un</span><b id="resValBalde">R$ 0,00</b></div>
+                <div class="resumo-item">Itens Normais<span id="resQtdNormal">0 un</span><b id="resValNormal">R$ 0,00</b></div>
+                <div class="resumo-item" style="border-color:#ffc107;">Promoções<span id="resQtdPromo">0 un</span><b id="resValPromo">R$ 0,00</b></div>
                 <div class="resumo-item" style="background: #ffe6e6;">Total Unidades<span id="resQtdTotal">0 un</span></div>
             </div>
             <div class="total-final">
-                <div style="font-size: 16px; color: #666;">Total sem Desconto: <s id="valSemDesc">R$ 0,00</s></div>
-                <div style="color: #28a745;"><b>Valor Final c/ Desconto: <span id="valComDesc">R$ 0,00</span></b></div>
+                <div style="font-size: 16px; color: #666;">Total sem Desconto (Normais): <s id="valSemDesc">R$ 0,00</s></div>
+                <div style="color: #28a745;"><b>Valor Final c/ Desconto + Promos: <span id="valComDesc">R$ 0,00</span></b></div>
             </div>
+            
+            <button class="btn-gerar" onclick="window.gerarExcelPedido()">⬇️ GERAR PEDIDO EM EXCEL</button>
         </div>
     </div>
 
@@ -96,9 +85,7 @@
             appId: "1:669786014126:web:d0da498633a145d56a883f"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
+        const db = getFirestore(initializeApp(firebaseConfig));
         const userId = localStorage.getItem('user');
         document.getElementById('txtLoja').innerText = localStorage.getItem('nome') || userId;
         
@@ -112,31 +99,40 @@
         };
 
         async function iniciar() {
-            // 1. Pega as permissões de planilhas do usuário
+            // 1. Busca permissões do usuário
             const userSnap = await getDoc(doc(db, "usuarios", userId));
-            const planilhas = userSnap.exists() && userSnap.data().planilhas ? userSnap.data().planilhas : { sorvete: true, seco: false, balde: false };
+            const planilhas = userSnap.exists() && userSnap.data().planilhas ? userSnap.data().planilhas : { sorvete: true, seco: false, balde: false, promo: false, padrao: false };
             
-            // Ativa os botões das abas permitidas
+            // Ativa Abas
             let primeiraAba = null;
             if(planilhas.sorvete) { document.getElementById('btnTabSorvete').style.display = 'block'; primeiraAba = primeiraAba || 'sorvete'; }
             if(planilhas.seco) { document.getElementById('btnTabSeco').style.display = 'block'; primeiraAba = primeiraAba || 'seco'; }
             if(planilhas.balde) { document.getElementById('btnTabBalde').style.display = 'block'; primeiraAba = primeiraAba || 'balde'; }
-            
+            if(planilhas.promo) { document.getElementById('btnTabPromo').style.display = 'block'; primeiraAba = primeiraAba || 'promo'; }
             if(primeiraAba) window.mudarAba(primeiraAba);
 
-            // 2. Pega os preços e produtos
-            const precosSnap = await getDoc(doc(db, "precos", userId));
-            const meusPrecos = precosSnap.exists() ? precosSnap.data() : {};
-            const prodSnap = await getDocs(collection(db, "produtos"));
+            // 2. Define qual tabela ler (Padrão ou a da Loja)
+            const tabelaId = planilhas.padrao ? 'padrao' : userId;
+            
+            // Busca Preços (Normais e Promo) e Catálogo
+            const [precoSnap, promoSnap, prodSnap] = await Promise.all([
+                getDoc(doc(db, "precos", tabelaId)),
+                planilhas.promo ? getDoc(doc(db, "precos", userId + "_promo")) : Promise.resolve({ exists: () => false }),
+                getDocs(collection(db, "produtos"))
+            ]);
+
+            const meusPrecos = precoSnap.exists() ? precoSnap.data() : {};
+            const precosPromo = promoSnap.exists() ? promoSnap.data() : {};
 
             prodSnap.forEach(d => {
                 const item = d.data();
+                // Itens Normais
                 if(meusPrecos[item.codigo]) {
-                    produtosGlobais.push({
-                        ...item,
-                        precoFinal: meusPrecos[item.codigo],
-                        catNormalizada: (item.categoria || 'SORVETE').toLowerCase().trim()
-                    });
+                    produtosGlobais.push({ ...item, precoFinal: meusPrecos[item.codigo], isPromo: false, catReal: (item.categoria || 'sorvete').toLowerCase().trim() });
+                }
+                // Itens em Promoção
+                if(precosPromo[item.codigo]) {
+                    produtosGlobais.push({ ...item, precoFinal: precosPromo[item.codigo], isPromo: true, catReal: 'promo' });
                 }
             });
 
@@ -145,14 +141,13 @@
 
         function renderizarTabelas() {
             produtosGlobais.forEach((p, i) => {
-                // Se a categoria no banco não for uma das 3, joga para sorvete por segurança
-                let cat = p.catNormalizada;
-                if(cat !== 'sorvete' && cat !== 'seco' && cat !== 'balde') cat = 'sorvete';
+                let cat = p.isPromo ? 'promo' : p.catReal;
+                if(!['sorvete', 'seco', 'balde', 'promo'].includes(cat)) cat = 'sorvete';
                 
                 const tbody = document.querySelector(`#tbl_${cat} tbody`);
                 if(tbody) {
                     tbody.innerHTML += `<tr id="tr_${i}">
-                        <td>${p.codigo}</td><td>${p.descricao}</td><td>${p.engradado}</td><td>R$ ${p.precoFinal.toFixed(2)}</td>
+                        <td>${p.codigo}</td><td>${p.descricao}</td><td>${p.engradado}</td><td style="${p.isPromo?'color:orange;font-weight:bold;':''}">R$ ${p.precoFinal.toFixed(2)}</td>
                         <td><input type="number" id="eng_${i}" value="0" min="0" oninput="window.calcularTudo()"></td>
                         <td><input type="number" id="uni_${i}" value="0" min="0" oninput="window.calcularTudo()"></td>
                         <td id="sub_${i}" style="font-weight:bold;">R$ 0.00</td>
@@ -162,48 +157,89 @@
         }
 
         window.calcularTudo = () => {
-            let descStr = document.getElementById('cliDesc').value;
-            let descontoPercentual = parseFloat(descStr) || 0;
-            if(descontoPercentual < 0) descontoPercentual = 0;
-            if(descontoPercentual > 100) descontoPercentual = 100;
-
-            let resumo = { sorvete: {u:0, v:0}, seco: {u:0, v:0}, balde: {u:0, v:0} };
-            let valTotalSemDesc = 0;
+            let desc = parseFloat(document.getElementById('cliDesc').value) || 0;
+            let resumo = { normalU:0, normalV:0, promoU:0, promoV:0 };
 
             produtosGlobais.forEach((p, i) => {
                 let inputEng = document.getElementById(`eng_${i}`);
-                if(!inputEng) return; // Produto não renderizado porque a aba não existe
-
-                let qtdEng = parseInt(inputEng.value) || 0;
-                let qtdUni = parseInt(document.getElementById(`uni_${i}`).value) || 0;
+                if(!inputEng) return;
                 
-                let totalUnidades = (qtdEng * p.engradado) + qtdUni;
-                let subtotal = totalUnidades * p.precoFinal;
+                let qtd = ((parseInt(inputEng.value)||0) * p.engradado) + (parseInt(document.getElementById(`uni_${i}`).value)||0);
+                let sub = qtd * p.precoFinal;
 
-                document.getElementById(`sub_${i}`).innerText = `R$ ${subtotal.toFixed(2)}`;
+                document.getElementById(`sub_${i}`).innerText = `R$ ${sub.toFixed(2)}`;
 
-                let cat = p.catNormalizada;
-                if(cat !== 'sorvete' && cat !== 'seco' && cat !== 'balde') cat = 'sorvete';
+                // Adiciona propriedades de cálculo no produto para o Excel
+                p.calcQtdCx = parseInt(inputEng.value)||0;
+                p.calcQtdUn = parseInt(document.getElementById(`uni_${i}`).value)||0;
+                p.calcTotalUnidades = qtd;
+                p.calcSubtotal = sub;
 
-                resumo[cat].u += totalUnidades;
-                resumo[cat].v += subtotal;
-                valTotalSemDesc += subtotal;
+                if(p.isPromo) { resumo.promoU += qtd; resumo.promoV += sub; }
+                else { resumo.normalU += qtd; resumo.normalV += sub; }
             });
 
-            // Atualiza tela de Resumo
-            document.getElementById('resQtdSorvete').innerText = resumo.sorvete.u + " un";
-            document.getElementById('resValSorvete').innerText = "R$ " + resumo.sorvete.v.toFixed(2);
-            document.getElementById('resQtdSeco').innerText = resumo.seco.u + " un";
-            document.getElementById('resValSeco').innerText = "R$ " + resumo.seco.v.toFixed(2);
-            document.getElementById('resQtdBalde').innerText = resumo.balde.u + " un";
-            document.getElementById('resValBalde').innerText = "R$ " + resumo.balde.v.toFixed(2);
+            document.getElementById('resQtdNormal').innerText = resumo.normalU + " un";
+            document.getElementById('resValNormal').innerText = "R$ " + resumo.normalV.toFixed(2);
+            document.getElementById('resQtdPromo').innerText = resumo.promoU + " un";
+            document.getElementById('resValPromo').innerText = "R$ " + resumo.promoV.toFixed(2);
+            document.getElementById('resQtdTotal').innerText = (resumo.normalU + resumo.promoU) + " un";
             
-            document.getElementById('resQtdTotal').innerText = (resumo.sorvete.u + resumo.seco.u + resumo.balde.u) + " un";
-            
-            document.getElementById('valSemDesc').innerText = "R$ " + valTotalSemDesc.toFixed(2);
-            
-            let valFinal = valTotalSemDesc - (valTotalSemDesc * (descontoPercentual / 100));
+            document.getElementById('valSemDesc').innerText = "R$ " + resumo.normalV.toFixed(2);
+            let valFinal = (resumo.normalV - (resumo.normalV * (desc/100))) + resumo.promoV; // Desconto não aplica na promo
             document.getElementById('valComDesc').innerText = "R$ " + valFinal.toFixed(2);
+        };
+
+        // GERAÇÃO DO ROMANEIO EXCEL DUAS COLUNAS
+        window.gerarExcelPedido = () => {
+            const razao = document.getElementById('cliRazao').value || "Cliente_S_Nome";
+            const cnpj = document.getElementById('cliCnpj').value || "Sem_CNPJ";
+            const desc = document.getElementById('cliDesc').value || "0";
+            
+            const wb = XLSX.utils.book_new();
+            
+            // Função para desenhar a aba no padrão da planilha original
+            const criarAba = (nomeAba, tipoCategoria) => {
+                // Filtra os produtos da categoria que tiveram alguma quantidade preenchida
+                let selecionados = produtosGlobais.filter(p => 
+                    (tipoCategoria === 'promo' ? p.isPromo : (p.catReal === tipoCategoria && !p.isPromo)) && p.calcTotalUnidades > 0
+                );
+                if(selecionados.length === 0) return;
+
+                let aoa = [
+                    [`ROMANEIO - ${nomeAba.toUpperCase()}`],
+                    ["CLIENTE:", razao, "", "CNPJ:", cnpj],
+                    ["DESCONTO APLICADO:", desc + "%", "", "DATA:", new Date().toLocaleDateString()],
+                    [],
+                    ["CÓDIGO", "PRODUTO", "QTD CX", "QTD UN", "TOTAL (R$)", "  ", "CÓDIGO", "PRODUTO", "QTD CX", "QTD UN", "TOTAL (R$)"]
+                ];
+
+                // Lógica de divisão em duas colunas (Esquerda e Direita)
+                let metade = Math.ceil(selecionados.length / 2);
+                for(let i = 0; i < metade; i++) {
+                    let esq = selecionados[i];
+                    let dir = selecionados[i + metade];
+                    
+                    let linha = [
+                        esq.codigo, esq.descricao, esq.calcQtdCx, esq.calcQtdUn, esq.calcSubtotal, "  ",
+                        dir ? dir.codigo : "", dir ? dir.descricao : "", dir ? dir.calcQtdCx : "", dir ? dir.calcQtdUn : "", dir ? dir.calcSubtotal : ""
+                    ];
+                    aoa.push(linha);
+                }
+
+                const ws = XLSX.utils.aoa_to_sheet(aoa);
+                XLSX.utils.book_append_sheet(wb, ws, nomeAba);
+            };
+
+            criarAba("SORVETES", "sorvete");
+            criarAba("SECOS", "seco");
+            criarAba("BALDES", "balde");
+            criarAba("PROMOCOES", "promo");
+
+            if(wb.SheetNames.length === 0) return alert("Nenhum produto foi selecionado no pedido!");
+
+            // Salva o arquivo final
+            XLSX.writeFile(wb, `PEDIDO_${razao.replace(/\s+/g, '_')}.xlsx`);
         };
 
         iniciar();
