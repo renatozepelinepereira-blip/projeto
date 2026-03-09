@@ -195,7 +195,7 @@
             document.querySelector('.btn-gerar').innerText = "⏳ GERANDO PEDIDO... AGUARDE";
 
             try {
-                const response = await fetch('./PEDIDO.xlsx');
+                const response = await fetch('PEDIDO.xlsx');
                 if(!response.ok) {
                     alert("⚠️ Erro: O arquivo modelo 'PEDIDO.xlsx' não foi encontrado. Suba ele na raiz do Cloudflare!");
                     document.querySelector('.btn-gerar').innerText = "⬇️ GERAR PEDIDO EM EXCEL";
