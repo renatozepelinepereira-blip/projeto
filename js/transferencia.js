@@ -33,6 +33,13 @@ async function iniciar() {
     const userSnap = await getDoc(doc(db, "usuarios", userId));
     if (userSnap.exists()) window.lojaCnpj = userSnap.data().cnpj || "CNPJ NÃO CADASTRADO";
 
+    const planilhas = userSnap.exists() && userSnap.data().planilhas ? userSnap.data().planilhas : { sorvete: true, seco: false, balde: false, venda: true };
+    
+    if (planilhas.venda === false && userId !== 'admin') {
+        let menuVenda = document.querySelector('a[href="loja.html"]');
+        if(menuVenda) menuVenda.style.display = 'none';
+    }
+
     const allUsers = await getDocs(collection(db, "usuarios"));
     let dlistaNomes = document.getElementById('listaLojasDestino'); let dlistaCnpj = document.getElementById('listaCnpjDestino');
     
@@ -43,7 +50,6 @@ async function iniciar() {
         }
     });
 
-    const planilhas = userSnap.exists() && userSnap.data().planilhas ? userSnap.data().planilhas : { sorvete: true, seco: false, balde: false };
     let primeiraAba = null;
     if(planilhas.sorvete) { document.getElementById('btnTabSorvete').style.display = 'block'; primeiraAba = primeiraAba || 'sorvete'; }
     if(planilhas.seco) { document.getElementById('btnTabSeco').style.display = 'block'; primeiraAba = primeiraAba || 'seco'; }
@@ -111,7 +117,21 @@ window.gerarExcelTransferencia = async () => {
     btn.innerText = "⏳ SALVANDO DADOS E GERANDO... AGUARDE";
 
     try {
-        await addDoc(collection(db, "historico"), { lojaId: userId, nomeLoja: nomeLoja, acao: "Gerou Transferência", destino: razaoDestino, dataHora: serverTimestamp() });
+        // === CRIA O BACKUP LEVE DA PLANILHA ===
+        let itensSelecionados = produtosGlobais.filter(p => p.calcTotalUnidades > 0).map(p => ({
+            codigo: p.codigo, descricao: p.descricao, precoFinal: p.precoFinal, engradado: p.engradado,
+            calcQtdCx: p.calcQtdCx, calcQtdUn: p.calcQtdUn, calcTotalUnidades: p.calcTotalUnidades,
+            catReal: p.catReal
+        }));
+        
+        let dadosBackup = {
+            tipo: 'transferencia', razaoDestino: razaoDestino, cnpjDestino: cnpjDestino, cnpjOrigem: cnpjOrigem,
+            resumo: window.resumoTransferencia,
+            itens: itensSelecionados
+        };
+
+        await addDoc(collection(db, "historico"), { lojaId: userId, nomeLoja: nomeLoja, acao: "Gerou Transferência", destino: razaoDestino, dataHora: serverTimestamp(), dadosPlanilha: JSON.stringify(dadosBackup) });
+        // ======================================
 
         const response = await fetch('./TRANSFERENCIA.xlsx');
         if(!response.ok) { alert("⚠️ Erro: O arquivo 'TRANSFERENCIA.xlsx' não foi encontrado."); btn.innerText = "⬇️ GERAR PLANILHA DE TRANSFERÊNCIA"; return; }
