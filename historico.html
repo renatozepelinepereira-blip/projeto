@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Histórico - Eskimó</title>
+    <link rel="stylesheet" href="./css/app.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+<body>
+    <div id="sidebar" class="sidebar">
+        <button class="close-btn" onclick="window.toggleMenu()">×</button>
+        <h2>Menu Eskimó</h2>
+        <a href="loja.html">🛒 Venda</a>
+        <a href="transferencia.html">🔄 Transferência</a>
+        <a href="historico.html" class="active">📜 Histórico de Planilhas</a>
+        <a href="#" onclick="localStorage.clear(); window.location.href='index.html'" style="color: #dc3545; margin-top: auto; border-top: 1px solid #eee;">🚪 Sair</a>
+    </div>
+    <div id="overlay" class="overlay" onclick="window.toggleMenu()"></div>
+
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <button class="menu-btn" onclick="window.toggleMenu()">☰</button>
+                <h1>Filial: <span id="txtLoja"></span> - <span style="color:#666; font-size:18px;">Meus Relatórios</span></h1>
+            </div>
+        </header>
+
+        <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd; border-left: 4px solid #6c757d;">
+            <h2 style="margin-bottom: 15px; color: #333; font-size: 20px;">Histórico de Planilhas Geradas</h2>
+            
+            <input type="text" id="pesquisaLogLoja" placeholder="🔍 Pesquisar por destino, ação ou data..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; background: #f8f9fa;">
+            
+            <div style="max-height: 500px; overflow-y: auto;">
+                <table id="tabelaHistoricoLoja" style="width: 100%; border-collapse: collapse;">
+                    <thead><tr>
+                        <th style="background:#6c757d; color:white; padding:10px; text-align:left;">Data / Hora</th>
+                        <th style="background:#6c757d; color:white; padding:10px; text-align:left;">Ação Realizada</th>
+                        <th style="background:#6c757d; color:white; padding:10px; text-align:left;">Destino (Cliente/Filial)</th>
+                        <th style="background:#6c757d; color:white; padding:10px; text-align:left;">Ações</th>
+                    </tr></thead>
+                    <tbody><tr><td colspan="4" style="text-align:center; padding:20px;">A carregar histórico...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="overlay" id="modalDetalhesLog" style="display: none; align-items: center; justify-content: center; z-index: 2000;">
+        <div style="background: white; padding: 25px; border-radius: 8px; width: 700px; max-width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 5px 20px rgba(0,0,0,0.2); position: relative;">
+            <h2 style="color: #0056b3; margin-bottom: 15px;">Detalhes da Planilha</h2>
+            <div id="conteudoDetalhesLog" style="font-size: 14px; background: #f9f9f9; padding: 15px; border-radius: 6px; border: 1px solid #eee; margin-bottom: 15px; max-height: 400px; overflow-y: auto;"></div>
+            <button id="btnRegerarPlanilhaModal" style="background: #28a745; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%;">⬇️ Baixar Esta Planilha Novamente</button>
+            <button onclick="document.getElementById('modalDetalhesLog').style.display='none'" style="background: #666; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px;">Fechar</button>
+        </div>
+    </div>
+
+    <script type="module" src="./js/historico.js"></script>
+</body>
+</html>
