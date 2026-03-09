@@ -2,33 +2,99 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Eskimó</title>
+    <title>Matriz - Eskimó</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
-        body { background: #f4f4f9; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 350px; border-top: 5px solid #e3000f; }
-        h1 { color: #e3000f; text-align: center; margin-bottom: 20px; font-size: 24px; }
-        input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; }
-        button { background: #e3000f; color: white; border: none; padding: 12px; border-radius: 6px; width: 100%; cursor: pointer; font-weight: bold; font-size: 16px; }
+        body { background: #f8f9fa; padding: 20px; color: #333; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 30px; border-radius: 12px; border-top: 5px solid #e3000f; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e3000f; padding-bottom: 15px; margin-bottom: 25px; }
+        h1, h2, h3 { color: #e3000f; margin-bottom: 15px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .card { border: 1px solid #eee; padding: 20px; border-radius: 8px; background: #fff; }
+        input[type="text"], input[type="password"], input[type="file"], input[type="number"] { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; }
+        button { background: #e3000f; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; }
         button:hover { background: #b3000c; }
-        #msg { color: red; text-align: center; margin-top: 10px; font-weight: bold; display: none; }
+        .btn-small { width: auto; padding: 6px 12px; font-size: 12px; margin: 0 5px; }
+        .btn-edit { background: #007bff; } .btn-edit:hover { background: #0056b3; }
+        .btn-preco { background: #ffc107; color: #000; } .btn-preco:hover { background: #e0a800; }
+        .btn-del { background: #dc3545; } .btn-del:hover { background: #c82333; }
+        ul { list-style: none; }
+        li { padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .checkbox-group { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        .checkbox-group label { display: flex; align-items: center; gap: 5px; cursor: pointer; background: #f4f4f4; padding: 8px 12px; border-radius: 6px; }
+        .modal { display: none; background: #fff; border: 2px solid #e3000f; padding: 20px; border-radius: 8px; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
     </style>
 </head>
 <body>
-    <form id="loginForm" class="card">
-        <h1>Portal Eskimó</h1>
-        <input type="text" id="user" placeholder="Usuário" required>
-        <input type="password" id="pass" placeholder="Senha" required>
-        <button type="submit" id="btnLogin">Entrar</button>
-        <p id="msg"></p>
-    </form>
+    <div class="container">
+        <header>
+            <h1>Painel Administrativo</h1>
+            <button onclick="localStorage.clear(); window.location.href='index.html'" style="width:auto; background:#444;">Sair</button>
+        </header>
+
+        <div class="grid">
+            <div>
+                <div class="card" style="margin-bottom: 20px;">
+                    <h2>Importar Planilhas (.xlsx ou .csv)</h2>
+                    <input type="file" id="fileCsv" accept=".csv, .xlsx" multiple>
+                    <button id="btnUpload" style="background: #28a745;">Subir Planilha para o Banco</button>
+                </div>
+
+                <div class="card">
+                    <h2>Usuários Cadastrados</h2>
+                    <button onclick="window.abrirNovoUsuario()" style="background: #17a2b8;">+ Novo Usuário</button>
+                    <ul id="listaLojas"></ul>
+                </div>
+            </div>
+
+            <div>
+                <div class="card modal" id="modalEditar">
+                    <h2 id="tituloForm">Editar Usuário</h2>
+                    <input type="hidden" id="editId">
+                    <input type="text" id="editLogin" placeholder="Login da loja" disabled>
+                    <input type="text" id="editNome" placeholder="Razão Social / Nome da Filial">
+                    <input type="text" id="editSenha" placeholder="Senha">
+                    
+                    <h3>Tabela de Preços e Acessos</h3>
+                    <div class="checkbox-group">
+                        <label style="background:#e3000f; color:white;"><input type="checkbox" id="chkPadrao"> USAR TABELA PADRÃO</label>
+                        <label><input type="checkbox" id="chkAdmin"> É Admin</label>
+                    </div>
+
+                    <h3>Abas Visíveis na Loja</h3>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" id="chkSorvete"> Sorvetes</label>
+                        <label><input type="checkbox" id="chkSeco"> Secos</label>
+                        <label><input type="checkbox" id="chkBalde"> Baldes</label>
+                        <label style="border: 1px solid #ffc107;"><input type="checkbox" id="chkPromo"> PROMOÇÃO</label>
+                    </div>
+
+                    <button id="btnSalvarEdicao">Salvar Configurações</button>
+                    <button onclick="document.getElementById('modalEditar').style.display='none'" style="background:#666;">Cancelar</button>
+                </div>
+
+                <div class="card modal" id="modalPrecos">
+                    <h2 id="tituloPrecos">Editor de Preços</h2>
+                    <button onclick="window.adicionarItemEditor()" style="background:#17a2b8; margin-bottom:15px;">+ Novo Produto</button>
+                    <input type="hidden" id="editTabelaId">
+                    
+                    <div id="listaEdicaoPrecos" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 20px;"></div>
+                    
+                    <button id="btnSalvarPrecos" style="background:#28a745;">💾 Salvar Somente Nesta Loja</button>
+                    <button id="btnSalvarTodas" style="background:#dc3545;">🌍 Aplicar para TODAS as Lojas</button>
+                    <button onclick="document.getElementById('modalPrecos').style.display='none'" style="background:#666;">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc, deleteField } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
-        // Suas chaves de conexão diretas com o Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8",
             authDomain: "sistema-pedidos-3f2c2.firebaseapp.com",
@@ -38,53 +104,197 @@
             appId: "1:669786014126:web:d0da498633a145d56a883f"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        const db = getFirestore(initializeApp(firebaseConfig));
+        if(localStorage.getItem('tipo') !== 'admin') window.location.href = 'index.html';
 
-        document.getElementById('loginForm').onsubmit = async (e) => {
-            e.preventDefault(); // Impede a página de piscar à toa
+        let usuariosData = {};
+        let editorItens = [];
+        let itensExcluidos = [];
+
+        async function carregarLojas() {
+            const snap = await getDocs(collection(db, "usuarios"));
+            const lista = document.getElementById('listaLojas');
+            lista.innerHTML = '';
+            usuariosData = {};
             
-            const u = document.getElementById('user').value.toLowerCase().trim();
-            const p = document.getElementById('pass').value;
-            const msg = document.getElementById('msg');
-            const btn = document.getElementById('btnLogin');
+            snap.forEach(d => {
+                usuariosData[d.id] = d.data();
+                const u = d.data();
+                lista.innerHTML += `<li>
+                    <span><b>${d.id}</b> - ${u.nomeLoja} ${u.planilhas?.padrao ? '<b style="color:orange; font-size:10px;">[PADRÃO]</b>' : ''}</span>
+                    <div>
+                        <button class="btn-small btn-preco" onclick="window.abrirPrecos('${d.id}')">💲 Preços</button>
+                        <button class="btn-small btn-edit" onclick="window.editar('${d.id}')">Editar</button>
+                        <button class="btn-small btn-del" onclick="window.excluir('${d.id}')">X</button>
+                    </div>
+                </li>`;
+            });
+        }
 
-            // Feedback visual enquanto carrega
-            btn.innerText = "Aguarde...";
-            btn.disabled = true;
-            msg.style.display = 'none';
+        window.abrirPrecos = async (userId) => {
+            document.getElementById('modalEditar').style.display = 'none';
+            const u = usuariosData[userId];
+            const tabelaId = (u.planilhas && u.planilhas.padrao) ? 'padrao' : userId;
+            
+            document.getElementById('tituloPrecos').innerText = `Editando: ${tabelaId.toUpperCase()}`;
+            document.getElementById('editTabelaId').value = tabelaId;
+            document.getElementById('listaEdicaoPrecos').innerHTML = '<p>Carregando...</p>';
+            document.getElementById('modalPrecos').style.display = 'block';
+
+            editorItens = [];
+            itensExcluidos = [];
 
             try {
-                // Cria o admin padrão caso seja o primeiro acesso na base nova
-                if(u === 'admin' && p === 'admin') {
-                    await setDoc(doc(db, "usuarios", "admin"), { senha: "admin", nomeLoja: "Matriz", tipo: "admin" }, { merge: true });
-                }
-
-                const snap = await getDoc(doc(db, "usuarios", u));
+                const [prodSnap, precoSnap] = await Promise.all([getDocs(collection(db, "produtos")), getDoc(doc(db, "precos", tabelaId))]);
+                const precosAtuais = precoSnap.exists() ? precoSnap.data() : {};
                 
-                if(snap.exists() && snap.data().senha === p) {
-                    
-                    // --- AQUI ESTÁ A CORREÇÃO PRINCIPAL ---
-                    // Salvamos todas as credenciais na memória do navegador
-                    localStorage.setItem('user', u);
-                    localStorage.setItem('nome', snap.data().nomeLoja);
-                    localStorage.setItem('tipo', snap.data().tipo); // Esta é a chave que libera a tela admin
-                    
-                    // Redireciona para a tela certa
-                    window.location.href = snap.data().tipo === "admin" ? "admin.html" : "loja.html";
-                } else {
-                    msg.style.display = 'block';
-                    msg.innerText = "Usuário ou senha incorretos.";
-                    btn.innerText = "Entrar";
-                    btn.disabled = false;
+                prodSnap.forEach(p => {
+                    const cod = p.id;
+                    if(precosAtuais[cod] !== undefined) {
+                        let pData = precosAtuais[cod];
+                        let val = typeof pData === 'object' ? pData.preco : pData;
+                        let vis = typeof pData === 'object' ? (pData.visivel !== false) : true;
+                        
+                        editorItens.push({ cod: cod, desc: p.data().descricao, cat: p.data().categoria, eng: p.data().engradado, preco: val, visivel: vis });
+                    }
+                });
+                renderEditor();
+            } catch (e) { document.getElementById('listaEdicaoPrecos').innerHTML = '<p style="color:red;">Erro ao carregar.</p>'; }
+        };
+
+        function renderEditor() {
+            let html = `<table><tr><th style="width:10%">Cód</th><th>Produto</th><th style="width:20%">Preço R$</th><th style="width:10%">Visível</th><th style="width:10%">Ação</th></tr>`;
+            editorItens.forEach((item, i) => {
+                html += `<tr>
+                    <td style="font-size:12px;">${item.cod}</td>
+                    <td style="font-size:12px;">${item.desc}</td>
+                    <td><input type="number" step="0.01" value="${item.preco}" onchange="editorItens[${i}].preco = parseFloat(this.value)" style="padding:4px; margin:0;"></td>
+                    <td style="text-align:center;"><input type="checkbox" ${item.visivel ? 'checked' : ''} onchange="editorItens[${i}].visivel = this.checked"></td>
+                    <td><button class="btn-del btn-small" onclick="window.removerItemEditor(${i})">X</button></td>
+                </tr>`;
+            });
+            html += '</table>';
+            document.getElementById('listaEdicaoPrecos').innerHTML = html;
+        }
+
+        window.removerItemEditor = (index) => {
+            itensExcluidos.push(editorItens[index].cod); 
+            editorItens.splice(index, 1);
+            renderEditor();
+        };
+
+        window.adicionarItemEditor = () => {
+            const cod = prompt("Código do Produto:");
+            if(!cod || editorItens.find(i => i.cod === cod)) return alert("Código inválido ou já existe.");
+            const desc = prompt("Descrição (Nome):");
+            const cat = prompt("Categoria (SORVETE, SECO ou BALDE):", "SORVETE");
+            const eng = parseInt(prompt("Quantidade no Engradado/Caixa:", "1")) || 1;
+            const preco = parseFloat(prompt("Preço R$:", "0.00")) || 0;
+            
+            editorItens.unshift({ cod, desc, cat, eng, preco, visivel: true });
+            renderEditor();
+        };
+
+        async function dispararSalvamento(paraTodas) {
+            const tabelaId = document.getElementById('editTabelaId').value;
+            let btnId = paraTodas ? 'btnSalvarTodas' : 'btnSalvarPrecos';
+            document.getElementById(btnId).innerText = "Salvando...";
+
+            let updates = {};
+            let batchProdutos = [];
+            
+            editorItens.forEach(i => {
+                if(i.preco > 0) {
+                    updates[i.cod] = { preco: i.preco, visivel: i.visivel };
+                    batchProdutos.push(i);
                 }
-            } catch (error) {
-                msg.style.display = 'block';
-                msg.innerText = "Erro de conexão: " + error.code;
-                btn.innerText = "Entrar";
-                btn.disabled = false;
+            });
+            
+            itensExcluidos.forEach(cod => { updates[cod] = deleteField(); });
+
+            for(let item of batchProdutos) {
+                await setDoc(doc(db, "produtos", item.cod), { codigo: item.cod, descricao: item.desc, engradado: item.eng, categoria: item.cat }, { merge: true });
+            }
+
+            if(paraTodas) {
+                if(!confirm("Tem certeza? Todos os usuários receberão essas alterações, exclusões e ocultações!")) {
+                    document.getElementById(btnId).innerText = "🌍 Aplicar para TODAS as Lojas";
+                    return;
+                }
+                const snap = await getDocs(collection(db, "usuarios"));
+                let alvo = ["padrao"];
+                snap.forEach(d => { if(d.data().tipo !== 'admin') alvo.push(d.id); });
+                
+                for(let u of alvo) {
+                    await setDoc(doc(db, "precos", u), updates, { merge: true });
+                }
+                alert("Aplicado para TODAS as lojas e para a tabela Padrão!");
+            } else {
+                await setDoc(doc(db, "precos", tabelaId), updates, { merge: true });
+                alert("Preços atualizados com sucesso!");
+            }
+
+            document.getElementById('modalPrecos').style.display = 'none';
+            document.getElementById(btnId).innerText = paraTodas ? "🌍 Aplicar para TODAS as Lojas" : "💾 Salvar Somente Nesta Loja";
+        }
+
+        document.getElementById('btnSalvarPrecos').onclick = () => dispararSalvamento(false);
+        document.getElementById('btnSalvarTodas').onclick = () => dispararSalvamento(true);
+
+        document.getElementById('btnUpload').onclick = async () => {
+            const files = document.getElementById('fileCsv').files;
+            if(files.length === 0) return alert("Selecione os arquivos!");
+            for(let f of files) {
+                const lojaId = f.name.replace(/\.[^/.]+$/, "").toLowerCase().trim();
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+                    const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+                    let precos = {}; let count = 0;
+                    for(let row of rawData) {
+                        let cleanRow = {}; for(let key in row) cleanRow[key.toString().trim().toUpperCase()] = row[key];
+                        let cod = cleanRow['CODIGO'] || cleanRow['CÓDIGO'];
+                        let prod = cleanRow['PRODUTO'];
+                        let eng = parseInt(cleanRow['ENGRADADO']) || 1;
+                        let cat = cleanRow['CATEGORIA'] ? String(cleanRow['CATEGORIA']).toUpperCase().trim() : 'SORVETE';
+                        let precoStr = String(cleanRow['PRECO'] || cleanRow['PREÇO'] || "0");
+                        let preco = parseFloat(precoStr.replace(/R\$/gi, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
+
+                        if(cod && prod && preco > 0) {
+                            precos[cod.toString()] = { preco: preco, visivel: true }; 
+                            if(!lojaId.includes('_promo')) {
+                                await setDoc(doc(db, "produtos", cod.toString()), { codigo: cod.toString(), descricao: prod, engradado: eng, categoria: cat }, { merge: true });
+                            }
+                            count++;
+                        }
+                    }
+                    if(count > 0) {
+                        await setDoc(doc(db, "precos", lojaId), precos);
+                        alert(`SUCESSO! ${count} produtos salvos na tabela "${lojaId}".`);
+                    }
+                };
+                reader.readAsArrayBuffer(f);
             }
         };
+
+        window.abrirNovoUsuario = () => { document.getElementById('modalEditar').style.display='block'; document.getElementById('editId').value="NOVO"; document.getElementById('editLogin').disabled=false; };
+        window.editar = (id) => { 
+            const u = usuariosData[id]; const plan = u.planilhas || {};
+            document.getElementById('editId').value = id; document.getElementById('editLogin').value = id; document.getElementById('editLogin').disabled = true;
+            document.getElementById('editNome').value = u.nomeLoja||""; document.getElementById('editSenha').value = u.senha||"";
+            document.getElementById('chkAdmin').checked = u.tipo === 'admin'; document.getElementById('chkPadrao').checked = plan.padrao||false;
+            document.getElementById('chkSorvete').checked = plan.sorvete !== false; document.getElementById('chkSeco').checked = plan.seco||false;
+            document.getElementById('chkBalde').checked = plan.balde||false; document.getElementById('chkPromo').checked = plan.promo||false;
+            document.getElementById('modalEditar').style.display = 'block';
+        };
+        window.excluir = async (id) => { if(confirm("Excluir usuário "+id+"?")){ await deleteDoc(doc(db, "usuarios", id)); carregarLojas();} };
+        document.getElementById('btnSalvarEdicao').onclick = async () => {
+            const login = document.getElementById('editLogin').value.toLowerCase().trim();
+            const dados = { senha: document.getElementById('editSenha').value, nomeLoja: document.getElementById('editNome').value, tipo: document.getElementById('chkAdmin').checked ? "admin" : "loja",
+                planilhas: { padrao: document.getElementById('chkPadrao').checked, sorvete: document.getElementById('chkSorvete').checked, seco: document.getElementById('chkSeco').checked, balde: document.getElementById('chkBalde').checked, promo: document.getElementById('chkPromo').checked } };
+            await setDoc(doc(db, "usuarios", login), dados, { merge: true }); document.getElementById('modalEditar').style.display = 'none'; carregarLojas();
+        };
+        carregarLojas();
     </script>
 </body>
 </html>
