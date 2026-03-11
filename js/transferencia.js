@@ -171,4 +171,17 @@ window.gerarExcelTransferencia = async () => {
     btn.innerText = "⬇️ GERAR PLANILHA TRANSFERÊNCIA";
 };
 
+// === ATALHO FLUIDO (ENTER PARA PULAR CAMPO) ===
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type === 'number') {
+        e.preventDefault();
+        const inputs = Array.from(document.querySelectorAll('.tab-content.active td input[type="number"]'));
+        const index = inputs.indexOf(e.target);
+        if (index > -1 && index < inputs.length - 1) {
+            inputs[index + 1].focus();
+            inputs[index + 1].select();
+        }
+    }
+});
+
 iniciar();
