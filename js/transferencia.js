@@ -1,11 +1,11 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-import { getFirestore, doc, getDoc, getDocs, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+// js/transferencia.js - Lógica da Tela
+import { db } from "./api/firebase.js";
+import { iniciarInterfaceGlobais } from "./utils/interface.js";
+import { processarExcelTransferencia } from "./utils/excel.js";
+import { doc, getDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
-const firebaseConfig = { apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8", authDomain: "sistema-pedidos-3f2c2.firebaseapp.com", projectId: "sistema-pedidos-3f2c2", storageBucket: "sistema-pedidos-3f2c2.firebasestorage.app", messagingSenderId: "669786014126", appId: "1:669786014126:web:d0da498633a145d56a883f" };
-const db = getFirestore(initializeApp(firebaseConfig));
 const userId = localStorage.getItem('user');
 const nomeLoja = localStorage.getItem('nome') || userId;
-
 if(!userId) window.location.href = 'index.html';
 document.getElementById('txtLoja').innerText = nomeLoja;
 
@@ -14,9 +14,9 @@ let filiaisSalvas = [];
 window.lojaCnpj = "Não Cadastrado"; 
 window.resumoTransferencia = { totalCaixas: 0, totalPecas: 0, valorTotal: 0 };
 
-window.toggleMenu = () => { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('show'); };
+// Inicia Menu e Enter Fluido
+iniciarInterfaceGlobais();
 
-// Controle de Abas
 window.mudarAba = (cat) => { 
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
     document.querySelectorAll('.tab-content').forEach(c => { c.classList.remove('active'); c.style.display = 'none'; }); 
@@ -26,35 +26,22 @@ window.mudarAba = (cat) => {
     if(content) { content.classList.add('active'); content.style.display = 'block'; }
 };
 
-// Enter Fluido
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type === 'number') {
-        e.preventDefault();
-        const inputs = Array.from(document.querySelectorAll('input[type="number"]')).filter(el => el.offsetParent !== null);
-        const index = inputs.indexOf(e.target);
-        if (index > -1 && index < inputs.length - 1) { inputs[index + 1].focus(); inputs[index + 1].select(); }
-    }
-});
-
 // Auto-preenchimento
 document.getElementById('cliRazao').addEventListener('input', (e) => { const enc = filiaisSalvas.find(c => c.razao.toUpperCase() === e.target.value.toUpperCase()); if(enc) document.getElementById('cliCnpj').value = enc.cnpj; });
 document.getElementById('cliCnpj').addEventListener('input', function (e) {
     let x = e.target.value.replace(/\D/g, '');
     if (x.length <= 11) { x = x.replace(/(\d{3})(\d)/, '$1.$2'); x = x.replace(/(\d{3})(\d)/, '$1.$2'); x = x.replace(/(\d{3})(\d{1,2})$/, '$1-$2'); } else { x = x.replace(/^(\d{2})(\d)/, '$1.$2'); x = x.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3'); x = x.replace(/\.(\d{3})(\d)/, '.$1/$2'); x = x.replace(/(\d{4})(\d)/, '$1-$2'); }
-    e.target.value = x;
-    const enc = filiaisSalvas.find(c => c.cnpj === x); if(enc) document.getElementById('cliRazao').value = enc.razao;
+    e.target.value = x; const enc = filiaisSalvas.find(c => c.cnpj === x); if(enc) document.getElementById('cliRazao').value = enc.razao;
 });
 
 async function iniciar() {
     const userSnap = await getDoc(doc(db, "usuarios", userId));
     if (userSnap.exists()) window.lojaCnpj = userSnap.data().cnpj || "CNPJ NÃO CADASTRADO";
     const planilhas = userSnap.data()?.planilhas || { sorvete: true, seco: true, balde: true, venda: true };
-    
     if (planilhas.venda === false && userId !== 'admin') { let mVenda = document.getElementById('linkVendaSidebar'); if(mVenda) mVenda.style.display = 'none'; }
 
     const allUsers = await getDocs(collection(db, "usuarios"));
-    let dlistaNomes = document.getElementById('listaLojasDestino'); let dlistaCnpj = document.getElementById('listaCnpjDestino');
-    allUsers.forEach(u => { if(u.id !== 'admin' && u.id !== userId) { let fData = { razao: u.data().nomeLoja, cnpj: u.data().cnpj || '' }; if(fData.cnpj) { filiaisSalvas.push(fData); dlistaNomes.innerHTML += `<option value="${fData.razao}">`; dlistaCnpj.innerHTML += `<option value="${fData.cnpj}">`; } } });
+    allUsers.forEach(u => { if(u.id !== 'admin' && u.id !== userId) { let fData = { razao: u.data().nomeLoja, cnpj: u.data().cnpj || '' }; if(fData.cnpj) { filiaisSalvas.push(fData); document.getElementById('listaLojasDestino').innerHTML += `<option value="${fData.razao}">`; document.getElementById('listaCnpjDestino').innerHTML += `<option value="${fData.cnpj}">`; } } });
 
     let primeiraAba = null;
     if(planilhas.sorvete !== false) { document.getElementById('btnTabSorvete').style.display = 'inline-block'; primeiraAba = primeiraAba || 'sorvete'; } else { document.getElementById('btnTabSorvete').style.display = 'none'; }
@@ -80,7 +67,8 @@ function renderizarTabelas() {
     produtosGlobais.forEach((p, i) => {
         const tbody = document.querySelector(`#tbl_${p.catReal} tbody`);
         if(tbody) {
-            tbody.innerHTML += `<tr id="tr_${i}"><td>${p.codigo}</td><td>${p.descricao}</td><td>${p.engradado}</td><td>R$ ${p.precoFinal.toFixed(2)}</td>
+            let imgHtml = p.imagem ? `<img src="${p.imagem}" class="img-produto">` : `<div class="img-placeholder">📷</div>`;
+            tbody.innerHTML += `<tr id="tr_${i}"><td style="text-align: center;">${imgHtml}</td><td>${p.codigo}</td><td>${p.descricao}</td><td>${p.engradado}</td><td>R$ ${p.precoFinal.toFixed(2)}</td>
                 <td><input type="number" id="eng_${i}" placeholder="0" min="0" step="0.5" oninput="window.calcularTudo()"></td>
                 <td><input type="number" id="uni_${i}" placeholder="0" min="0" step="1" oninput="window.calcularTudo()"></td><td id="sub_${i}" style="font-weight:bold;">R$ 0.00</td></tr>`;
         }
@@ -89,7 +77,6 @@ function renderizarTabelas() {
 
 window.calcularTudo = () => {
     let totalCaixas = 0; let totalPecas = 0; let valorTotal = 0;
-    
     produtosGlobais.forEach((p, i) => {
         let inputEng = document.getElementById(`eng_${i}`); let inputUni = document.getElementById(`uni_${i}`);
         if(!inputEng || !inputUni) return;
@@ -97,127 +84,52 @@ window.calcularTudo = () => {
         let cxStr = inputEng.value; let unStr = inputUni.value;
         let cx = parseFloat(cxStr) || 0; let un = parseFloat(unStr) || 0;
         
-        if (cxStr !== "" && (cx * 10) % 5 !== 0) { alert(`⚠️ ERRO: Quantidade de Engradados inválida em "${p.descricao}". Apenas múltiplos de 0.5.`); inputEng.value = ""; cx = 0; }
-        if (unStr !== "" && un % 1 !== 0) { alert(`⚠️ ERRO: Unidades em "${p.descricao}" devem ser valores inteiros.`); inputUni.value = ""; un = 0; }
+        if (cxStr !== "" && (cx * 10) % 5 !== 0) { alert(`⚠️ ERRO em "${p.descricao}". Apenas múltiplos de 0.5.`); inputEng.value = ""; cx = 0; }
+        if (unStr !== "" && un % 1 !== 0) { alert(`⚠️ ERRO: Unidades devem ser inteiras.`); inputUni.value = ""; un = 0; }
 
         let capacidadeEngradado = parseFloat(p.engradado) || 1;
-        let qtdTotalPecas = (cx * capacidadeEngradado) + un; 
-        let sub = qtdTotalPecas * p.precoFinal;
+        let qtdTotalPecas = (cx * capacidadeEngradado) + un; let sub = qtdTotalPecas * p.precoFinal;
         
         document.getElementById(`sub_${i}`).innerText = `R$ ${sub.toFixed(2)}`;
         p.calcQtdCx = cx; p.calcQtdUn = un; p.calcTotalUnidades = qtdTotalPecas; p.calcSubtotal = sub;
-        
         totalCaixas += cx; totalPecas += qtdTotalPecas; valorTotal += sub;
         let tr = document.getElementById(`tr_${i}`); if (tr) { if (qtdTotalPecas > 0) tr.classList.add('linha-destaque'); else tr.classList.remove('linha-destaque'); }
     });
-    
-    document.getElementById('resTotalEngradados').innerText = totalCaixas + " cx"; 
-    document.getElementById('resTotalUnidades').innerText = totalPecas + " un"; 
-    document.getElementById('resValorTotal').innerText = "R$ " + valorTotal.toFixed(2);
+    document.getElementById('resTotalEngradados').innerText = totalCaixas + " cx"; document.getElementById('resTotalUnidades').innerText = totalPecas + " un"; document.getElementById('resValorTotal').innerText = "R$ " + valorTotal.toFixed(2);
     window.resumoTransferencia = { totalCaixas, totalPecas, valorTotal };
 };
 
 window.gerarExcelTransferencia = async () => {
-    // 1. Verificações Iniciais
     const razaoDestino = document.getElementById('cliRazao').value.trim(); 
     const cnpjDestino = document.getElementById('cliCnpj').value.trim(); 
-    const cnpjOrigem = window.lojaCnpj || "CNPJ NÃO CADASTRADO";
-    const btn = document.querySelector('.btn-gerar');
     
-    if(!razaoDestino || !cnpjDestino) return alert("⚠️ ATENÇÃO: Os campos Filial de Entrada e CNPJ da Filial não podem ficar em branco!");
-
+    if(!razaoDestino || !cnpjDestino) return alert("Preencha a Filial e CNPJ!");
+    
     const cnpjLimpo = cnpjDestino.replace(/\D/g, '');
     const lojaValida = filiaisSalvas.find(f => f.cnpj.replace(/\D/g, '') === cnpjLimpo);
-    if(!lojaValida) return alert("⛔ OPERAÇÃO BLOQUEADA!\nSó é permitido transferir para lojas da rede cadastradas.");
+    if(!lojaValida) return alert("⛔ Só é permitido transferir para lojas da rede cadastradas.");
 
-    // 2. Verifica se tem itens selecionados
     let itensSelecionados = produtosGlobais.filter(p => p.calcTotalUnidades > 0);
-    if (itensSelecionados.length === 0) {
-        return alert("⚠️ ERRO: Nenhuma quantidade foi preenchida! Adicione produtos antes de gerar a planilha.");
-    }
+    if (itensSelecionados.length === 0) return alert("Nenhuma quantidade preenchida!");
 
-    btn.innerText = "⏳ A GERAR PLANILHA...";
-    btn.style.opacity = "0.7";
+    const btn = document.querySelector('.btn-gerar'); 
+    btn.innerText = "⏳ A GERAR PLANILHA..."; 
     btn.disabled = true;
 
     try {
-        let itensMapeados = itensSelecionados.map(p => ({
-            codigo: p.codigo, descricao: p.descricao, precoFinal: p.precoFinal, engradado: p.engradado,
-            calcQtdCx: p.calcQtdCx || 0, calcQtdUn: p.calcQtdUn || 0, calcTotalUnidades: p.calcTotalUnidades || 0, catReal: p.catReal
-        }));
+        let itensMapeados = itensSelecionados.map(p => ({ codigo: p.codigo, descricao: p.descricao, precoFinal: p.precoFinal, engradado: p.engradado, calcQtdCx: p.calcQtdCx || 0, calcQtdUn: p.calcQtdUn || 0, calcTotalUnidades: p.calcTotalUnidades || 0, catReal: p.catReal }));
         
-        let dadosBackup = {
-            tipo: 'transferencia', razaoDestino, cnpjDestino, cnpjOrigem,
+        // ENVIA PARA O MOTOR ISOLADO DO EXCEL
+        await processarExcelTransferencia({
+            userId, nomeLoja, razaoDestino, cnpjDestino, cnpjOrigem: window.lojaCnpj, 
             resumo: window.resumoTransferencia, itens: itensMapeados
-        };
-
-        // Salva no Histórico do Firebase
-        await addDoc(collection(db, "historico"), { 
-            lojaId: userId, nomeLoja: nomeLoja, acao: "Gerou Transferência", destino: razaoDestino, 
-            dataHora: serverTimestamp(), dadosPlanilha: JSON.stringify(dadosBackup) 
         });
-
-        // Tenta baixar o Template do Excel
-        const response = await fetch('./TRANSFERENCIA.xlsx');
-        if (!response.ok) throw new Error("O arquivo 'TRANSFERENCIA.xlsx' não foi encontrado na pasta raiz do site.");
-        
-        const buffer = await response.arrayBuffer(); 
-        const wb = new ExcelJS.Workbook(); 
-        await wb.xlsx.load(buffer);
-
-        const preencherAba = (nomeAba, categoriasPermitidas, tipoAba) => {
-            const sheet = wb.getWorksheet(nomeAba); 
-            if(!sheet) {
-                console.warn(`Aba "${nomeAba}" não encontrada no Excel.`);
-                return; 
-            }
-            
-            let selecionados = itensMapeados.filter(p => categoriasPermitidas.includes(p.catReal));
-            if(selecionados.length === 0) return;
-            
-            let qtdTotalUnidadeAba = 0; let valorTotalAba = 0;
-            selecionados.forEach(p => { qtdTotalUnidadeAba += p.calcTotalUnidades; valorTotalAba += (p.calcTotalUnidades * p.precoFinal); });
-
-            if (tipoAba === 'FATURAMENTO') { 
-                sheet.getCell('D7').value = cnpjOrigem; sheet.getCell('I7').value = cnpjDestino; 
-                sheet.getCell('E8').value = qtdTotalUnidadeAba; sheet.getCell('J8').value = valorTotalAba; 
-            } else { 
-                sheet.getCell('E7').value = cnpjOrigem; sheet.getCell('K7').value = razaoDestino; 
-                sheet.getCell('D8').value = window.resumoTransferencia.totalCaixas; 
-                sheet.getCell('G8').value = window.resumoTransferencia.totalPecas; 
-                sheet.getCell('L8').value = window.resumoTransferencia.valorTotal; 
-            }
-
-            let linhaAtual = 10; 
-            selecionados.forEach(item => {
-                sheet.getCell(`C${linhaAtual}`).value = item.codigo;
-                if (tipoAba === 'FATURAMENTO') { 
-                    sheet.getCell(`D${linhaAtual}`).value = item.calcTotalUnidades; 
-                    sheet.getCell(`E${linhaAtual}`).value = item.descricao; 
-                    sheet.getCell(`F${linhaAtual}`).value = item.precoFinal; 
-                } else { 
-                    sheet.getCell(`D${linhaAtual}`).value = item.calcQtdCx; 
-                    sheet.getCell(`E${linhaAtual}`).value = item.calcTotalUnidades; 
-                    sheet.getCell(`F${linhaAtual}`).value = item.descricao; 
-                }
-                linhaAtual++;
-            });
-        };
-
-        preencherAba("FATURAMENTO - PROD", ["sorvete", "balde"], "FATURAMENTO"); 
-        preencherAba("FATURAMENTO - SECO", ["seco"], "FATURAMENTO"); 
-        preencherAba("ROMANEIO", ["sorvete", "seco", "balde"], "ROMANEIO");
-        
-        const outBuffer = await wb.xlsx.writeBuffer(); 
-        saveAs(new Blob([outBuffer]), `TRANSFERENCIA_${razaoDestino.replace(/\s+/g, '_').toUpperCase()}.xlsx`);
         
     } catch (e) { 
-        console.error("Erro completo:", e);
-        alert("Falha ao gerar o arquivo: " + e.message); 
-    } finally {
-        btn.innerText = "⬇️ GERAR PLANILHA DE TRANSFERÊNCIA";
-        btn.style.opacity = "1";
-        btn.disabled = false;
+        alert("Falha: " + e.message); 
+    } finally { 
+        btn.innerText = "⬇️ GERAR PLANILHA DE TRANSFERÊNCIA"; 
+        btn.disabled = false; 
     }
 };
 
