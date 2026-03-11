@@ -25,20 +25,31 @@
     <div class="main-content">
         <div id="sec-dashboard" class="secao active">
             <h2 class="section-title">Visão Geral do Sistema</h2>
+            
             <div class="dash-cards">
-                <div class="card-stat"><h3>Lojas Ativas</h3><div class="valor" id="dashTotLojas">0</div></div>
-                <div class="card-stat"><h3>Clientes/Destinos</h3><div class="valor" id="dashTotClientes">0</div></div>
-                <div class="card-stat"><h3>Planilhas Geradas</h3><div class="valor" id="dashTotAcoes">0</div></div>
+                <div class="card-stat">
+                    <h3>Lojas Ativas</h3>
+                    <div class="valor" id="dashTotLojas">0</div>
+                </div>
+                <div class="card-stat">
+                    <h3>Clientes/Destinos</h3>
+                    <div class="valor" id="dashTotClientes">0</div>
+                </div>
+                <div class="card-stat">
+                    <h3>Planilhas Geradas</h3>
+                    <div class="valor" id="dashTotAcoes">0</div>
+                </div>
             </div>
+            
             <div class="card-panel">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <h3 style="margin: 0;">Últimas Atividades</h3>
                     <button id="btnToggleLog" onclick="window.toggleLog()" class="btn-secundario" style="background: #6c757d; padding: 6px 12px; font-size: 12px;">👁️ Ocultar Log</button>
                 </div>
-                <input type="text" id="pesquisaLogAdmin" placeholder="🔍 Pesquisar por loja, destino, ação ou data..." style="margin-bottom: 15px; width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; border-color: #e3000f; background: #f8fbff;">
+                <input type="text" id="pesquisaLogAdmin" placeholder="🔍 Pesquisar por loja, destino, ação ou data...">
                 <div id="containerTabelaHistorico" style="max-height: 400px; overflow-y: auto;">
                     <table id="tabelaHistorico">
-                        <thead><tr><th>Data / Hora</th><th>Loja/Filial</th><th>Ação</th><th>Destino</th><th>Backup</th></tr></thead>
+                        <thead><tr><th>Data / Hora</th><th>Loja/Filial</th><th>Ação</th><th>Destino</th><th>Ações</th></tr></thead>
                         <tbody><tr><td colspan="5" style="text-align:center;">A carregar histórico...</td></tr></tbody>
                     </table>
                 </div>
@@ -46,7 +57,7 @@
         </div>
 
         <div id="sec-lojas" class="secao">
-            <div class="section-title">Lojas e Utilizadores <button class="btn-perigo" onclick="window.apagarTodasLojas()">🗑️ Limpar Banco</button></div>
+            <div class="section-title">Lojas e Utilizadores</div>
             <div style="display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start;">
                 <div class="card-panel">
                     <button onclick="abrirNovoUsuario()" class="btn-primario" style="background: #28a745; margin-bottom: 30px;">+ Criar Loja Manual</button>
@@ -55,7 +66,7 @@
                     <button id="btnUploadUsuarios" class="btn-secundario" style="width: 100%;">⚡ Importar Lojas</button>
                 </div>
                 <div class="card-panel">
-                    <input type="text" id="pesquisaLoja" placeholder="🔍 Pesquisar loja por nome ou login..." style="margin-bottom: 15px;">
+                    <input type="text" id="pesquisaLoja" placeholder="🔍 Pesquisar loja por nome ou login...">
                     <div style="max-height: 550px; overflow-y: auto;"><table id="tabelaLojas"><thead><tr><th>Login</th><th>Razão Social</th><th>CNPJ</th><th>Ações</th></tr></thead><tbody></tbody></table></div>
                 </div>
             </div>
@@ -65,7 +76,7 @@
             <h2 class="section-title">Tabelas de Preços</h2>
             <div class="card-panel" style="max-width: 600px;">
                 <input type="file" id="fileCsv" accept=".csv, .xlsx" multiple>
-                <button id="btnUpload" class="btn-sucesso">Subir Tabelas</button>
+                <button id="btnUpload" class="btn-sucesso" style="width: 100%; padding: 12px;">Subir Tabelas</button>
             </div>
         </div>
 
@@ -77,8 +88,8 @@
         <div id="sec-backup" class="secao">
             <h2 class="section-title">Backup Geral</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div class="card-panel"><button class="btn-sucesso" style="width:100%;" onclick="window.gerarBackup()">⬇️ Download do Backup (.json)</button></div>
-                <div class="card-panel"><input type="file" id="fileBackup" accept=".json"><button class="btn-perigo" style="width:100%;" onclick="window.restaurarBackup()">⬆️ Restaurar Sistema</button></div>
+                <div class="card-panel"><button class="btn-sucesso" style="width:100%; padding:15px;" onclick="window.gerarBackup()">⬇️ Download do Backup (.json)</button></div>
+                <div class="card-panel"><input type="file" id="fileBackup" accept=".json"><button class="btn-perigo" style="width:100%; padding:15px;" onclick="window.restaurarBackup()">⬆️ Restaurar Sistema</button></div>
             </div>
         </div>
     </div>
@@ -100,7 +111,7 @@
                 <label><input type="checkbox" id="chkBalde"> Baldes</label>
                 <label style="border-color:#ffc107"><input type="checkbox" id="chkPromo"> Promoção</label>
             </div>
-            <button id="btnResetSenha" onclick="window.resetarSenha()" style="background:#ffc107; margin-bottom:10px; display:none;">🔑 Resetar Senha para 'eskimo'</button>
+            <button id="btnResetSenha" onclick="window.resetarSenha()" style="background:#ffc107; margin-bottom:10px; display:none; padding:10px; border:none; border-radius:6px; cursor:pointer; width:100%; font-weight:bold;">🔑 Resetar Senha para 'eskimo'</button>
             <button id="btnSalvarEdicao" class="btn-primario">Salvar Loja</button>
             <button onclick="window.fecharModal('modalEditar')" class="btn-primario" style="background:#666; margin-top:10px;">Cancelar</button>
         </div>
@@ -112,23 +123,23 @@
             <input type="hidden" id="editTabelaId">
             <div class="upload-interno-box">
                 <input type="file" id="fileCsvModal" accept=".csv, .xlsx">
-                <button id="btnUploadModal" class="btn-primario" style="background:#0056b3">⬆️ Importar nesta Loja</button>
+                <button id="btnUploadModal" class="btn-primario" style="background:#0056b3; width:auto; padding:8px 15px;">⬆️ Importar nesta Loja</button>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                 <h3 style="font-size: 16px;">Preços Cadastrados</h3>
                 <button onclick="window.adicionarItemEditor()" class="btn-secundario" style="background:#28a745; margin:0;">+ Novo Produto</button>
             </div>
             <div id="listaEdicaoPrecos" style="max-height: 350px; overflow-y: auto; border: 1px solid #ddd; margin-bottom: 20px; border-radius: 6px;"></div>
-            <button id="btnSalvarPrecos" class="btn-sucesso">💾 Salvar Alterações</button>
+            <button id="btnSalvarPrecos" class="btn-sucesso" style="width:100%; padding:15px; border-radius:8px;">💾 Salvar Alterações</button>
             <button onclick="window.fecharModal('modalPrecos')" class="btn-primario" style="background:#666; margin-top:10px;">Fechar</button>
         </div>
     </div>
 
     <div class="modal-overlay" id="modalDetalhesLog">
         <div class="modal-content" style="width: 700px;">
-            <h2 style="color: #0056b3">Detalhes da Planilha</h2>
-            <div id="conteudoDetalhesLog" style="font-size: 14px; background: #f9f9f9; padding: 15px; border-radius: 6px; margin-bottom: 15px; max-height: 400px; overflow-y: auto;"></div>
-            <button id="btnRegerarPlanilhaModal" class="btn-sucesso">⬇️ Baixar Novamente</button>
+            <h2 style="color: #0056b3; margin-bottom:15px;">Detalhes da Planilha</h2>
+            <div id="conteudoDetalhesLog" style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee;"></div>
+            <button id="btnRegerarPlanilhaModal"></button>
             <button onclick="window.fecharModal('modalDetalhesLog')" class="btn-primario" style="background:#666; margin-top:10px;">Fechar</button>
         </div>
     </div>
