@@ -1,52 +1,66 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-import { getFirestore, doc, getDoc, getDocs, collection, query, where, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Venda - Eskimó</title>
+    <link rel="stylesheet" href="./css/global.css">
+    <style>
+        .client-box { background: #fffafa; padding: 20px; border-radius: 10px; margin-bottom: 25px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 20px; border: 1px solid #ffe6e6; border-left: 5px solid #e3000f; }
+        .tabs { display: flex; gap: 8px; border-bottom: 2px solid #eaeaea; margin-bottom: 20px; }
+        .tab-btn { background: none; border: none; padding: 12px 24px; cursor: pointer; color: #888; font-weight: bold; font-size: 15px; border-bottom: 3px solid transparent; }
+        .tab-btn.active { color: #e3000f; border-bottom-color: #e3000f; }
+        .resumo-box { background: white; border: 2px solid #e3000f; padding: 20px; border-radius: 12px; margin-top: 30px; }
+        .resumo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; }
+        .resumo-item { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #eee; }
+        .resumo-item span { display: block; font-size: 18px; font-weight: bold; color: #e3000f; margin-top: 5px; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+<body>
+    <div id="sidebar" class="sidebar">
+        <button class="close-btn" onclick="window.toggleMenu()">×</button>
+        <h2>Menu Eskimó</h2>
+        <a href="loja.html" class="active">🛒 Venda</a>
+        <a href="transferencia.html">🔄 Transferência</a>
+        <a href="historico.html">📜 Histórico</a>
+        <a href="#" onclick="localStorage.clear(); window.location.href='index.html'" style="color: #dc3545; margin-top: auto;">🚪 Sair</a>
+    </div>
+    <div id="overlay" class="overlay" onclick="window.toggleMenu()"></div>
 
-const firebaseConfig = { apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8", authDomain: "sistema-pedidos-3f2c2.firebaseapp.com", projectId: "sistema-pedidos-3f2c2", storageBucket: "sistema-pedidos-3f2c2.firebasestorage.app", messagingSenderId: "669786014126", appId: "1:669786014126:web:d0da498633a145d56a883f" };
-const db = getFirestore(initializeApp(firebaseConfig));
-const userId = localStorage.getItem('user');
-const nomeLoja = localStorage.getItem('nome') || userId;
+    <div class="container">
+        <header><div class="header-left"><button class="menu-btn" onclick="window.toggleMenu()">☰</button><h1>Venda: <span id="txtLoja"></span></h1></div></header>
 
-if(!userId) window.location.href = 'index.html';
-document.getElementById('txtLoja').innerText = nomeLoja;
+        <div class="client-box">
+            <div><label>Razão Social</label><input type="text" id="cliRazao" list="listaNomesClientes" autocomplete="off"></div>
+            <div><label>CPF / CNPJ</label><input type="text" id="cliCnpj" list="listaCnpjClientes" autocomplete="off"></div>
+            <div><label>Pagamento</label><select id="cliFormaPagamento"><option value="A vista">A vista</option><option value="Boleto">Boleto</option></select></div>
+            <div><label>Prazo</label><input type="text" id="cliPrazo" disabled style="background-color: #f0f0f0;" placeholder="Bloqueado"></div>
+        </div>
+        <datalist id="listaNomesClientes"></datalist><datalist id="listaCnpjClientes"></datalist>
 
-let produtosGlobais = [];
-let clientesSalvos = [];
-window.resumoGlobal = { sorvete: {u:0, vBruto:0, vLiq:0}, seco: {u:0, vBruto:0, vLiq:0}, balde: {u:0, vBruto:0, vLiq:0}, promo: {u:0, vBruto:0, vLiq:0}, totalU: 0, totalV: 0 };
+        <div class="tabs">
+            <button class="tab-btn active" id="btnTabSorvete" onclick="window.mudarAba('sorvete')">🍨 Sorvetes</button>
+            <button class="tab-btn" id="btnTabSeco" onclick="window.mudarAba('seco')">📦 Secos</button>
+            <button class="tab-btn" id="btnTabBalde" onclick="window.mudarAba('balde')">🪣 Baldes</button>
+            <button class="tab-btn" id="btnTabPromo" onclick="window.mudarAba('promo')" style="color:#e0a800;">⭐ Promoções</button>
+        </div>
 
-window.toggleMenu = () => { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('show'); };
-window.mudarAba = (cat) => { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.getElementById('btnTab' + cat.charAt(0).toUpperCase() + cat.slice(1)).classList.add('active'); document.getElementById('content_' + cat).classList.add('active'); };
+        <div id="content_sorvete" class="tab-content active"><table id="tbl_sorvete"><thead><tr><th style="width: 50px; text-align: center;">📷</th><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+        <div id="content_seco" class="tab-content"><table id="tbl_seco"><thead><tr><th style="width: 50px; text-align: center;">📷</th><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+        <div id="content_balde" class="tab-content"><table id="tbl_balde"><thead><tr><th style="width: 50px; text-align: center;">📷</th><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+        <div id="content_promo" class="tab-content"><table id="tbl_promo"><thead><tr><th style="width: 50px; text-align: center;">📷</th><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
 
-// Bloqueio de Prazo
-document.getElementById('cliFormaPagamento').addEventListener('change', (e) => {
-    const prazo = document.getElementById('cliPrazo');
-    if(e.target.value === 'A vista') { prazo.value = ''; prazo.disabled = true; prazo.style.backgroundColor = '#f0f0f0'; prazo.placeholder = 'Bloqueado'; } 
-    else { prazo.disabled = false; prazo.style.backgroundColor = '#fff'; prazo.placeholder = 'Ex: 15 dias'; }
-});
-
-// === ATALHO FLUIDO (ENTER PARA PULAR CAMPO) ===
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type === 'number') {
-        e.preventDefault();
-        const inputs = Array.from(document.querySelectorAll('.tab-content.active td input[type="number"]'));
-        const index = inputs.indexOf(e.target);
-        if (index > -1 && index < inputs.length - 1) {
-            inputs[index + 1].focus();
-            inputs[index + 1].select();
-        }
-    }
-});
-
-// Auto-Preenchimento e resto da lógica mantidos integralmente...
-function preencherCliente(encontrado) { /* ... mantido idêntico para poupar espaço ... */ }
-document.getElementById('cliRazao').addEventListener('input', (e) => { /* ... mantido ... */ });
-document.getElementById('cliCnpj').addEventListener('input', (e) => { /* ... mantido ... */ });
-
-async function iniciar() {
-    const userSnap = await getDoc(doc(db, "usuarios", userId));
-    const planilhas = userSnap.data()?.planilhas || { venda: true };
-    if (planilhas.venda === false && userId !== 'admin') { window.location.href = 'transferencia.html'; return; }
-    
-    // ... [Seu código de leitura de preços e clientes, não modificado para evitar quebrar a sua base de dados]
-    // Apenas a renderização da tabela, o cálculo e o Excel seguem normais.
-}
-iniciar();
+        <div class="resumo-box">
+            <div class="resumo-grid">
+                <div class="resumo-item"><b>Sorvetes</b><span id="resValSorvete">R$ 0,00</span></div>
+                <div class="resumo-item"><b>Secos</b><span id="resValSeco">R$ 0,00</span></div>
+                <div class="resumo-item"><b>Baldes</b><span id="resValBalde">R$ 0,00</span></div>
+                <div class="resumo-item" style="border-color:#e0a800"><b>Promo</b><span id="resValPromo" style="color:#e0a800">R$ 0,00</span></div>
+                <div class="resumo-item" style="background:#fff5f5"><b>Total Geral</b><span id="valComDesc">R$ 0,00</span></div>
+            </div>
+            <button class="btn-primario" style="width:100%; margin-top:20px; padding:20px; font-size:18px;" onclick="window.gerarExcelPedido()">⬇️ GERAR PEDIDO EM EXCEL</button>
+        </div>
+    </div>
+    <script type="module" src="./js/loja.js"></script>
+</body>
+</html>
