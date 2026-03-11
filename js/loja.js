@@ -1,66 +1,104 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Venda - Eskimó</title>
-    <link rel="stylesheet" href="./css/global.css">
-    <style>
-        .client-box { background: #fffafa; padding: 20px; border-radius: 10px; margin-bottom: 25px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 20px; border: 1px solid #ffe6e6; border-left: 5px solid #e3000f; }
-        .tabs { display: flex; gap: 8px; border-bottom: 2px solid #eaeaea; margin-bottom: 20px; }
-        .tab-btn { background: none; border: none; padding: 12px 24px; cursor: pointer; color: #888; font-weight: bold; font-size: 15px; border-bottom: 3px solid transparent; }
-        .tab-btn.active { color: #e3000f; border-bottom-color: #e3000f; }
-        .resumo-box { background: white; border: 2px solid #e3000f; padding: 20px; border-radius: 12px; margin-top: 30px; }
-        .resumo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; }
-        .resumo-item { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #eee; }
-        .resumo-item span { display: block; font-size: 18px; font-weight: bold; color: #e3000f; margin-top: 5px; }
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-</head>
-<body>
-    <div id="sidebar" class="sidebar">
-        <button class="close-btn" onclick="window.toggleMenu()">×</button>
-        <h2>Menu Eskimó</h2>
-        <a href="loja.html" class="active">🛒 Venda</a>
-        <a href="transferencia.html">🔄 Transferência</a>
-        <a href="historico.html">📜 Histórico</a>
-        <a href="#" onclick="localStorage.clear(); window.location.href='index.html'" style="color: #dc3545; margin-top: auto;">🚪 Sair</a>
-    </div>
-    <div id="overlay" class="overlay" onclick="window.toggleMenu()"></div>
+import { db } from "./api/firebase.js";
+import { iniciarInterfaceGlobais } from "./utils/interface.js";
+import { processarExcelVenda } from "./utils/excel.js";
+import { doc, getDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
-    <div class="container">
-        <header><div class="header-left"><button class="menu-btn" onclick="window.toggleMenu()">☰</button><h1>Venda: <span id="txtLoja"></span></h1></div></header>
+const userId = localStorage.getItem('user'); const nomeLoja = localStorage.getItem('nome') || userId;
+if(!userId) window.location.href = 'index.html'; document.getElementById('txtLoja').innerText = nomeLoja;
 
-        <div class="client-box">
-            <div><label>Razão Social</label><input type="text" id="cliRazao" list="listaNomesClientes" autocomplete="off"></div>
-            <div><label>CPF / CNPJ</label><input type="text" id="cliCnpj" list="listaCnpjClientes" autocomplete="off"></div>
-            <div><label>Pagamento</label><select id="cliFormaPagamento"><option value="A vista">A vista</option><option value="Boleto">Boleto</option></select></div>
-            <div><label>Prazo</label><input type="text" id="cliPrazo" disabled style="background-color: #f0f0f0;" placeholder="Bloqueado"></div>
-        </div>
-        <datalist id="listaNomesClientes"></datalist><datalist id="listaCnpjClientes"></datalist>
+let produtosGlobais = []; let clientesSalvos = [];
+window.resumoGlobal = { sorvete: {vLiq:0}, seco: {vLiq:0}, balde: {vLiq:0}, promo: {vLiq:0}, totalV: 0 };
 
-        <div class="tabs">
-            <button class="tab-btn active" id="btnTabSorvete" onclick="window.mudarAba('sorvete')">🍨 Sorvetes</button>
-            <button class="tab-btn" id="btnTabSeco" onclick="window.mudarAba('seco')">📦 Secos</button>
-            <button class="tab-btn" id="btnTabBalde" onclick="window.mudarAba('balde')">🪣 Baldes</button>
-            <button class="tab-btn" id="btnTabPromo" onclick="window.mudarAba('promo')" style="color:#e0a800;">⭐ Promoções</button>
-        </div>
+iniciarInterfaceGlobais();
 
-        <div id="content_sorvete" class="tab-content active"><table id="tbl_sorvete"><thead><tr><th style="width: 50px; text-align: center;">📷</th><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
-        <div id="content_seco" class="tab-content"><table id="tbl_seco"><thead><tr><th style="width: 50px; text-align: center;">📷</th><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
-        <div id="content_balde" class="tab-content"><table id="tbl_balde"><thead><tr><th style="width: 50px; text-align: center;">📷</th><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
-        <div id="content_promo" class="tab-content"><table id="tbl_promo"><thead><tr><th style="width: 50px; text-align: center;">📷</th><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+window.mudarAba = (cat) => { 
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
+    document.querySelectorAll('.tab-content').forEach(c => { c.classList.remove('active'); c.style.display = 'none'; }); 
+    const btn = document.getElementById('btnTab' + cat.charAt(0).toUpperCase() + cat.slice(1));
+    const content = document.getElementById('content_' + cat);
+    if(btn) btn.classList.add('active'); if(content) { content.classList.add('active'); content.style.display = 'block'; }
+};
 
-        <div class="resumo-box">
-            <div class="resumo-grid">
-                <div class="resumo-item"><b>Sorvetes</b><span id="resValSorvete">R$ 0,00</span></div>
-                <div class="resumo-item"><b>Secos</b><span id="resValSeco">R$ 0,00</span></div>
-                <div class="resumo-item"><b>Baldes</b><span id="resValBalde">R$ 0,00</span></div>
-                <div class="resumo-item" style="border-color:#e0a800"><b>Promo</b><span id="resValPromo" style="color:#e0a800">R$ 0,00</span></div>
-                <div class="resumo-item" style="background:#fff5f5"><b>Total Geral</b><span id="valComDesc">R$ 0,00</span></div>
-            </div>
-            <button class="btn-primario" style="width:100%; margin-top:20px; padding:20px; font-size:18px;" onclick="window.gerarExcelPedido()">⬇️ GERAR PEDIDO EM EXCEL</button>
-        </div>
-    </div>
-    <script type="module" src="./js/loja.js"></script>
-</body>
-</html>
+document.getElementById('cliFormaPagamento').addEventListener('change', (e) => {
+    const prazo = document.getElementById('cliPrazo');
+    if(e.target.value === 'A vista') { prazo.value = ''; prazo.disabled = true; prazo.style.backgroundColor = '#f0f0f0'; prazo.placeholder = 'Bloqueado'; } 
+    else { prazo.disabled = false; prazo.style.backgroundColor = '#fff'; prazo.placeholder = 'Ex: 15 dias'; }
+});
+
+async function iniciar() {
+    const userSnap = await getDoc(doc(db, "usuarios", userId));
+    const planilhas = userSnap.data()?.planilhas || { venda: true };
+    if (planilhas.venda === false && userId !== 'admin') { window.location.href = 'transferencia.html'; return; }
+
+    const cliSnap = await getDocs(collection(db, "clientes"));
+    cliSnap.forEach(c => { clientesSalvos.push(c.data()); document.getElementById('listaNomesClientes').innerHTML += `<option value="${c.data().razao}">`; document.getElementById('listaCnpjClientes').innerHTML += `<option value="${c.data().cnpj}">`; });
+
+    const [precoSnap, prodSnap] = await Promise.all([ getDoc(doc(db, "precos", userId)), getDocs(collection(db, "produtos")) ]);
+    const precosLoja = precoSnap.exists() ? precoSnap.data() : {};
+
+    prodSnap.forEach(d => {
+        const item = d.data(); const objPreco = precosLoja[item.codigo];
+        if (objPreco !== undefined && (typeof objPreco === 'object' ? (objPreco.visivel !== false) : true)) {
+            let rawCat = (item.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            let safeCat = 'sorvete'; if (rawCat.includes('seco')) safeCat = 'seco'; else if (rawCat.includes('balde')) safeCat = 'balde'; else if (rawCat.includes('promo')) safeCat = 'promo';
+            produtosGlobais.push({ ...item, precoFinal: typeof objPreco === 'object' ? objPreco.preco : objPreco, catReal: safeCat });
+        }
+    });
+    renderizarTabelas();
+}
+
+function renderizarTabelas() {
+    produtosGlobais.forEach((p, i) => {
+        const tbody = document.querySelector(`#tbl_${p.catReal} tbody`);
+        if(tbody) {
+            let imgHtml = p.imagem ? `<img src="${p.imagem}" class="img-produto">` : `<div class="img-placeholder">🍨</div>`;
+            tbody.innerHTML += `<tr id="tr_${i}"><td style="text-align: center;">${imgHtml}</td><td>${p.codigo}</td><td>${p.descricao}</td><td>${p.engradado}</td><td>R$ ${p.precoFinal.toFixed(2)}</td>
+                <td><input type="number" id="eng_${i}" placeholder="0" min="0" step="0.5" oninput="window.calcularTudo()"></td>
+                <td><input type="number" id="uni_${i}" placeholder="0" min="0" step="1" oninput="window.calcularTudo()"></td><td id="sub_${i}" style="font-weight:bold;">R$ 0.00</td></tr>`;
+        }
+    });
+}
+
+window.calcularTudo = () => {
+    let totCategorias = { sorvete: 0, seco: 0, balde: 0, promo: 0 }; let totalGeral = 0;
+    produtosGlobais.forEach((p, i) => {
+        let inputEng = document.getElementById(`eng_${i}`); let inputUni = document.getElementById(`uni_${i}`);
+        if(!inputEng || !inputUni) return;
+        let cxStr = inputEng.value; let unStr = inputUni.value;
+        let cx = parseFloat(cxStr) || 0; let un = parseFloat(unStr) || 0;
+        
+        if (cxStr !== "" && (cx * 10) % 5 !== 0) { alert(`⚠️ ERRO em "${p.descricao}". Apenas múltiplos de 0.5.`); inputEng.value = ""; cx = 0; }
+        if (unStr !== "" && un % 1 !== 0) { alert(`⚠️ ERRO: Unidades devem ser inteiras.`); inputUni.value = ""; un = 0; }
+
+        let cap = parseFloat(p.engradado) || 1;
+        let qtd = (cx * cap) + un; let sub = qtd * p.precoFinal;
+        
+        document.getElementById(`sub_${i}`).innerText = `R$ ${sub.toFixed(2)}`;
+        p.calcQtdCx = cx; p.calcQtdUn = un; p.calcTotalUnidades = qtd; p.calcSubtotal = sub;
+        
+        totCategorias[p.catReal] += sub; totalGeral += sub;
+        let tr = document.getElementById(`tr_${i}`); if (tr) { if (qtd > 0) tr.classList.add('linha-destaque'); else tr.classList.remove('linha-destaque'); }
+    });
+    
+    document.getElementById('resValSorvete').innerText = "R$ " + totCategorias.sorvete.toFixed(2); document.getElementById('resValSeco').innerText = "R$ " + totCategorias.seco.toFixed(2);
+    document.getElementById('resValBalde').innerText = "R$ " + totCategorias.balde.toFixed(2); document.getElementById('resValPromo').innerText = "R$ " + totCategorias.promo.toFixed(2);
+    document.getElementById('valComDesc').innerText = "R$ " + totalGeral.toFixed(2);
+    window.resumoGlobal.totalV = totalGeral;
+};
+
+window.gerarExcelPedido = async () => {
+    const razao = document.getElementById('cliRazao').value.trim(); const cnpj = document.getElementById('cliCnpj').value.trim();
+    const formaPagamento = document.getElementById('cliFormaPagamento').value; const prazo = document.getElementById('cliPrazo').value.trim();
+    if(!razao) return alert("Preencha a Razão Social do Cliente!");
+    
+    let itensSelecionados = produtosGlobais.filter(p => p.calcTotalUnidades > 0).map(p => ({ codigo: p.codigo, descricao: p.descricao, precoFinal: p.precoFinal, calcTotalUnidades: p.calcTotalUnidades }));
+    if (itensSelecionados.length === 0) return alert("Preencha alguma quantidade!");
+
+    const btn = document.querySelector('.btn-primario'); btn.innerText = "⏳ A GERAR PLANILHA..."; btn.disabled = true;
+
+    try {
+        await processarExcelVenda({ userId, nomeLoja, razao, cnpj, formaPagamento, prazo, totalV: window.resumoGlobal.totalV, itens: itensSelecionados });
+    } catch (e) { alert("Falha: " + e.message); } finally { btn.innerText = "⬇️ GERAR PEDIDO EM EXCEL"; btn.disabled = false; }
+};
+
+iniciar();
