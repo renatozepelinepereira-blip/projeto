@@ -1,7 +1,7 @@
-
 // js/api/firebase.js - Conexão Centralizada
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import { getStorage } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js"; // BIBLIOTECA DE FOTOS
 
 const firebaseConfig = { 
     apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8", 
@@ -14,3 +14,4 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+export const storage = getStorage(app); // EXPORTA O DISCO VIRTUAL DE FOTOS
