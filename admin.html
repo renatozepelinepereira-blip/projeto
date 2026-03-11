@@ -4,36 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel Administrativo - Eskimó</title>
-    <link rel="stylesheet" href="./css/global.css">
-    <style>
-        body { display: flex; height: 100vh; overflow: hidden; background: #f4f7f6; }
-        .sidebar { width: 80px; position: relative; left: 0; box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
-        .sidebar:hover { width: 280px; }
-        .sidebar-header { background: #e3000f; height: 70px; display: flex; align-items: center; padding-left: 22px; gap: 15px; border-bottom: 3px solid #cc000d; }
-        .nav-links { display: flex; flex-direction: column; padding: 15px 0; flex-grow: 1; }
-        .nav-links button { background: none; border: none; color: #adb5bd; padding: 16px 22px; text-align: left; cursor: pointer; display: flex; align-items: center; width: 280px; transition: 0.2s; border-left: 4px solid transparent; font-size: 15px; }
-        .nav-links button i { min-width: 35px; font-style: normal; font-size: 20px; text-align: center; }
-        .nav-links button span { margin-left: 10px; opacity: 0; transition: 0.2s; pointer-events: none; }
-        .sidebar:hover .nav-links button span { opacity: 1; pointer-events: auto; }
-        .nav-links button:hover, .nav-links button.active { background: #34495e; color: white; border-left-color: #e3000f; }
-        .main-content { flex-grow: 1; padding: 35px; overflow-y: auto; }
-        .dash-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
-        .card-stat { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: center; }
-        .card-stat h3 { color: #7f8c8d; font-size: 14px; margin-bottom: 10px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
-        .card-stat .valor { font-size: 36px; font-weight: 800; color: #2c3e50; line-height: 1; }
-        .card-panel { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; }
-        .section-title { font-size: 26px; font-weight: 700; margin-bottom: 25px; color: #2c3e50; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;}
-        .secao { display: none; animation: fadeIn 0.3s ease-out; }
-        .secao.active { display: block; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    </style>
+    
+    <link rel="stylesheet" href="./css/admin.css">
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </head>
 <body>
     
     <div class="sidebar">
-        <div class="sidebar-header"><span style="font-size:26px; min-width:35px; text-align: center;">🍨</span><h2 style="color:white; margin:0; font-size: 18px;">Admin</h2></div>
+        <div class="sidebar-header">
+            <span style="font-size:26px; min-width:35px; text-align: center;">🍨</span>
+            <h2 style="color:white; margin:0; font-size: 18px;">Admin</h2>
+        </div>
         <div class="nav-links">
             <button onclick="mudarSecao('dashboard')" class="active" id="nav-dashboard"><i>📊</i> <span>Dashboard</span></button>
             <button onclick="mudarSecao('produtos')" id="nav-produtos"><i>📦</i> <span>Catálogo de Produtos</span></button>
@@ -44,14 +27,14 @@
     </div>
 
     <div class="main-content">
-        <div id="avisoBanco" style="display:none; background:#f8d7da; color:#721c24; padding:15px; border-radius:8px; margin-bottom:20px; font-weight:bold; border:1px solid #f5c6cb;">⚠️ O sistema não conseguiu carregar os dados. Verifique a sua ligação à internet ou se está a correr num servidor local.</div>
+        <div id="avisoBanco" style="display:none; background:#f8d7da; color:#721c24; padding:15px; border-radius:8px; margin-bottom:20px; font-weight:bold; border:1px solid #f5c6cb;">⚠️ O sistema não conseguiu carregar os dados. Verifique a sua ligação à internet ou configurações.</div>
 
         <div id="sec-dashboard" class="secao active">
             <h2 class="section-title">Visão Geral</h2>
             <div class="dash-cards">
-                <div class="card-stat" style="border-left: 6px solid #e3000f;"><h3>Lojas Ativas</h3><div class="valor" id="dashLojas">0</div></div>
-                <div class="card-stat" style="border-left: 6px solid #0056b3;"><h3>Produtos Catálogo</h3><div class="valor" id="dashProdutos">0</div></div>
-                <div class="card-stat" style="border-left: 6px solid #28a745;"><h3>Planilhas Geradas</h3><div class="valor" id="dashPlanilhas">0</div></div>
+                <div class="card-stat"><h3>Lojas Ativas</h3><div class="valor" id="dashLojas">0</div></div>
+                <div class="card-stat" style="border-left-color: #0056b3;"><h3>Produtos Catálogo</h3><div class="valor" id="dashProdutos">0</div></div>
+                <div class="card-stat" style="border-left-color: #28a745;"><h3>Planilhas Geradas</h3><div class="valor" id="dashPlanilhas">0</div></div>
             </div>
             <div class="card-panel">
                 <h3>Últimas Atividades</h3>
@@ -82,16 +65,16 @@
                     <label>Nome da Tabela de Preço:</label>
                     <input type="text" id="nomeTabelaPreco" placeholder="Ex: PM01, TF, T03" style="text-transform: uppercase;">
                     <input type="file" id="fileCsvPrecos" accept=".csv, .xlsx" style="margin-top:10px;">
-                    <button onclick="window.importarTabelaPrecos()" class="btn-primario" style="width:100%; margin-top:10px;">⚡ Importar e Salvar Tabela</button>
+                    <button onclick="window.importarTabelaPrecos()" class="btn-primario" style="width:100%;">⚡ Importar e Salvar Tabela</button>
                 </div>
                 <div class="card-panel">
                     <h3 style="color:#28a745">2. Associar Tabela a uma Loja</h3>
                     <p style="font-size:13px; color:#666; margin-bottom:15px;">Defina qual tabela a loja usará na aba de VENDA.</p>
                     <label>Selecione a Loja:</label>
                     <select id="selectLojaAssociar"></select>
-                    <label style="margin-top:10px; display:block;">Tabela de Preço (Venda):</label>
+                    <label>Tabela de Preço (Venda):</label>
                     <select id="selectTabelaAssociar"></select>
-                    <button onclick="window.associarTabelaLoja()" class="btn-sucesso" style="width:100%; margin-top:15px;">Vincular Tabela à Loja</button>
+                    <button onclick="window.associarTabelaLoja()" class="btn-sucesso" style="width:100%;">Vincular Tabela à Loja</button>
                 </div>
             </div>
         </div>
@@ -108,9 +91,10 @@
     </div>
 
     <div class="modal-overlay" id="modalProduto">
-        <div class="modal-content" style="width: 500px;">
+        <div class="modal-content">
             <h2 id="titModalProduto" style="color: #e3000f; margin-bottom:15px;">Produto</h2>
-            <input type="hidden" id="prodEditOrigem"> <label>Código do Produto</label> <input type="text" id="prodEditCodigo">
+            <input type="hidden" id="prodEditOrigem">
+            <label>Código do Produto</label> <input type="text" id="prodEditCodigo">
             <label>Descrição Completa</label> <input type="text" id="prodEditDescricao">
             <label>Categoria (sorvete, seco, balde, promo)</label> <input type="text" id="prodEditCategoria" placeholder="Ex: sorvete">
             <label>Capacidade do Engradado</label> <input type="number" id="prodEditEngradado">
@@ -122,14 +106,14 @@
     </div>
 
     <div class="modal-overlay" id="modalLoja">
-        <div class="modal-content" style="width: 500px;">
+        <div class="modal-content">
             <h2 id="titModalLoja" style="color: #e3000f; margin-bottom:15px;">Loja / Usuário</h2>
             <input type="hidden" id="lojaEditIsNew">
             <label>Login (Usuário)</label> <input type="text" id="lojaEditId">
             <label>Senha</label> <input type="text" id="lojaEditSenha" placeholder="Deixe em branco para não alterar">
             <label>Razão Social</label> <input type="text" id="lojaEditNome">
             <label>CNPJ</label> <input type="text" id="lojaEditCnpj">
-            <label style="display:flex; align-items:center; gap:10px; margin-top:15px; background:#f4f6f9; padding:10px; border-radius:8px;">
+            <label style="display:flex; align-items:center; gap:10px; margin-top:15px; background:#f4f6f9; padding:10px; border-radius:8px; cursor:pointer;">
                 <input type="checkbox" id="lojaEditBloqueiaVenda" style="width:auto; margin:0;"> 
                 Bloquear módulo de Vendas (Apenas Transferência)
             </label>
@@ -138,7 +122,14 @@
         </div>
     </div>
 
-    <div class="modal-overlay" id="modalDetalhesLog"><div class="modal-content"><h2 style="color:#e3000f; margin-bottom:15px;">Detalhes</h2><div id="conteudoDetalhesLog" style="background:#f8f9fa; padding:20px; border-radius:8px; margin-bottom:15px;"></div><button id="btnRegerarPlanilhaModal" class="btn-sucesso" style="width:100%; padding:15px;"></button><button onclick="window.fecharModal('modalDetalhesLog')" class="btn-secundario" style="width:100%; margin-top:10px; padding:15px;">Fechar</button></div></div>
+    <div class="modal-overlay" id="modalDetalhesLog">
+        <div class="modal-content" style="width: 700px;">
+            <h2 style="color:#e3000f; margin-bottom:15px;">Detalhes</h2>
+            <div id="conteudoDetalhesLog" style="background:#f8f9fa; padding:20px; border-radius:8px; margin-bottom:15px; border:1px solid #e0e0e0;"></div>
+            <button id="btnRegerarPlanilhaModal" class="btn-sucesso" style="width:100%;"></button>
+            <button onclick="window.fecharModal('modalDetalhesLog')" class="btn-secundario" style="width:100%; margin-top:10px;">Fechar</button>
+        </div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script type="module" src="./js/admin.js"></script>
