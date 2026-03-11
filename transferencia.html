@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8"><title>Transferência - Eskimó</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transferência - Eskimó</title>
     <link rel="stylesheet" href="./css/app.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -12,33 +14,50 @@
         <h2>Menu Eskimó</h2>
         <a href="loja.html">🛒 Venda</a>
         <a href="transferencia.html" class="active">🔄 Transferência</a>
-        <a href="historico.html">📜 Histórico de Planilhas</a>
-        <a href="#" onclick="localStorage.clear(); window.location.href='index.html'" style="color:#dc3545; margin-top:auto; border-top:1px solid #eee;">🚪 Sair</a>
+        <a href="historico.html">📜 Histórico</a>
+        <a href="#" onclick="localStorage.clear(); window.location.href='index.html'" style="color: #dc3545; margin-top: auto; border-top: 1px solid #eee;">🚪 Sair</a>
     </div>
     <div id="overlay" class="overlay" onclick="window.toggleMenu()"></div>
+
     <div class="container">
-        <header><div class="header-left"><button class="menu-btn" onclick="window.toggleMenu()">☰</button><h1>Transferência: <span id="txtLoja"></span></h1></div></header>
+        <header>
+            <div class="header-left">
+                <button class="menu-btn" onclick="window.toggleMenu()">☰</button>
+                <h1>Transferência: <span id="txtLoja"></span></h1>
+            </div>
+        </header>
+
         <div class="client-box" style="grid-template-columns: 2fr 1fr;">
-            <div><label><b>Filial de Destino</b></label><input type="text" id="cliRazao" list="listaLojasDestino" autocomplete="off"></div>
-            <div><label><b>CNPJ Destino</b></label><input type="text" id="cliCnpj" list="listaCnpjDestino" autocomplete="off"></div>
+            <div>
+                <label>Filial de Destino (Entrada)</label>
+                <input type="text" id="cliRazao" list="listaLojasDestino" placeholder="Selecione a filial..." autocomplete="off">
+            </div>
+            <div>
+                <label>CNPJ da Filial</label>
+                <input type="text" id="cliCnpj" list="listaCnpjDestino" placeholder="00.000..." autocomplete="off">
+            </div>
         </div>
-        <datalist id="listaLojasDestino"></datalist><datalist id="listaCnpjDestino"></datalist>
+        
+        <datalist id="listaLojasDestino"></datalist>
+        <datalist id="listaCnpjDestino"></datalist>
+
         <div class="tabs" id="tabContainer">
-            <button class="tab-btn" id="btnTabSorvete" onclick="window.mudarAba('sorvete')">🍨 Sorvetes</button>
+            <button class="tab-btn active" id="btnTabSorvete" onclick="window.mudarAba('sorvete')">🍨 Sorvetes</button>
             <button class="tab-btn" id="btnTabSeco" onclick="window.mudarAba('seco')">📦 Secos</button>
             <button class="tab-btn" id="btnTabBalde" onclick="window.mudarAba('balde')">🪣 Baldes</button>
         </div>
-        <div id="content_sorvete" class="tab-content"><table id="tbl_sorvete"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço TF</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+
+        <div id="content_sorvete" class="tab-content active"><table id="tbl_sorvete"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço TF</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
         <div id="content_seco" class="tab-content"><table id="tbl_seco"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço TF</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
         <div id="content_balde" class="tab-content"><table id="tbl_balde"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço TF</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+
         <div class="resumo-box">
-            <h2>Resumo Transferência</h2>
             <div class="resumo-grid grid-3">
-                <div class="resumo-item">Engradados<span id="resTotalEngradados">0 cx</span></div>
-                <div class="resumo-item">Peças<span id="resTotalUnidades">0 un</span></div>
-                <div class="resumo-item" style="background:#e6f2ff">Valor Total<span id="resValorTotal">R$ 0,00</span></div>
+                <div class="resumo-item"><b>Engradados</b><span id="resTotalEngradados">0 cx</span></div>
+                <div class="resumo-item"><b>Total Peças</b><span id="resTotalUnidades">0 un</span></div>
+                <div class="resumo-item" style="background:#f0f7ff; border-color:#0056b3;"><b>Valor Total</b><span id="resValorTotal" style="color:#0056b3">R$ 0,00</span></div>
             </div>
-            <button class="btn-gerar" onclick="window.gerarExcelTransferencia()">⬇️ GERAR PLANILHA TRANSFERÊNCIA</button>
+            <button class="btn-gerar" onclick="window.gerarExcelTransferencia()">⬇️ GERAR PLANILHA DE TRANSFERÊNCIA</button>
         </div>
     </div>
     <script type="module" src="./js/transferencia.js"></script>
