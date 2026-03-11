@@ -1,20 +1,20 @@
-// js/transferencia.js - Lógica da Tela
+// js/transferencia.js - Módulo de Transferência (Preços Fixos TF)
 import { db } from "./api/firebase.js";
 import { iniciarInterfaceGlobais } from "./utils/interface.js";
 import { processarExcelTransferencia } from "./utils/excel.js";
 import { doc, getDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
-const userId = localStorage.getItem('user');
+const userId = localStorage.getItem('user'); 
 const nomeLoja = localStorage.getItem('nome') || userId;
+
 if(!userId) window.location.href = 'index.html';
 document.getElementById('txtLoja').innerText = nomeLoja;
 
-let produtosGlobais = [];
+let produtosGlobais = []; 
 let filiaisSalvas = [];
 window.lojaCnpj = "Não Cadastrado"; 
 window.resumoTransferencia = { totalCaixas: 0, totalPecas: 0, valorTotal: 0 };
 
-// Inicia Menu e Enter Fluido
 iniciarInterfaceGlobais();
 
 window.mudarAba = (cat) => { 
@@ -22,11 +22,9 @@ window.mudarAba = (cat) => {
     document.querySelectorAll('.tab-content').forEach(c => { c.classList.remove('active'); c.style.display = 'none'; }); 
     const btn = document.getElementById('btnTab' + cat.charAt(0).toUpperCase() + cat.slice(1));
     const content = document.getElementById('content_' + cat);
-    if(btn) btn.classList.add('active'); 
-    if(content) { content.classList.add('active'); content.style.display = 'block'; }
+    if(btn) btn.classList.add('active'); if(content) { content.classList.add('active'); content.style.display = 'block'; }
 };
 
-// Auto-preenchimento
 document.getElementById('cliRazao').addEventListener('input', (e) => { const enc = filiaisSalvas.find(c => c.razao.toUpperCase() === e.target.value.toUpperCase()); if(enc) document.getElementById('cliCnpj').value = enc.cnpj; });
 document.getElementById('cliCnpj').addEventListener('input', function (e) {
     let x = e.target.value.replace(/\D/g, '');
@@ -36,12 +34,27 @@ document.getElementById('cliCnpj').addEventListener('input', function (e) {
 
 async function iniciar() {
     const userSnap = await getDoc(doc(db, "usuarios", userId));
-    if (userSnap.exists()) window.lojaCnpj = userSnap.data().cnpj || "CNPJ NÃO CADASTRADO";
-    const planilhas = userSnap.data()?.planilhas || { sorvete: true, seco: true, balde: true, venda: true };
-    if (planilhas.venda === false && userId !== 'admin') { let mVenda = document.getElementById('linkVendaSidebar'); if(mVenda) mVenda.style.display = 'none'; }
+    const dadosUsuario = userSnap.data() || {};
+    
+    if (dadosUsuario.cnpj) window.lojaCnpj = dadosUsuario.cnpj;
+    
+    const planilhas = dadosUsuario.planilhas || { sorvete: true, seco: true, balde: true, venda: true };
+    if (planilhas.venda === false && userId !== 'admin') { 
+        let mVenda = document.getElementById('linkVendaSidebar'); 
+        if(mVenda) mVenda.style.display = 'none'; 
+    }
 
     const allUsers = await getDocs(collection(db, "usuarios"));
-    allUsers.forEach(u => { if(u.id !== 'admin' && u.id !== userId) { let fData = { razao: u.data().nomeLoja, cnpj: u.data().cnpj || '' }; if(fData.cnpj) { filiaisSalvas.push(fData); document.getElementById('listaLojasDestino').innerHTML += `<option value="${fData.razao}">`; document.getElementById('listaCnpjDestino').innerHTML += `<option value="${fData.cnpj}">`; } } });
+    allUsers.forEach(u => { 
+        if(u.id !== 'admin' && u.id !== userId) { 
+            let fData = { razao: u.data().nomeLoja, cnpj: u.data().cnpj || '' }; 
+            if(fData.cnpj) { 
+                filiaisSalvas.push(fData); 
+                document.getElementById('listaLojasDestino').innerHTML += `<option value="${fData.razao}">`; 
+                document.getElementById('listaCnpjDestino').innerHTML += `<option value="${fData.cnpj}">`; 
+            } 
+        } 
+    });
 
     let primeiraAba = null;
     if(planilhas.sorvete !== false) { document.getElementById('btnTabSorvete').style.display = 'inline-block'; primeiraAba = primeiraAba || 'sorvete'; } else { document.getElementById('btnTabSorvete').style.display = 'none'; }
@@ -49,17 +62,32 @@ async function iniciar() {
     if(planilhas.balde) { document.getElementById('btnTabBalde').style.display = 'inline-block'; primeiraAba = primeiraAba || 'balde'; } else { document.getElementById('btnTabBalde').style.display = 'none'; }
     if(primeiraAba) window.mudarAba(primeiraAba);
 
-    const [precoTfSnap, prodSnap] = await Promise.all([ getDoc(doc(db, "precos", "tf")), getDocs(collection(db, "produtos")) ]);
+    // Na Transferência, a tabela é sempre a 'TF'
+    const [precoTfSnap, prodSnap] = await Promise.all([ 
+        getDoc(doc(db, "precos", "tf")), 
+        getDocs(collection(db, "produtos")) 
+    ]);
+    
     const precosTF = precoTfSnap.exists() ? precoTfSnap.data() : {};
 
     prodSnap.forEach(d => {
-        const item = d.data(); const objTf = precosTF[item.codigo];
+        const item = d.data(); 
+        const objTf = precosTF[item.codigo];
+        
         if (objTf !== undefined && (typeof objTf === 'object' ? (objTf.visivel !== false) : true)) {
             let rawCat = (item.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            let safeCat = 'sorvete'; if (rawCat.includes('seco')) safeCat = 'seco'; else if (rawCat.includes('balde')) safeCat = 'balde';
-            produtosGlobais.push({ ...item, precoFinal: typeof objTf === 'object' ? objTf.preco : objTf, catReal: safeCat });
+            let safeCat = 'sorvete'; 
+            if (rawCat.includes('seco')) safeCat = 'seco'; 
+            else if (rawCat.includes('balde')) safeCat = 'balde';
+            
+            produtosGlobais.push({ 
+                ...item, 
+                precoFinal: typeof objTf === 'object' ? objTf.preco : objTf, 
+                catReal: safeCat 
+            });
         }
     });
+    
     renderizarTabelas();
 }
 
@@ -93,6 +121,7 @@ window.calcularTudo = () => {
         document.getElementById(`sub_${i}`).innerText = `R$ ${sub.toFixed(2)}`;
         p.calcQtdCx = cx; p.calcQtdUn = un; p.calcTotalUnidades = qtdTotalPecas; p.calcSubtotal = sub;
         totalCaixas += cx; totalPecas += qtdTotalPecas; valorTotal += sub;
+        
         let tr = document.getElementById(`tr_${i}`); if (tr) { if (qtdTotalPecas > 0) tr.classList.add('linha-destaque'); else tr.classList.remove('linha-destaque'); }
     });
     document.getElementById('resTotalEngradados').innerText = totalCaixas + " cx"; document.getElementById('resTotalUnidades').innerText = totalPecas + " un"; document.getElementById('resValorTotal').innerText = "R$ " + valorTotal.toFixed(2);
@@ -112,14 +141,13 @@ window.gerarExcelTransferencia = async () => {
     let itensSelecionados = produtosGlobais.filter(p => p.calcTotalUnidades > 0);
     if (itensSelecionados.length === 0) return alert("Nenhuma quantidade preenchida!");
 
-    const btn = document.querySelector('.btn-gerar'); 
+    const btn = document.querySelector('.btn-primario'); 
     btn.innerText = "⏳ A GERAR PLANILHA..."; 
     btn.disabled = true;
 
     try {
         let itensMapeados = itensSelecionados.map(p => ({ codigo: p.codigo, descricao: p.descricao, precoFinal: p.precoFinal, engradado: p.engradado, calcQtdCx: p.calcQtdCx || 0, calcQtdUn: p.calcQtdUn || 0, calcTotalUnidades: p.calcTotalUnidades || 0, catReal: p.catReal }));
         
-        // ENVIA PARA O MOTOR ISOLADO DO EXCEL
         await processarExcelTransferencia({
             userId, nomeLoja, razaoDestino, cnpjDestino, cnpjOrigem: window.lojaCnpj, 
             resumo: window.resumoTransferencia, itens: itensMapeados
