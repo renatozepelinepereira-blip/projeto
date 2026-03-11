@@ -12,21 +12,27 @@ document.getElementById('txtLoja').innerText = nomeLoja;
 let produtosGlobais = [];
 let filiaisSalvas = [];
 window.lojaCnpj = "Não Cadastrado"; 
+window.resumoTransferencia = { totalCaixas: 0, totalPecas: 0, valorTotal: 0 };
 
 window.toggleMenu = () => { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('show'); };
 
-document.getElementById('cliRazao').addEventListener('input', (e) => {
-    const encontrado = filiaisSalvas.find(c => c.razao.toUpperCase() === e.target.value.toUpperCase());
-    if(encontrado) document.getElementById('cliCnpj').value = encontrado.cnpj;
+// === ATALHO FLUIDO (ENTER) ===
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type === 'number') {
+        e.preventDefault();
+        const inputs = Array.from(document.querySelectorAll('.tab-content.active td input[type="number"]'));
+        const index = inputs.indexOf(e.target);
+        if (index > -1 && index < inputs.length - 1) { inputs[index + 1].focus(); inputs[index + 1].select(); }
+    }
 });
 
+// Auto-preenchimento
+document.getElementById('cliRazao').addEventListener('input', (e) => { const enc = filiaisSalvas.find(c => c.razao.toUpperCase() === e.target.value.toUpperCase()); if(enc) document.getElementById('cliCnpj').value = enc.cnpj; });
 document.getElementById('cliCnpj').addEventListener('input', function (e) {
     let x = e.target.value.replace(/\D/g, '');
-    if (x.length <= 11) { x = x.replace(/(\d{3})(\d)/, '$1.$2'); x = x.replace(/(\d{3})(\d)/, '$1.$2'); x = x.replace(/(\d{3})(\d{1,2})$/, '$1-$2'); } 
-    else { x = x.replace(/^(\d{2})(\d)/, '$1.$2'); x = x.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3'); x = x.replace(/\.(\d{3})(\d)/, '.$1/$2'); x = x.replace(/(\d{4})(\d)/, '$1-$2'); }
+    if (x.length <= 11) { x = x.replace(/(\d{3})(\d)/, '$1.$2'); x = x.replace(/(\d{3})(\d)/, '$1.$2'); x = x.replace(/(\d{3})(\d{1,2})$/, '$1-$2'); } else { x = x.replace(/^(\d{2})(\d)/, '$1.$2'); x = x.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3'); x = x.replace(/\.(\d{3})(\d)/, '.$1/$2'); x = x.replace(/(\d{4})(\d)/, '$1-$2'); }
     e.target.value = x;
-    const encontrado = filiaisSalvas.find(c => c.cnpj === x);
-    if(encontrado) document.getElementById('cliRazao').value = encontrado.razao;
+    const enc = filiaisSalvas.find(c => c.cnpj === x); if(enc) document.getElementById('cliRazao').value = enc.razao;
 });
 
 window.mudarAba = (cat) => { 
@@ -39,40 +45,23 @@ window.mudarAba = (cat) => {
 async function iniciar() {
     const userSnap = await getDoc(doc(db, "usuarios", userId));
     if (userSnap.exists()) window.lojaCnpj = userSnap.data().cnpj || "CNPJ NÃO CADASTRADO";
-
-    const planilhas = userSnap.exists() && userSnap.data().planilhas ? userSnap.data().planilhas : { sorvete: true, seco: false, balde: false, venda: true };
-    
-    if (planilhas.venda === false && userId !== 'admin') {
-        let menuVenda = document.querySelector('a[href="loja.html"]');
-        if(menuVenda) menuVenda.style.display = 'none';
-    }
+    const planilhas = userSnap.data()?.planilhas || { sorvete: true, seco: true, balde: true, venda: true };
+    if (planilhas.venda === false && userId !== 'admin') { let mVenda = document.querySelector('a[href="loja.html"]'); if(mVenda) mVenda.style.display = 'none'; }
 
     const allUsers = await getDocs(collection(db, "usuarios"));
-    let dlistaNomes = document.getElementById('listaLojasDestino'); 
-    let dlistaCnpj = document.getElementById('listaCnpjDestino');
-    
-    allUsers.forEach(u => {
-        if(u.id !== 'admin' && u.id !== userId) { 
-            let fData = { razao: u.data().nomeLoja, cnpj: u.data().cnpj || '' };
-            if(fData.cnpj) { filiaisSalvas.push(fData); dlistaNomes.innerHTML += `<option value="${fData.razao}">`; dlistaCnpj.innerHTML += `<option value="${fData.cnpj}">`; }
-        }
-    });
+    let dlistaNomes = document.getElementById('listaLojasDestino'); let dlistaCnpj = document.getElementById('listaCnpjDestino');
+    allUsers.forEach(u => { if(u.id !== 'admin' && u.id !== userId) { let fData = { razao: u.data().nomeLoja, cnpj: u.data().cnpj || '' }; if(fData.cnpj) { filiaisSalvas.push(fData); dlistaNomes.innerHTML += `<option value="${fData.razao}">`; dlistaCnpj.innerHTML += `<option value="${fData.cnpj}">`; } } });
 
-    let primeiraAba = null;
-    if(planilhas.sorvete) { document.getElementById('btnTabSorvete').style.display = 'block'; primeiraAba = primeiraAba || 'sorvete'; }
-    if(planilhas.seco) { document.getElementById('btnTabSeco').style.display = 'block'; primeiraAba = primeiraAba || 'seco'; }
-    if(planilhas.balde) { document.getElementById('btnTabBalde').style.display = 'block'; primeiraAba = primeiraAba || 'balde'; }
-    if(primeiraAba) window.mudarAba(primeiraAba);
+    if(!planilhas.seco) document.getElementById('btnTabSeco').style.display = 'none';
+    if(!planilhas.balde) document.getElementById('btnTabBalde').style.display = 'none';
 
     const [precoTfSnap, prodSnap] = await Promise.all([ getDoc(doc(db, "precos", "tf")), getDocs(collection(db, "produtos")) ]);
     const precosTF = precoTfSnap.exists() ? precoTfSnap.data() : {};
 
     prodSnap.forEach(d => {
         const item = d.data(); const objTf = precosTF[item.codigo];
-        if (objTf !== undefined) {
-            if((typeof objTf === 'object' ? (objTf.visivel !== false) : true)) {
-                produtosGlobais.push({ ...item, precoFinal: typeof objTf === 'object' ? objTf.preco : objTf, catReal: (item.categoria || 'sorvete').toLowerCase().trim() });
-            }
+        if (objTf !== undefined && (typeof objTf === 'object' ? (objTf.visivel !== false) : true)) {
+            produtosGlobais.push({ ...item, precoFinal: typeof objTf === 'object' ? objTf.preco : objTf, catReal: (item.categoria || 'sorvete').toLowerCase().trim() });
         }
     });
     renderizarTabelas();
@@ -92,16 +81,29 @@ function renderizarTabelas() {
 
 window.calcularTudo = () => {
     let totalCaixas = 0; let totalPecas = 0; let valorTotal = 0;
+    
     produtosGlobais.forEach((p, i) => {
         let inputEng = document.getElementById(`eng_${i}`); let inputUni = document.getElementById(`uni_${i}`);
         if(!inputEng || !inputUni) return;
-        let cx = parseFloat(inputEng.value) || 0; let un = parseFloat(inputUni.value) || 0;
-        let qtdTotalPecas = (cx * p.engradado) + un; let sub = qtdTotalPecas * p.precoFinal;
+        
+        let cx = parseFloat(inputEng.value) || 0; 
+        let un = parseFloat(inputUni.value) || 0;
+        
+        // --- TRAVAS DE SEGURANÇA ---
+        if ((cx * 10) % 5 !== 0) { alert(`⚠️ ERRO NO ENGRADADO: Apenas múltiplos de meio em meio (Ex: 0.5, 1, 1.5).`); inputEng.value = ""; cx = 0; }
+        if (un % 1 !== 0) { alert(`⚠️ ERRO NA UNIDADE: Apenas valores inteiros.`); inputUni.value = ""; un = 0; }
+
+        let capacidadeEngradado = parseFloat(p.engradado) || 1;
+        let qtdTotalPecas = (cx * capacidadeEngradado) + un; 
+        let sub = qtdTotalPecas * p.precoFinal;
+        
         document.getElementById(`sub_${i}`).innerText = `R$ ${sub.toFixed(2)}`;
         p.calcQtdCx = cx; p.calcQtdUn = un; p.calcTotalUnidades = qtdTotalPecas; p.calcSubtotal = sub;
+        
         totalCaixas += cx; totalPecas += qtdTotalPecas; valorTotal += sub;
         let tr = document.getElementById(`tr_${i}`); if (tr) { if (qtdTotalPecas > 0) tr.classList.add('linha-destaque'); else tr.classList.remove('linha-destaque'); }
     });
+    
     document.getElementById('resTotalEngradados').innerText = totalCaixas + " cx"; 
     document.getElementById('resTotalUnidades').innerText = totalPecas + " un"; 
     document.getElementById('resValorTotal').innerText = "R$ " + valorTotal.toFixed(2);
@@ -123,7 +125,6 @@ window.gerarExcelTransferencia = async () => {
     btn.innerText = "⏳ A GERAR...";
 
     try {
-        // BACKUP LEVE
         let itensSelecionados = produtosGlobais.filter(p => p.calcTotalUnidades > 0).map(p => ({
             codigo: p.codigo, descricao: p.descricao, precoFinal: p.precoFinal, engradado: p.engradado,
             calcQtdCx: p.calcQtdCx, calcQtdUn: p.calcQtdUn, calcTotalUnidades: p.calcTotalUnidades, catReal: p.catReal
@@ -168,20 +169,7 @@ window.gerarExcelTransferencia = async () => {
         const outBuffer = await wb.xlsx.writeBuffer(); 
         saveAs(new Blob([outBuffer]), `TRANSFERENCIA_${razaoDestino.replace(/\s+/g, '_').toUpperCase()}.xlsx`);
     } catch (e) { alert("Erro ao processar."); }
-    btn.innerText = "⬇️ GERAR PLANILHA TRANSFERÊNCIA";
+    btn.innerText = "⬇️ GERAR PLANILHA DE TRANSFERÊNCIA";
 };
-
-// === ATALHO FLUIDO (ENTER PARA PULAR CAMPO) ===
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type === 'number') {
-        e.preventDefault();
-        const inputs = Array.from(document.querySelectorAll('.tab-content.active td input[type="number"]'));
-        const index = inputs.indexOf(e.target);
-        if (index > -1 && index < inputs.length - 1) {
-            inputs[index + 1].focus();
-            inputs[index + 1].select();
-        }
-    }
-});
 
 iniciar();
