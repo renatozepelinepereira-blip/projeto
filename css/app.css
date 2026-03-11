@@ -118,3 +118,17 @@ td input[type="number"]:focus { border-color: #e3000f; background-color: #fff; b
 .btn-sucesso:hover { background: #218838; transform: translateY(-2px); }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* === CONTROLE ABSOLUTO DAS ABAS (TABS) === */
+.tab-content { display: none !important; }
+.tab-content.active { display: block !important; }
+
+/* Estilo adicional moderno para os inputs de quantidade em todo o sistema */
+td input[type="number"] {
+    width: 75px; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;
+    text-align: center; font-size: 15px; font-weight: 700; color: #333;
+    outline: none; transition: all 0.2s; -moz-appearance: textfield;
+}
+td input[type="number"]::-webkit-outer-spin-button, td input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+td input[type="number"]:focus { border-color: #e3000f; background-color: #fff; box-shadow: 0 0 0 3px rgba(227, 0, 15, 0.15); }
+body.modo-transferencia td input[type="number"]:focus { border-color: #0056b3; box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.15); }
