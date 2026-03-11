@@ -4,29 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel Administrativo - Eskimó</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍨</text></svg>">
     
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 0; }
         body { display: flex; height: 100vh; overflow: hidden; background: #f4f7f6; color: #333; }
 
-        /* MENU LATERAL INTELIGENTE */
+        /* MENU LATERAL */
         .sidebar-admin { 
-            width: 85px; 
-            background: #2c3e50; display: flex; flex-direction: column; 
+            width: 85px; background: #2c3e50; display: flex; flex-direction: column; 
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; white-space: nowrap; 
             z-index: 1000; box-shadow: 3px 0 15px rgba(0,0,0,0.15); flex-shrink: 0;
         }
         .sidebar-admin:hover { width: 260px; }
-        
         .sidebar-header { background: #e3000f; height: 70px; display: flex; align-items: center; padding-left: 25px; border-bottom: 3px solid #b3000c; }
         .nav-links { display: flex; flex-direction: column; padding: 15px 0; flex-grow: 1; }
-        
         .nav-links button { 
             background: transparent; border: none; color: #adb5bd; padding: 16px 28px; 
             text-align: left; cursor: pointer; display: flex; align-items: center; 
             width: 260px; transition: 0.2s; border-left: 4px solid transparent; outline: none; 
         }
-        
         .nav-links button i { min-width: 30px; font-style: normal; font-size: 20px; }
         .nav-links button span { margin-left: 15px; opacity: 0; transition: 0.2s; }
         .sidebar-admin:hover .nav-links button span { opacity: 1; }
@@ -36,11 +33,11 @@
         .main-content { flex-grow: 1; padding: 30px; overflow-y: auto; background: #f4f7f6; }
         .section-title { font-size: 24px; margin-bottom: 20px; color: #2c3e50; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 10px;}
         
+        /* DASHBOARD CARDS */
         .dash-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .card-stat { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #e3000f; }
         .card-stat h3 { color: #7f8c8d; font-size: 13px; text-transform: uppercase; margin-bottom: 10px; }
         .card-stat .valor { font-size: 32px; font-weight: 800; color: #2c3e50; }
-
         .card-panel { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
         
         /* TABELAS */
@@ -49,20 +46,18 @@
         td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; vertical-align: middle; }
         .img-produto { width: 40px; height: 40px; object-fit: cover; border-radius: 5px; }
 
-        /* BOTÕES E INPUTS */
-        .btn-sucesso { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn-primario { background: #e3000f; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn-secundario { background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
-        .btn-small { padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; color: white; }
-        
+        /* INPUTS */
         input[type="text"], input[type="number"], select, input[type="date"], input[type="file"] { 
             width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; 
         }
 
-        /* MODAIS */
+        .btn-sucesso { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-primario { background: #e3000f; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-secundario { background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+        .btn-small { padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; color: white; }
+
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
         .modal-content { background: white; padding: 25px; border-radius: 10px; width: 450px; max-height: 90vh; overflow-y: auto; }
-        
         .secao { display: none; }
         .secao.active { display: block; }
     </style>
@@ -74,9 +69,7 @@
 <body>
     
     <div class="sidebar-admin">
-        <div class="sidebar-header">
-            <span style="font-size:24px;">❄️</span>
-        </div>
+        <div class="sidebar-header"><span style="font-size:24px;">🍨</span></div>
         <div class="nav-links">
             <button onclick="mudarSecao('dashboard')" class="active" id="nav-dashboard"><i>📊</i> <span>Dashboard</span></button>
             <button onclick="mudarSecao('produtos')" id="nav-produtos"><i>📦</i> <span>Produtos</span></button>
@@ -89,28 +82,32 @@
 
     <div class="main-content">
         <div id="sec-dashboard" class="secao active">
-            <h2 class="section-title">Painel de Controle</h2>
+            <h2 class="section-title">Painel Administrativo</h2>
             <div class="dash-cards">
                 <div class="card-stat"><h3>Lojas</h3><div class="valor" id="dashLojas">0</div></div>
                 <div class="card-stat" style="border-left-color: #007bff;"><h3>Produtos</h3><div class="valor" id="dashProdutos">0</div></div>
-                <div class="card-stat" style="border-left-color: #28a745;">
-                    <div style="display:flex; justify-content:space-between;">
+                <div class="card-stat" style="border-left-color: #28a745; min-width: 320px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
                         <h3>Planilhas</h3>
-                        <input type="date" id="filtroDataHist" onchange="carregarDashboard()" style="width:auto; padding:0; height:20px; border:none; font-size:11px;">
+                        <div style="display:flex; gap:5px; align-items:center;">
+                            <input type="date" id="dataInicio" onchange="carregarDashboard()" style="width:110px; padding:2px; font-size:10px; margin:0;">
+                            <span style="font-size:10px;">até</span>
+                            <input type="date" id="dataFim" onchange="carregarDashboard()" style="width:110px; padding:2px; font-size:10px; margin:0;">
+                        </div>
                     </div>
                     <div class="valor" id="dashPlanilhas">0</div>
                 </div>
             </div>
 
             <div class="card-panel">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h3>Histórico de Atividades</h3>
-                    <button onclick="toggleTabelaHistorico()" class="btn-secundario" id="btnToggleHist" style="font-size:12px;">👁️ Esconder</button>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                    <h3 style="margin: 0; color: #444;">Últimas Atividades</h3>
+                    <button onclick="window.toggleTabelaHistorico()" class="btn-secundario" id="btnToggleHist" style="font-size:12px; padding: 5px 15px;">👁️ Esconder Histórico</button>
                 </div>
                 <div id="wrapperHistorico">
-                    <input type="text" id="pesquisaLogAdmin" placeholder="Filtrar por loja ou ação..." style="margin-top:15px;">
+                    <input type="text" id="pesquisaLogAdmin" placeholder="🔍 Filtrar lista abaixo por texto..." style="margin-bottom:15px;">
                     <table id="tabelaHistorico">
-                        <thead><tr><th>Data</th><th>Loja</th><th>Ação</th><th>Destino</th><th>Ações</th></tr></thead>
+                        <thead><tr><th>Data</th><th>Loja</th><th>Ação</th><th>Destino</th><th>Ação</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -132,8 +129,8 @@
             <h2 class="section-title">Tabelas de Preços</h2>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
                 <div class="card-panel">
-                    <h3>Subir Tabela (Excel)</h3>
-                    <input type="text" id="nomeTabelaPreco" placeholder="Nome (ex: TF)">
+                    <h3>Importar Excel</h3>
+                    <input type="text" id="nomeTabelaPreco" placeholder="Ex: TF, PM01">
                     <input type="file" id="fileCsvPrecos" accept=".xlsx, .csv">
                     <button onclick="importarTabelaPrecos()" class="btn-primario" style="width:100%">Importar</button>
                 </div>
@@ -141,7 +138,7 @@
                     <h3>Vincular Loja</h3>
                     <select id="selectLojaAssociar"></select>
                     <select id="selectTabelaAssociar"></select>
-                    <button onclick="associarTabelaLoja()" class="btn-sucesso" style="width:100%">Salvar Vínculo</button>
+                    <button onclick="associarTabelaLoja()" class="btn-sucesso" style="width:100%">Salvar</button>
                 </div>
             </div>
         </div>
@@ -161,11 +158,11 @@
             <h2 class="section-title">Backup e Restauração</h2>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
                 <div class="card-panel" style="text-align:center;">
-                    <p>Baixe todos os dados do sistema em um arquivo .zip</p><br>
+                    <p>Baixe o banco de dados completo (.zip)</p><br>
                     <button onclick="gerarBackupCompleto()" class="btn-sucesso" id="btnGerarBackup">⬇️ Baixar Backup</button>
                 </div>
                 <div class="card-panel" style="text-align:center; border: 2px dashed #e3000f;">
-                    <p>Selecione um arquivo .zip para restaurar o sistema</p><br>
+                    <p>Restaurar a partir de um arquivo .zip</p><br>
                     <input type="file" id="fileRestoreZip" accept=".zip">
                     <button onclick="restaurarBackupCompleto()" class="btn-primario" id="btnRestaurarBackup">⚡ Restaurar Dados</button>
                 </div>
@@ -179,11 +176,10 @@
             <input type="hidden" id="prodEditImagemUrl">
             <label>Código</label><input type="text" id="prodEditCodigo">
             <label>Descrição</label><input type="text" id="prodEditDescricao">
-            <label>Categoria</label><input type="text" id="prodEditCategoria" placeholder="sorvete, seco, balde...">
+            <label>Categoria</label><input type="text" id="prodEditCategoria">
             <label>Engradado</label><input type="number" id="prodEditEngradado">
-            <label>Foto do Produto</label>
-            <input type="file" id="prodEditImagemFile" accept="image/*">
-            <div style="text-align:center; margin:10px;"><img id="previewFoto" src="" style="width:80px; height:80px; object-fit:cover; display:none; border-radius:5px;"></div>
+            <label>Foto do Produto</label><input type="file" id="prodEditImagemFile" accept="image/*">
+            <div style="text-align:center;"><img id="previewFoto" src="" style="width:80px; height:80px; object-fit:cover; display:none; border-radius:5px; margin:10px;"></div>
             <button onclick="salvarProduto()" id="btnSalvarProd" class="btn-sucesso" style="width:100%">Salvar</button>
             <button onclick="fecharModal('modalProduto')" class="btn-secundario" style="width:100%; margin-top:10px;">Cancelar</button>
         </div>
