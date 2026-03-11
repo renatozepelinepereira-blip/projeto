@@ -6,93 +6,43 @@
     <title>Painel Administrativo - Eskimó</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍨</text></svg>">
     
-    <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 0; }
-        body { display: flex; height: 100vh; overflow: hidden; background: #f4f7f6; color: #333; }
+    <link rel="stylesheet" href="./css/admin.css">
 
-        /* MENU LATERAL */
-        .sidebar-admin { 
-            width: 85px; background: #2c3e50; display: flex; flex-direction: column; 
-            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; white-space: nowrap; 
-            z-index: 1000; box-shadow: 3px 0 15px rgba(0,0,0,0.15); flex-shrink: 0;
-        }
-        .sidebar-admin:hover { width: 260px; }
-        .sidebar-header { background: #e3000f; height: 70px; display: flex; align-items: center; padding-left: 25px; border-bottom: 3px solid #b3000c; }
-        .nav-links { display: flex; flex-direction: column; padding: 15px 0; flex-grow: 1; }
-        .nav-links button { 
-            background: transparent; border: none; color: #adb5bd; padding: 16px 28px; 
-            text-align: left; cursor: pointer; display: flex; align-items: center; 
-            width: 260px; transition: 0.2s; border-left: 4px solid transparent; outline: none; 
-        }
-        .nav-links button i { min-width: 30px; font-style: normal; font-size: 20px; }
-        .nav-links button span { margin-left: 15px; opacity: 0; transition: 0.2s; }
-        .sidebar-admin:hover .nav-links button span { opacity: 1; }
-        .nav-links button:hover, .nav-links button.active { background: #34495e; color: white; border-left-color: #e3000f; }
-
-        /* CONTEÚDO */
-        .main-content { flex-grow: 1; padding: 30px; overflow-y: auto; background: #f4f7f6; }
-        .section-title { font-size: 24px; margin-bottom: 20px; color: #2c3e50; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 10px;}
-        
-        /* DASHBOARD CARDS */
-        .dash-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .card-stat { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #e3000f; }
-        .card-stat h3 { color: #7f8c8d; font-size: 13px; text-transform: uppercase; margin-bottom: 10px; }
-        .card-stat .valor { font-size: 32px; font-weight: 800; color: #2c3e50; }
-        .card-panel { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        
-        /* TABELAS */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { background: #f8f9fa; padding: 12px; text-align: left; font-size: 13px; color: #666; border-bottom: 2px solid #eee; }
-        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; vertical-align: middle; }
-        .img-produto { width: 40px; height: 40px; object-fit: cover; border-radius: 5px; }
-
-        /* INPUTS */
-        input[type="text"], input[type="number"], select, input[type="date"], input[type="file"] { 
-            width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; 
-        }
-
-        .btn-sucesso { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn-primario { background: #e3000f; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn-secundario { background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
-        .btn-small { padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; color: white; }
-
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 25px; border-radius: 10px; width: 450px; max-height: 90vh; overflow-y: auto; }
-        .secao { display: none; }
-        .secao.active { display: block; }
-    </style>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js" defer></script>
 </head>
 <body>
     
     <div class="sidebar-admin">
-        <div class="sidebar-header"><span style="font-size:24px;">🍨</span></div>
+        <div class="sidebar-header">
+            <span style="font-size:26px; min-width:35px; text-align: left;">🍨</span>
+            <h2 style="color:white; margin:0; font-size: 18px;">Admin</h2>
+        </div>
         <div class="nav-links">
-            <button onclick="mudarSecao('dashboard')" class="active" id="nav-dashboard"><i>📊</i> <span>Dashboard</span></button>
-            <button onclick="mudarSecao('produtos')" id="nav-produtos"><i>📦</i> <span>Produtos</span></button>
-            <button onclick="mudarSecao('precos')" id="nav-precos"><i>💲</i> <span>Preços</span></button>
-            <button onclick="mudarSecao('lojas')" id="nav-lojas"><i>🏪</i> <span>Lojas</span></button>
-            <button onclick="mudarSecao('backup')" id="nav-backup"><i>💾</i> <span>Backup</span></button>
-            <button onclick="localStorage.clear(); window.location.href='index.html'" style="margin-top:auto; color: #ff7675;"><i>🚪</i> <span>Sair</span></button>
+            <button onclick="window.mudarSecao('dashboard')" class="active" id="nav-dashboard"><i>📊</i> <span>Dashboard</span></button>
+            <button onclick="window.mudarSecao('produtos')" id="nav-produtos"><i>📦</i> <span>Catálogo</span></button>
+            <button onclick="window.mudarSecao('precos')" id="nav-precos"><i>💲</i> <span>Preços</span></button>
+            <button onclick="window.mudarSecao('lojas')" id="nav-lojas"><i>🏪</i> <span>Lojas</span></button>
+            <button onclick="window.mudarSecao('backup')" id="nav-backup"><i>💾</i> <span>Backup</span></button>
+            <button onclick="localStorage.clear(); window.location.href='index.html'" style="margin-top:auto; color:#ff7675;"><i>🚪</i> <span>Sair</span></button>
         </div>
     </div>
 
     <div class="main-content">
         <div id="sec-dashboard" class="secao active">
-            <h2 class="section-title">Painel Administrativo</h2>
+            <h2 class="section-title">Visão Geral</h2>
             <div class="dash-cards">
-                <div class="card-stat"><h3>Lojas</h3><div class="valor" id="dashLojas">0</div></div>
-                <div class="card-stat" style="border-left-color: #007bff;"><h3>Produtos</h3><div class="valor" id="dashProdutos">0</div></div>
+                <div class="card-stat"><h3>Lojas Ativas</h3><div class="valor" id="dashLojas">0</div></div>
+                <div class="card-stat" style="border-left-color: #0056b3;"><h3>Produtos Catálogo</h3><div class="valor" id="dashProdutos">0</div></div>
                 <div class="card-stat" style="border-left-color: #28a745; min-width: 320px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3>Planilhas</h3>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
+                        <h3 style="margin:0;">Planilhas</h3>
                         <div style="display:flex; gap:5px; align-items:center;">
-                            <input type="date" id="dataInicio" onchange="carregarDashboard()" style="width:110px; padding:2px; font-size:10px; margin:0;">
+                            <input type="date" id="dataInicio" onchange="window.carregarDashboard()" style="width:115px; padding:2px; font-size:10px; margin:0; border:1px solid #ddd; border-radius:4px;">
                             <span style="font-size:10px;">até</span>
-                            <input type="date" id="dataFim" onchange="carregarDashboard()" style="width:110px; padding:2px; font-size:10px; margin:0;">
+                            <input type="date" id="dataFim" onchange="window.carregarDashboard()" style="width:115px; padding:2px; font-size:10px; margin:0; border:1px solid #ddd; border-radius:4px;">
                         </div>
                     </div>
                     <div class="valor" id="dashPlanilhas">0</div>
@@ -105,66 +55,70 @@
                     <button onclick="window.toggleTabelaHistorico()" class="btn-secundario" id="btnToggleHist" style="font-size:12px; padding: 5px 15px;">👁️ Esconder Histórico</button>
                 </div>
                 <div id="wrapperHistorico">
-                    <input type="text" id="pesquisaLogAdmin" placeholder="🔍 Filtrar lista abaixo por texto..." style="margin-bottom:15px;">
-                    <table id="tabelaHistorico">
-                        <thead><tr><th>Data</th><th>Loja</th><th>Ação</th><th>Destino</th><th>Ação</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
+                    <input type="text" id="pesquisaLogAdmin" placeholder="🔍 Filtrar por texto..." style="margin-bottom:15px; padding:10px; width:100%; border-radius:8px; border:1px solid #ddd;">
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        <table id="tabelaHistorico">
+                            <thead><tr><th>Data</th><th>Loja</th><th>Ação</th><th>Destino</th><th>Ações</th></tr></thead>
+                            <tbody id="corpoTabelaHistorico"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div id="sec-produtos" class="secao">
-            <h2 class="section-title">Gestão de Produtos</h2>
+            <h2 class="section-title">Produtos</h2>
             <div class="card-panel">
-                <button onclick="abrirNovoProduto()" class="btn-sucesso">+ Novo Produto</button>
-                <table id="tabelaProdutosAdmin">
-                    <thead><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Cat.</th><th>Ação</th></tr></thead>
-                    <tbody></tbody>
-                </table>
+                <button onclick="window.abrirNovoProduto()" class="btn-sucesso">+ Novo Produto</button>
+                <div style="max-height: 550px; overflow-y: auto; margin-top:15px;">
+                    <table id="tabelaProdutosAdmin">
+                        <thead><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Cat.</th><th>Ação</th></tr></thead>
+                        <tbody id="corpoTabelaProdutos"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
         <div id="sec-precos" class="secao">
-            <h2 class="section-title">Tabelas de Preços</h2>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+            <h2 class="section-title">Preços</h2>
+            <div class="grid-2">
                 <div class="card-panel">
                     <h3>Importar Excel</h3>
-                    <input type="text" id="nomeTabelaPreco" placeholder="Ex: TF, PM01">
+                    <input type="text" id="nomeTabelaPreco" placeholder="Nome (Ex: TF, PM01)">
                     <input type="file" id="fileCsvPrecos" accept=".xlsx, .csv">
-                    <button onclick="importarTabelaPrecos()" class="btn-primario" style="width:100%">Importar</button>
+                    <button onclick="window.importarTabelaPrecos()" class="btn-primario" style="width:100%;">Importar</button>
                 </div>
                 <div class="card-panel">
                     <h3>Vincular Loja</h3>
                     <select id="selectLojaAssociar"></select>
-                    <select id="selectTabelaAssociar"></select>
-                    <button onclick="associarTabelaLoja()" class="btn-sucesso" style="width:100%">Salvar</button>
+                    <select id="selectTabelaAssociar" style="margin-top:10px;"></select>
+                    <button onclick="window.associarTabelaLoja()" class="btn-sucesso" style="width:100%; margin-top:15px;">Salvar Vínculo</button>
                 </div>
             </div>
         </div>
 
         <div id="sec-lojas" class="secao">
-            <h2 class="section-title">Configuração de Lojas</h2>
+            <h2 class="section-title">Lojas</h2>
             <div class="card-panel">
-                <button onclick="abrirNovaLoja()" class="btn-sucesso">+ Nova Loja</button>
-                <table id="tabelaLojasAdmin">
+                <button onclick="window.abrirNovaLoja()" class="btn-sucesso">+ Nova Loja</button>
+                <table id="tabelaLojasAdmin" style="margin-top:15px;">
                     <thead><tr><th>Login</th><th>Nome</th><th>CNPJ</th><th>Tabela</th><th>Ação</th></tr></thead>
-                    <tbody></tbody>
+                    <tbody id="corpoTabelaLojas"></tbody>
                 </table>
             </div>
         </div>
 
         <div id="sec-backup" class="secao">
-            <h2 class="section-title">Backup e Restauração</h2>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+            <h2 class="section-title">Backup</h2>
+            <div class="grid-2">
                 <div class="card-panel" style="text-align:center;">
-                    <p>Baixe o banco de dados completo (.zip)</p><br>
-                    <button onclick="gerarBackupCompleto()" class="btn-sucesso" id="btnGerarBackup">⬇️ Baixar Backup</button>
+                    <p>Baixar todos os dados (.zip)</p><br>
+                    <button onclick="window.gerarBackupCompleto()" id="btnGerarBackup" class="btn-sucesso" style="width:100%;">⬇️ Baixar Backup</button>
                 </div>
                 <div class="card-panel" style="text-align:center; border: 2px dashed #e3000f;">
-                    <p>Restaurar a partir de um arquivo .zip</p><br>
+                    <p>Restaurar a partir de .zip</p><br>
                     <input type="file" id="fileRestoreZip" accept=".zip">
-                    <button onclick="restaurarBackupCompleto()" class="btn-primario" id="btnRestaurarBackup">⚡ Restaurar Dados</button>
+                    <button onclick="window.restaurarBackupCompleto()" id="btnRestaurarBackup" class="btn-primario" style="width:100%;">⚡ Restaurar Dados</button>
                 </div>
             </div>
         </div>
@@ -178,23 +132,23 @@
             <label>Descrição</label><input type="text" id="prodEditDescricao">
             <label>Categoria</label><input type="text" id="prodEditCategoria">
             <label>Engradado</label><input type="number" id="prodEditEngradado">
-            <label>Foto do Produto</label><input type="file" id="prodEditImagemFile" accept="image/*">
-            <div style="text-align:center;"><img id="previewFoto" src="" style="width:80px; height:80px; object-fit:cover; display:none; border-radius:5px; margin:10px;"></div>
-            <button onclick="salvarProduto()" id="btnSalvarProd" class="btn-sucesso" style="width:100%">Salvar</button>
-            <button onclick="fecharModal('modalProduto')" class="btn-secundario" style="width:100%; margin-top:10px;">Cancelar</button>
+            <label>Foto</label><input type="file" id="prodEditImagemFile" accept="image/*">
+            <div style="text-align:center;"><img id="previewFoto" src="" style="width:100px; height:100px; object-fit:cover; display:none; border-radius:8px; margin:10px;"></div>
+            <button onclick="window.salvarProduto()" id="btnSalvarProd" class="btn-sucesso" style="width:100%">Salvar</button>
+            <button onclick="window.fecharModal('modalProduto')" class="btn-secundario" style="width:100%; margin-top:10px;">Cancelar</button>
         </div>
     </div>
 
     <div class="modal-overlay" id="modalLoja">
         <div class="modal-content">
-            <h3 id="titModalLoja">Loja</h3>
+            <h3 id="titModalLoja">Loja / Usuário</h3>
             <input type="hidden" id="lojaEditIsNew">
             <label>Login</label><input type="text" id="lojaEditId">
             <label>Senha</label><input type="text" id="lojaEditSenha">
             <label>Razão Social</label><input type="text" id="lojaEditNome">
             <label>CNPJ</label><input type="text" id="lojaEditCnpj">
-            <button onclick="salvarLoja()" class="btn-sucesso" style="width:100%">Salvar</button>
-            <button onclick="fecharModal('modalLoja')" class="btn-secundario" style="width:100%; margin-top:10px;">Cancelar</button>
+            <button onclick="window.salvarLoja()" class="btn-sucesso" style="width:100%">Salvar</button>
+            <button onclick="window.fecharModal('modalLoja')" class="btn-secundario" style="width:100%; margin-top:10px;">Cancelar</button>
         </div>
     </div>
 
