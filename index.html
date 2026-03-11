@@ -4,48 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Eskimó</title>
-    
-    <link rel="stylesheet" href="./css/global.css">
-    
-    <style>
-        /* Estilos exclusivos para centralizar a tela de login */
-        body { 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            background: #2c3e50; /* Fundo escuro elegante */
-            margin: 0;
-        }
-        .login-box { 
-            background: white; 
-            padding: 40px; 
-            border-radius: 12px; 
-            box-shadow: 0 15px 35px rgba(0,0,0,0.2); 
-            width: 100%; 
-            max-width: 400px; 
-            text-align: center; 
-            border-top: 6px solid #e3000f; 
-            animation: fadeIn 0.5s ease-out;
-        }
-        .login-box h1 { color: #e3000f; margin-bottom: 25px; font-size: 24px; }
-        .login-box input { margin-bottom: 15px; padding: 15px; font-size: 15px; }
-        #msgErro { color: #dc3545; margin-top: 15px; font-weight: bold; display: none; background: #f8d7da; padding: 10px; border-radius: 6px; border: 1px solid #f5c6cb; }
-    </style>
+    <link rel="stylesheet" href="./css/login.css">
 </head>
 <body>
 
-    <div class="login-box">
-        <div style="font-size: 55px; margin-bottom: 10px;">🍨</div>
-        <h1>Sistema Eskimó</h1>
-        
-        <form id="loginForm">
-            <input type="text" id="usuario" placeholder="Usuário / Login" required autocomplete="off">
-            <input type="password" id="senha" placeholder="Senha" required>
-            <button type="submit" class="btn-primario" style="width: 100%; padding: 15px; font-size: 18px; margin-top: 10px; text-transform: uppercase;" id="btnEntrar">Entrar</button>
-        </form>
-        
-        <div id="msgErro">Usuário ou senha incorretos!</div>
+    <div class="bg-shape1"></div>
+    <div class="bg-shape2"></div>
+
+    <div class="login-wrapper">
+        <div class="login-box">
+            <div class="logo-icon">🍨</div>
+            <h1>Eskimó Sorvetes</h1>
+            <p>Sistema de Pedidos e Logística</p>
+            
+            <form id="loginForm">
+                <div class="input-group">
+                    <input type="text" id="usuario" placeholder="Usuário / Login" required autocomplete="off">
+                    <span class="input-icon">👤</span>
+                </div>
+                
+                <div class="input-group">
+                    <input type="password" id="senha" placeholder="Senha" required>
+                    <span class="input-icon">🔒</span>
+                </div>
+                
+                <button type="submit" class="btn-entrar" id="btnEntrar">Acessar Sistema</button>
+            </form>
+            
+            <div id="msgErro">Usuário ou senha incorretos!</div>
+            
+            <div class="footer-text">&copy; 2026 Eskimó Faturamento Central</div>
+        </div>
     </div>
 
     <script type="module" src="./js/index.js"></script>
