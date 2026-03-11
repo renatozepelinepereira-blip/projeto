@@ -10,25 +10,16 @@
     <div id="sidebar" class="sidebar">
         <button class="close-btn" onclick="window.toggleMenu()">×</button>
         <h2>Menu Eskimó</h2>
-        <a href="loja.html">🛒 Venda</a><a href="transferencia.html">🔄 Transferência</a><a href="historico.html" class="active">📜 Histórico</a>
-        <a href="#" onclick="localStorage.clear(); window.location.href='index.html'" style="color:#dc3545; margin-top:auto; border-top:1px solid #eee;">🚪 Sair</a>
+        <a href="loja.html">🛒 Venda</a>
+        <a href="transferencia.html">🔄 Transferência</a>
+        <a href="historico.html" class="active">📜 Histórico</a>
+        <a href="#" onclick="localStorage.clear(); window.location.href='index.html'">🚪 Sair</a>
     </div>
     <div id="overlay" class="overlay" onclick="window.toggleMenu()"></div>
     <div class="container">
-        <header><div class="header-left"><button class="menu-btn" onclick="window.toggleMenu()">☰</button><h1>Filial: <span id="txtLoja"></span></h1></div></header>
-        <div style="background:#fff; padding:20px; border-radius:8px; border:1px solid #ddd; border-left:4px solid #6c757d">
-            <h2 style="margin-bottom:15px">Histórico de Planilhas</h2>
-            <input type="text" id="pesquisaLogLoja" placeholder="🔍 Pesquisar por destino ou data..." style="width:100%; padding:12px; margin-bottom:15px; border-radius:6px; background:#f8f9fa;">
-            <div style="max-height:500px; overflow-y:auto"><table id="tabelaHistoricoLoja" style="width:100%"><thead><tr><th>Data</th><th>Ação</th><th>Destino</th><th>Ações</th></tr></thead><tbody><tr><td colspan="4" style="text-align:center; padding:20px;">A carregar...</td></tr></tbody></table></div>
-        </div>
-    </div>
-    <div class="overlay" id="modalDetalhesLog" style="display:none; align-items:center; justify-content:center; z-index:2000;">
-        <div style="background:white; padding:25px; border-radius:8px; width:700px; max-width:90%; box-shadow:0 5px 20px rgba(0,0,0,0.2)">
-            <h2 style="color:#0056b3">Detalhes</h2>
-            <div id="conteudoDetalhesLog" style="font-size:14px; background:#f9f9f9; padding:15px; border-radius:6px; margin-bottom:15px; max-height:400px; overflow-y:auto"></div>
-            <button id="btnRegerarPlanilhaModal" style="background:#28a745; color:white; border:none; padding:12px; border-radius:6px; width:100%; font-weight:bold">⬇️ Baixar Novamente</button>
-            <button onclick="document.getElementById('modalDetalhesLog').style.display='none'" style="background:#666; color:white; border:none; padding:12px; border-radius:6px; width:100%; margin-top:10px;">Fechar</button>
-        </div>
+        <header><div class="header-left"><button class="menu-btn" onclick="window.toggleMenu()">☰</button><h1>Histórico: <span id="txtLoja"></span></h1></div></header>
+        <input type="text" id="pesquisaLogLoja" placeholder="🔍 Pesquisar por destino ou data..." style="width:100%; padding:12px; margin-bottom:15px; border-radius:6px; border:1px solid #ddd;">
+        <div style="max-height:500px; overflow-y:auto"><table id="tabelaHistoricoLoja"><thead><tr><th>Data</th><th>Ação</th><th>Destino</th><th>Ações</th></tr></thead><tbody></tbody></table></div>
     </div>
     <script type="module" src="./js/historico.js"></script>
 </body>
