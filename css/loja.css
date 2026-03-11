@@ -1,0 +1,51 @@
+/* css/loja.css - Tema Vermelho Exclusivo para Vendas */
+* { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 0; }
+body { background: #f4f6f9; color: #333; line-height: 1.6; }
+
+.container { max-width: 1200px; margin: 20px auto; background: white; padding: 25px; border-radius: 12px; border-top: 6px solid #e3000f; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+h1, h2 { color: #333; }
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; }
+.header-left { display: flex; align-items: center; gap: 15px; }
+.menu-btn { font-size: 24px; background: none; border: none; cursor: pointer; color: #555; }
+
+/* Menu Sanduíche */
+.sidebar { position: fixed; left: -300px; top: 0; width: 280px; height: 100%; background: #fff; box-shadow: 4px 0 20px rgba(0,0,0,0.1); transition: left 0.3s; z-index: 2100; display: flex; flex-direction: column; }
+.sidebar.open { left: 0; }
+.sidebar .close-btn { align-self: flex-end; width: 45px; height: 45px; font-size: 28px; border: none; background: none; cursor: pointer; color: #888; display: flex; align-items: center; justify-content: center; margin: 10px 10px 0 0; }
+.sidebar h2 { text-align: center; margin: 0 0 20px 0; font-size: 22px; color: #e3000f; }
+.sidebar a { padding: 16px 25px; text-decoration: none; color: #555; font-weight: 600; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 12px; transition: 0.2s; }
+.sidebar a:hover { background: #fff5f5; color: #e3000f; padding-left: 32px; }
+.sidebar a.active { background: #e3000f !important; color: white !important; font-weight: bold; }
+.overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: none; backdrop-filter: blur(2px); }
+.overlay.show { display: block; }
+
+/* Caixas e Abas Venda */
+.client-box { background: #fffafa; padding: 20px; border-radius: 10px; margin-bottom: 25px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 20px; border: 1px solid #ffe6e6; border-left: 5px solid #e3000f; }
+.client-box label { display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; color: #777; margin-bottom: 6px; }
+.tabs { display: flex; gap: 8px; border-bottom: 2px solid #eaeaea; margin-bottom: 20px; }
+.tab-btn { background: none; border: none; padding: 12px 24px; cursor: pointer; color: #888; font-weight: bold; font-size: 15px; border-bottom: 3px solid transparent; }
+.tab-btn.active { color: #e3000f; border-bottom-color: #e3000f; background: #fffafa; }
+.tab-content { display: none !important; } .tab-content.active { display: block !important; }
+
+/* Tabela e Inputs */
+table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 20px; }
+th { background: #e3000f; color: white; padding: 12px; text-align: left; text-transform: uppercase; font-size: 13px; }
+td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
+tr:hover td { background-color: #fdfdfd; }
+.linha-destaque td { background-color: #fff9e6 !important; font-weight: bold; }
+.img-produto { width: 45px; height: 45px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; }
+.img-placeholder { width: 45px; height: 45px; background: #f8f9fa; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 1px dashed #ccc; }
+
+input[type="text"], select, input[type="number"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; transition: 0.2s; background: #fff; }
+input:focus, select:focus { border-color: #e3000f; box-shadow: 0 0 0 3px rgba(227, 0, 15, 0.1); }
+td input[type="number"] { width: 75px; text-align: center; font-weight: bold; font-size: 15px; -moz-appearance: textfield; }
+td input[type="number"]::-webkit-outer-spin-button, td input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* Resumo Final */
+.resumo-box { background: white; border: 2px solid #e3000f; padding: 25px; border-radius: 12px; margin-top: 30px; }
+.resumo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; }
+.resumo-item { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #eee; }
+.resumo-item b { display: block; font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 5px; }
+.resumo-item span { display: block; font-size: 18px; font-weight: bold; color: #e3000f; margin-top: 5px; }
+.btn-primario { background: #e3000f; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+.btn-primario:hover { transform: translateY(-2px); filter: brightness(0.9); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
