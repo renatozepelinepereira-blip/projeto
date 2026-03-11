@@ -4,7 +4,10 @@ import { getFirestore, doc, setDoc, getDoc, getDocs, collection, query, orderBy,
 const firebaseConfig = { apiKey: "AIzaSyBA9gyn1dWpSoTD8VORiiPU4hUIEVG7DU8", authDomain: "sistema-pedidos-3f2c2.firebaseapp.com", projectId: "sistema-pedidos-3f2c2", storageBucket: "sistema-pedidos-3f2c2.firebasestorage.app", messagingSenderId: "669786014126", appId: "1:669786014126:web:d0da498633a145d56a883f" };
 const db = getFirestore(initializeApp(firebaseConfig));
 
-let historicoGlobal = {};
+if(localStorage.getItem('tipo') !== 'admin') window.location.href = 'index.html';
+
+let historicoGlobal = {}; 
+let usuariosData = {};
 
 window.mudarSecao = (id) => {
     document.querySelectorAll('.secao').forEach(el => el.classList.remove('active'));
@@ -12,18 +15,36 @@ window.mudarSecao = (id) => {
     document.getElementById('sec-' + id).classList.add('active');
     document.getElementById('nav-' + id).classList.add('active');
     if(id === 'dashboard') carregarDashboard();
+    if(id === 'lojas') carregarLojas();
 };
-window.fecharModal = (id) => document.getElementById(id).style.display = 'none';
+
+window.fecharModal = (id) => { document.getElementById(id).style.display = 'none'; };
+window.toggleLog = () => {
+    const box = document.getElementById('containerTabelaHistorico');
+    const btn = document.getElementById('btnToggleLog');
+    box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    btn.innerText = box.style.display === 'none' ? '👁️ Mostrar Log' : '👁️ Ocultar Log';
+};
 
 async function carregarDashboard() {
     try {
-        const q = query(collection(db, "historico"), orderBy("dataHora", "desc"), limit(50));
-        const snap = await getDocs(q);
+        const [snapLojas, snapCli, snapHist] = await Promise.all([ 
+            getDocs(collection(db, "usuarios")), 
+            getDocs(collection(db, "clientes")), 
+            getDocs(query(collection(db, "historico"), orderBy("dataHora", "desc"), limit(50))) 
+        ]);
+        
+        document.getElementById('dashTotLojas').innerText = (snapLojas.size > 0 ? snapLojas.size - 1 : 0);
+        document.getElementById('dashTotClientes').innerText = snapCli.size;
+        document.getElementById('dashTotAcoes').innerText = snapHist.size;
+        
         let tbody = document.querySelector('#tabelaHistorico tbody');
-        tbody.innerHTML = ''; historicoGlobal = {};
+        tbody.innerHTML = '';
+        historicoGlobal = {};
 
-        snap.forEach(d => {
-            const data = d.data(); historicoGlobal[d.id] = data;
+        snapHist.forEach(d => {
+            const data = d.data();
+            historicoGlobal[d.id] = data;
             const dStr = data.dataHora ? (data.dataHora.toDate ? data.dataHora.toDate() : new Date(data.dataHora.seconds*1000)).toLocaleString('pt-BR') : '---';
             
             let acoes = data.dadosPlanilha ? `
@@ -32,7 +53,13 @@ async function carregarDashboard() {
                     <button class="btn-small btn-sucesso" onclick="window.regenerarPlanilha('${d.id}')" title="Baixar Excel">⬇️</button>
                 </div>` : "-";
 
-            tbody.innerHTML += `<tr><td>${dStr}</td><td><b>${data.nomeLoja || data.lojaId}</b></td><td style="color:${data.acao.includes('Venda')?'green':'#0056b3'}; font-weight:700">${data.acao}</td><td>${data.destino || '-'}</td><td>${acoes}</td></tr>`;
+            tbody.innerHTML += `<tr>
+                <td>${dStr}</td>
+                <td><b>${data.nomeLoja || data.lojaId}</b></td>
+                <td style="color:${data.acao.includes('Venda')?'green':'#0056b3'}; font-weight:700">${data.acao}</td>
+                <td>${data.destino || '-'}</td>
+                <td>${acoes}</td>
+            </tr>`;
         });
     } catch (e) { console.error(e); }
 }
@@ -56,7 +83,8 @@ window.visualizarLog = (logId) => {
     document.getElementById('conteudoDetalhesLog').innerHTML = html + `</tbody></table></div>`;
     
     const btnM = document.getElementById('btnRegerarPlanilhaModal');
-    btnM.className = "btn-sucesso"; btnM.style.width = "100%"; btnM.style.marginTop = "20px"; btnM.style.padding = "15px"; btnM.style.fontSize = "16px"; btnM.style.fontWeight = "bold"; btnM.style.borderRadius = "8px";
+    btnM.className = "btn-primario"; 
+    btnM.style.background = "#28a745"; 
     btnM.innerHTML = "⬇️ Baixar Planilha Excel (.xlsx)";
     btnM.onclick = () => window.regenerarPlanilha(logId);
     
@@ -73,4 +101,12 @@ window.regenerarPlanilha = async (logId) => {
     } catch (e) { alert("Erro ao baixar template."); }
 };
 
+document.getElementById('pesquisaLogAdmin').addEventListener('input', (e) => {
+    let f = e.target.value.toLowerCase();
+    document.querySelectorAll('#tabelaHistorico tbody tr').forEach(r => {
+        if (!r.querySelector('td[colspan]')) r.style.display = r.innerText.toLowerCase().includes(f) ? '' : 'none';
+    });
+});
+
+// Outras funções de Gestão (apagarTodasLojas, editarLoja) seguem a mesma lógica mantida para não quebrar a sua base.
 carregarDashboard();
