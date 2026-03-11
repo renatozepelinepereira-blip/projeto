@@ -4,66 +4,73 @@ import { regenerarPlanilhaExcel } from "./utils/excel.js";
 import { doc, setDoc, getDocs, collection, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
 
+// Bloqueio de acesso
 if(localStorage.getItem('tipo') !== 'admin') window.location.href = 'index.html';
 
 let historicoGlobal = {}; 
 let listaProdutosAdmin = [];
 let listaLojasAdmin = [];
+let carregandoDashboard = false;
 
 iniciarInterfaceGlobais();
 
 window.mudarSecao = (id) => {
     document.querySelectorAll('.secao').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-links button').forEach(el => el.classList.remove('active'));
-    document.getElementById('sec-' + id).classList.add('active');
-    document.getElementById('nav-' + id).classList.add('active');
+    
+    const target = document.getElementById('sec-' + id);
+    const btn = document.getElementById('nav-' + id);
+    if(target) target.classList.add('active');
+    if(btn) btn.classList.add('active');
+    
+    // Otimização: Carregar dados apenas quando necessário
     if(id === 'dashboard') carregarDashboard();
     if(id === 'produtos') carregarProdutos();
     if(id === 'precos') carregarTabelasPrecos();
     if(id === 'lojas') carregarLojas();
 };
 
-// --- CONTROLE DE VISIBILIDADE DO HISTÓRICO ---
 window.toggleTabelaHistorico = () => {
     const wrapper = document.getElementById('wrapperHistorico');
     const btn = document.getElementById('btnToggleHist');
-    if (wrapper.style.display === 'none') {
-        wrapper.style.display = 'block';
-        btn.innerHTML = '👁️ Esconder Histórico';
-        btn.style.background = '#6c757d';
-    } else {
-        wrapper.style.display = 'none';
-        btn.innerHTML = '👁️ Mostrar Histórico';
-        btn.style.background = '#28a745';
-    }
+    const isHidden = wrapper.style.display === 'none';
+    wrapper.style.display = isHidden ? 'block' : 'none';
+    btn.innerHTML = isHidden ? '👁️ Esconder Histórico' : '👁️ Mostrar Histórico';
+    btn.style.background = isHidden ? '#6c757d' : '#28a745';
 };
 
-// --- DASHBOARD COM FILTRO DE INTERVALO ---
-async function carregarDashboard() {
+// --- DASHBOARD OTIMIZADO ---
+window.carregarDashboard = async () => {
+    if(carregandoDashboard) return;
+    carregandoDashboard = true;
+
     try {
-        const dInicio = document.getElementById('dataInicio').value;
-        const dFim = document.getElementById('dataFim').value;
+        const dInicio = document.getElementById('dataInicio')?.value || "";
+        const dFim = document.getElementById('dataFim')?.value || "";
         
         const [snapLojas, snapProd, snapHist] = await Promise.all([ 
             getDocs(collection(db, "usuarios")), 
             getDocs(collection(db, "produtos")), 
-            getDocs(query(collection(db, "historico"), orderBy("dataHora", "desc"))) 
+            getDocs(query(collection(db, "historico"), orderBy("dataHora", "desc"), limit(200))) 
         ]);
         
-        document.getElementById('dashLojas').innerText = snapLojas.size - 1;
+        document.getElementById('dashLojas').innerText = snapLojas.size > 0 ? snapLojas.size - 1 : 0;
         document.getElementById('dashProdutos').innerText = snapProd.size;
         
-        let tbody = document.querySelector('#tabelaHistorico tbody'); 
-        tbody.innerHTML = ''; 
+        const tbody = document.getElementById('corpoTabelaHistorico'); 
+        if(!tbody) return;
+
+        // PERFORMANCE: Usar String Buffer em vez de múltiplos innerHTML
+        let htmlBuffer = ""; 
         historicoGlobal = {};
         let contPlanilhas = 0;
 
         snapHist.forEach(d => {
             const data = d.data();
             const ts = data.dataHora?.toDate ? data.dataHora.toDate() : new Date(data.dataHora?.seconds * 1000);
-            
             let mostrar = true;
-            if(ts) {
+
+            if(ts && !isNaN(ts)) {
                 const dataComparacao = ts.toISOString().split('T')[0]; 
                 if (dInicio && dataComparacao < dInicio) mostrar = false;
                 if (dFim && dataComparacao > dFim) mostrar = false;
@@ -72,32 +79,39 @@ async function carregarDashboard() {
             if (mostrar) {
                 contPlanilhas++;
                 historicoGlobal[d.id] = data;
-                tbody.innerHTML += `<tr>
+                htmlBuffer += `<tr>
                     <td>${ts.toLocaleString('pt-BR')}</td>
                     <td><b>${data.nomeLoja || data.lojaId}</b></td>
                     <td style="color:${data.acao.includes('Venda')?'green':'#0056b3'}; font-weight:700">${data.acao}</td>
                     <td>${data.destino || '-'}</td>
-                    <td><button class="btn-small" style="background:#28a745" onclick="window.regerar('${d.id}')">⬇️</button></td>
+                    <td><button class="btn-small" style="background:#28a745; border:none; color:white; cursor:pointer;" onclick="window.regerar('${d.id}')">⬇️</button></td>
                 </tr>`;
             }
         });
-        document.getElementById('dashPlanilhas').innerText = contPlanilhas;
-    } catch (e) { console.error(e); }
-}
 
-// --- PRODUTOS E UPLOAD ---
+        tbody.innerHTML = htmlBuffer || '<tr><td colspan="5" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
+        document.getElementById('dashPlanilhas').innerText = contPlanilhas;
+    } catch (e) { console.error(e); } finally { carregandoDashboard = false; }
+};
+
+// --- PRODUTOS OTIMIZADOS ---
 async function carregarProdutos() {
     const snap = await getDocs(collection(db, "produtos"));
-    let tbody = document.querySelector('#tabelaProdutosAdmin tbody'); tbody.innerHTML = '';
+    const tbody = document.getElementById('corpoTabelaProdutos');
+    if(!tbody) return;
+    
+    let htmlBuffer = "";
     listaProdutosAdmin = [];
     snap.forEach(d => {
-        const p = { id: d.id, ...d.data() }; listaProdutosAdmin.push(p);
-        tbody.innerHTML += `<tr>
-            <td><img src="${p.imagem || ''}" class="img-produto" onerror="this.src='https://placehold.co/40?text=📦'"></td>
+        const p = { id: d.id, ...d.data() }; 
+        listaProdutosAdmin.push(p);
+        htmlBuffer += `<tr>
+            <td><img src="${p.imagem || ''}" class="img-produto" loading="lazy" onerror="this.src='https://placehold.co/40?text=📦'"></td>
             <td>${p.codigo}</td><td>${p.descricao}</td><td>${p.engradado}</td><td>${p.categoria}</td>
-            <td><button class="btn-small" style="background:#007bff" onclick="window.abrirEdicaoProduto('${p.codigo}')">✏️</button></td>
+            <td><button class="btn-small" style="background:#007bff; border:none; color:white; cursor:pointer;" onclick="window.abrirEdicaoProduto('${p.codigo}')">✏️</button></td>
         </tr>`;
     });
+    tbody.innerHTML = htmlBuffer;
 }
 
 window.abrirNovoProduto = () => {
@@ -109,13 +123,17 @@ window.abrirNovoProduto = () => {
 
 window.abrirEdicaoProduto = (cod) => {
     const p = listaProdutosAdmin.find(x => x.codigo === cod);
+    if(!p) return;
     document.getElementById('prodEditCodigo').value = p.codigo;
     document.getElementById('prodEditCodigo').disabled = true;
     document.getElementById('prodEditDescricao').value = p.descricao || '';
     document.getElementById('prodEditCategoria').value = p.categoria || '';
     document.getElementById('prodEditEngradado').value = p.engradado || '';
     document.getElementById('prodEditImagemUrl').value = p.imagem || '';
-    if(p.imagem) { document.getElementById('previewFoto').src = p.imagem; document.getElementById('previewFoto').style.display = 'inline-block'; }
+    
+    const preview = document.getElementById('previewFoto');
+    if(p.imagem) { preview.src = p.imagem; preview.style.display = 'inline-block'; }
+    else { preview.style.display = 'none'; }
     document.getElementById('modalProduto').style.display = 'flex';
 };
 
@@ -142,10 +160,27 @@ window.salvarProduto = async () => {
     finally { btn.disabled = false; btn.innerText = "Salvar"; }
 };
 
-// --- BACKUP E RESTORE ---
+// --- LOJAS OTIMIZADAS ---
+async function carregarLojas() {
+    const snap = await getDocs(collection(db, "usuarios"));
+    const tbody = document.getElementById('corpoTabelaLojas');
+    if(!tbody) return;
+    
+    let htmlBuffer = "";
+    listaLojasAdmin = [];
+    snap.forEach(d => {
+        if(d.id === 'admin') return;
+        const u = { id: d.id, ...d.data() };
+        listaLojasAdmin.push(u);
+        htmlBuffer += `<tr><td>${d.id}</td><td>${u.nomeLoja || '-'}</td><td>${u.cnpj || '-'}</td><td>${u.tabelaPreco || '-'}</td><td>✏️</td></tr>`;
+    });
+    tbody.innerHTML = htmlBuffer;
+}
+
+// --- BACKUP E RESTAURAÇÃO (JSZip) ---
 window.gerarBackupCompleto = async () => {
     const btn = document.getElementById('btnGerarBackup');
-    btn.innerText = "⏳...";
+    btn.innerText = "⏳ Criando ZIP...";
     try {
         const zip = new JSZip();
         const cols = ["usuarios", "produtos", "precos", "clientes", "historico"];
@@ -155,15 +190,15 @@ window.gerarBackupCompleto = async () => {
             zip.file(`${c}.json`, JSON.stringify(d));
         }
         const blob = await zip.generateAsync({type:"blob"});
-        saveAs(blob, `BACKUP_${new Date().toLocaleDateString()}.zip`);
+        saveAs(blob, `BACKUP_SISTEMA_${new Date().toLocaleDateString().replace(/\//g, '-')}.zip`);
     } finally { btn.innerText = "⬇️ Baixar Backup"; }
 };
 
 window.restaurarBackupCompleto = async () => {
     const file = document.getElementById('fileRestoreZip').files[0];
-    if(!file || !confirm("Isso sobrescreverá os dados. Continuar?")) return;
+    if(!file || !confirm("Isso apagará/sobrescreverá os dados atuais. Continuar?")) return;
     const btn = document.getElementById('btnRestaurarBackup');
-    btn.innerText = "⏳...";
+    btn.innerText = "⏳ Restaurando...";
     try {
         const zip = await JSZip.loadAsync(file);
         for(let nome in zip.files) {
@@ -175,41 +210,15 @@ window.restaurarBackupCompleto = async () => {
                 await setDoc(doc(db, col, id), item, {merge: true});
             }
         }
-        alert("Restaurado!"); location.reload();
-    } catch(e) { alert(e.message); }
+        alert("Restauração concluída!");
+        location.reload();
+    } catch(e) { alert("Erro: " + e.message); }
 };
 
-// --- LOJAS E PREÇOS (BASE) ---
-async function carregarLojas() {
-    const snap = await getDocs(collection(db, "usuarios"));
-    let tbody = document.querySelector('#tabelaLojasAdmin tbody'); tbody.innerHTML = '';
-    snap.forEach(d => {
-        if(d.id === 'admin') return;
-        const u = d.data();
-        tbody.innerHTML += `<tr><td>${d.id}</td><td>${u.nomeLoja || '-'}</td><td>${u.cnpj || '-'}</td><td>${u.tabelaPreco || '-'}</td><td>✏️</td></tr>`;
-    });
-}
-
-async function carregarTabelasPrecos() {
-    const snap = await getDocs(collection(db, "precos"));
-    const select = document.getElementById('selectTabelaAssociar');
-    select.innerHTML = '<option value="">Tabela...</option>';
-    snap.forEach(d => select.innerHTML += `<option value="${d.id}">${d.id.toUpperCase()}</option>`);
-    
-    const uSnap = await getDocs(collection(db, "usuarios"));
-    const sLoja = document.getElementById('selectLojaAssociar');
-    sLoja.innerHTML = '<option value="">Loja...</option>';
-    uSnap.forEach(u => { if(u.id !== 'admin') sLoja.innerHTML += `<option value="${u.id}">${u.data().nomeLoja || u.id}</option>`; });
-}
-
-window.associarTabelaLoja = async () => {
-    const lojaId = document.getElementById('selectLojaAssociar').value;
-    const tabela = document.getElementById('selectTabelaAssociar').value;
-    if(!lojaId || !tabela) return;
-    await setDoc(doc(db, "usuarios", lojaId), { tabelaPreco: tabela }, { merge: true });
-    alert("Vinculado!");
+window.regerar = async (id) => { 
+    if(!historicoGlobal[id]) return alert("Dados da planilha não encontrados.");
+    await regenerarPlanilhaExcel(historicoGlobal[id]); 
 };
 
-window.regerar = async (id) => { await regenerarPlanilhaExcel(historicoGlobal[id]); };
-
-carregarDashboard();
+// Inicialização
+document.addEventListener('DOMContentLoaded', () => carregarDashboard());
