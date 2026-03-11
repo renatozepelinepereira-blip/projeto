@@ -1,18 +1,26 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Venda - Eskimó</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Venda - Eskimó</title>
+    
     <link rel="stylesheet" href="./css/global.css">
+    
     <style>
+        /* Estilos específicos da tela de Vendas que não afetam o resto do site */
         .client-box { background: #fffafa; padding: 20px; border-radius: 10px; margin-bottom: 25px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 20px; border: 1px solid #ffe6e6; border-left: 5px solid #e3000f; }
+        .client-box label { display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; color: #777; margin-bottom: 6px; }
         .tabs { display: flex; gap: 8px; border-bottom: 2px solid #eaeaea; margin-bottom: 20px; }
         .tab-btn { background: none; border: none; padding: 12px 24px; cursor: pointer; color: #888; font-weight: bold; font-size: 15px; border-bottom: 3px solid transparent; }
-        .tab-btn.active { color: #e3000f; border-bottom-color: #e3000f; }
-        .resumo-box { background: white; border: 2px solid #e3000f; padding: 20px; border-radius: 12px; margin-top: 30px; }
+        .tab-btn.active { color: #e3000f; border-bottom-color: #e3000f; background: #fffafa; }
+        .resumo-box { background: white; border: 2px solid #e3000f; padding: 25px; border-radius: 12px; margin-top: 30px; }
         .resumo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; }
         .resumo-item { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #eee; }
+        .resumo-item b { display: block; font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 5px; }
         .resumo-item span { display: block; font-size: 18px; font-weight: bold; color: #e3000f; margin-top: 5px; }
     </style>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </head>
@@ -23,20 +31,41 @@
         <a href="loja.html" class="active">🛒 Venda</a>
         <a href="transferencia.html">🔄 Transferência</a>
         <a href="historico.html">📜 Histórico</a>
-        <a href="#" onclick="localStorage.clear(); window.location.href='index.html'" style="color: #dc3545; margin-top: auto;">🚪 Sair</a>
+        <a href="#" onclick="localStorage.clear(); window.location.href='index.html'" style="color: #dc3545; margin-top: auto; border-top: 1px solid #eee;">🚪 Sair</a>
     </div>
     <div id="overlay" class="overlay" onclick="window.toggleMenu()"></div>
 
     <div class="container">
-        <header><div class="header-left"><button class="menu-btn" onclick="window.toggleMenu()">☰</button><h1>Venda: <span id="txtLoja"></span></h1></div></header>
+        <header>
+            <div class="header-left">
+                <button class="menu-btn" onclick="window.toggleMenu()">☰</button>
+                <h1>Venda: <span id="txtLoja"></span></h1>
+            </div>
+        </header>
 
         <div class="client-box">
-            <div><label>Razão Social</label><input type="text" id="cliRazao" list="listaNomesClientes" autocomplete="off"></div>
-            <div><label>CPF / CNPJ</label><input type="text" id="cliCnpj" list="listaCnpjClientes" autocomplete="off"></div>
-            <div><label>Pagamento</label><select id="cliFormaPagamento"><option value="A vista">A vista</option><option value="Boleto">Boleto</option></select></div>
-            <div><label>Prazo</label><input type="text" id="cliPrazo" disabled style="background-color: #f0f0f0;" placeholder="Bloqueado"></div>
+            <div>
+                <label>Razão Social do Cliente</label>
+                <input type="text" id="cliRazao" list="listaNomesClientes" placeholder="Nome..." autocomplete="off">
+            </div>
+            <div>
+                <label>CPF / CNPJ</label>
+                <input type="text" id="cliCnpj" list="listaCnpjClientes" placeholder="000.000..." autocomplete="off">
+            </div>
+            <div>
+                <label>Pagamento</label>
+                <select id="cliFormaPagamento">
+                    <option value="A vista">A vista</option>
+                    <option value="Boleto">Boleto</option>
+                </select>
+            </div>
+            <div>
+                <label>Prazo</label>
+                <input type="text" id="cliPrazo" disabled style="background-color: #f0f0f0;" placeholder="Bloqueado">
+            </div>
         </div>
-        <datalist id="listaNomesClientes"></datalist><datalist id="listaCnpjClientes"></datalist>
+        <datalist id="listaNomesClientes"></datalist>
+        <datalist id="listaCnpjClientes"></datalist>
 
         <div class="tabs">
             <button class="tab-btn active" id="btnTabSorvete" onclick="window.mudarAba('sorvete')">🍨 Sorvetes</button>
@@ -58,9 +87,10 @@
                 <div class="resumo-item" style="border-color:#e0a800"><b>Promo</b><span id="resValPromo" style="color:#e0a800">R$ 0,00</span></div>
                 <div class="resumo-item" style="background:#fff5f5"><b>Total Geral</b><span id="valComDesc">R$ 0,00</span></div>
             </div>
-            <button class="btn-primario" style="width:100%; margin-top:20px; padding:20px; font-size:18px;" onclick="window.gerarExcelPedido()">⬇️ GERAR PEDIDO EM EXCEL</button>
+            <button class="btn-primario" style="width:100%; margin-top:20px; padding:20px; font-size:18px; text-transform: uppercase;" onclick="window.gerarExcelPedido()">⬇️ GERAR PEDIDO EM EXCEL</button>
         </div>
     </div>
+    
     <script type="module" src="./js/loja.js"></script>
 </body>
 </html>
