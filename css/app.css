@@ -136,3 +136,49 @@ body.modo-transferencia td input[type="number"]:focus { border-color: #0056b3; b
 /* === CONTROLE ABSOLUTO DAS ABAS === */
 .tab-content { display: none !important; }
 .tab-content.active { display: block !important; }
+
+/* ========================================= */
+/* MODAIS (JANELAS FLUTUANTES) NO HISTÓRICO  */
+/* ========================================= */
+.modal-overlay { 
+    display: none; /* Fica escondido até clicar no olho */
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0,0,0,0.6); 
+    z-index: 3000; /* Fica acima de tudo, inclusive do menu */
+    justify-content: center; 
+    align-items: center; 
+    backdrop-filter: blur(3px); 
+}
+
+.modal-content { 
+    background: white; 
+    padding: 30px; 
+    border-radius: 12px; 
+    width: 700px; 
+    max-width: 95%; 
+    max-height: 90vh; 
+    overflow-y: auto; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2); 
+    position: relative;
+    animation: modalFadeIn 0.3s ease-out; /* Efeito suave ao abrir */
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Ajuste para o botão verde de baixar dentro do modal ficar perfeito */
+#btnRegerarPlanilhaModal {
+    background-color: #28a745;
+    color: white;
+    transition: 0.2s;
+}
+#btnRegerarPlanilhaModal:hover {
+    background-color: #218838;
+    transform: translateY(-2px);
+}
