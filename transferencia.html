@@ -12,7 +12,7 @@
     <div id="sidebar" class="sidebar">
         <button class="close-btn" onclick="window.toggleMenu()">×</button>
         <h2>Menu Eskimó</h2>
-        <a href="loja.html">🛒 Venda</a>
+        <a href="loja.html" id="linkVendaSidebar">🛒 Venda</a>
         <a href="transferencia.html" class="active">🔄 Transferência</a>
         <a href="historico.html">📜 Histórico</a>
         <a href="#" onclick="localStorage.clear(); window.location.href='index.html'" style="color: #dc3545; margin-top: auto; border-top: 1px solid #eee;">🚪 Sair</a>
@@ -42,12 +42,12 @@
         <datalist id="listaCnpjDestino"></datalist>
 
         <div class="tabs" id="tabContainer">
-            <button class="tab-btn active" id="btnTabSorvete" onclick="window.mudarAba('sorvete')">🍨 Sorvetes</button>
+            <button class="tab-btn" id="btnTabSorvete" onclick="window.mudarAba('sorvete')">🍨 Sorvetes</button>
             <button class="tab-btn" id="btnTabSeco" onclick="window.mudarAba('seco')">📦 Secos</button>
             <button class="tab-btn" id="btnTabBalde" onclick="window.mudarAba('balde')">🪣 Baldes</button>
         </div>
 
-        <div id="content_sorvete" class="tab-content active"><table id="tbl_sorvete"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço TF</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+        <div id="content_sorvete" class="tab-content"><table id="tbl_sorvete"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço TF</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
         <div id="content_seco" class="tab-content"><table id="tbl_seco"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço TF</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
         <div id="content_balde" class="tab-content"><table id="tbl_balde"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço TF</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
 
