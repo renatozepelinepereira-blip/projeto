@@ -1,12 +1,17 @@
+// js/loja.js - Módulo de Vendas (Com Tabelas Dinâmicas)
 import { db } from "./api/firebase.js";
 import { iniciarInterfaceGlobais } from "./utils/interface.js";
 import { processarExcelVenda } from "./utils/excel.js";
 import { doc, getDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
-const userId = localStorage.getItem('user'); const nomeLoja = localStorage.getItem('nome') || userId;
-if(!userId) window.location.href = 'index.html'; document.getElementById('txtLoja').innerText = nomeLoja;
+const userId = localStorage.getItem('user'); 
+const nomeLoja = localStorage.getItem('nome') || userId;
 
-let produtosGlobais = []; let clientesSalvos = [];
+if(!userId) window.location.href = 'index.html'; 
+document.getElementById('txtLoja').innerText = nomeLoja;
+
+let produtosGlobais = []; 
+let clientesSalvos = [];
 window.resumoGlobal = { sorvete: {vLiq:0}, seco: {vLiq:0}, balde: {vLiq:0}, promo: {vLiq:0}, totalV: 0 };
 
 iniciarInterfaceGlobais();
@@ -26,24 +31,63 @@ document.getElementById('cliFormaPagamento').addEventListener('change', (e) => {
 });
 
 async function iniciar() {
+    // 1. Puxa os dados da Loja Logada
     const userSnap = await getDoc(doc(db, "usuarios", userId));
-    const planilhas = userSnap.data()?.planilhas || { venda: true };
-    if (planilhas.venda === false && userId !== 'admin') { window.location.href = 'transferencia.html'; return; }
+    const dadosUsuario = userSnap.data() || {};
+    
+    if (dadosUsuario.planilhas?.venda === false && userId !== 'admin') { 
+        window.location.replace('transferencia.html'); 
+        return; 
+    }
 
+    // 2. Descobre qual Tabela de Preço esta Loja usa
+    let nomeTabelaPreco = dadosUsuario.tabelaPreco;
+    if (!nomeTabelaPreco) {
+        alert("⚠️ Atenção: Nenhuma tabela de preços associada a esta loja! Usando a tabela padrão 'TF'. Peça ao administrador para configurar.");
+        nomeTabelaPreco = 'tf';
+    } else {
+        nomeTabelaPreco = nomeTabelaPreco.toLowerCase(); // Mantém padronizado
+    }
+
+    // Carrega a lista de clientes para o auto-preenchimento
     const cliSnap = await getDocs(collection(db, "clientes"));
-    cliSnap.forEach(c => { clientesSalvos.push(c.data()); document.getElementById('listaNomesClientes').innerHTML += `<option value="${c.data().razao}">`; document.getElementById('listaCnpjClientes').innerHTML += `<option value="${c.data().cnpj}">`; });
+    cliSnap.forEach(c => { 
+        clientesSalvos.push(c.data()); 
+        document.getElementById('listaNomesClientes').innerHTML += `<option value="${c.data().razao}">`; 
+        document.getElementById('listaCnpjClientes').innerHTML += `<option value="${c.data().cnpj}">`; 
+    });
 
-    const [precoSnap, prodSnap] = await Promise.all([ getDoc(doc(db, "precos", userId)), getDocs(collection(db, "produtos")) ]);
+    // 3. Puxa a Tabela de Preços Específica e os Produtos
+    const [precoSnap, prodSnap] = await Promise.all([ 
+        getDoc(doc(db, "precos", nomeTabelaPreco)), 
+        getDocs(collection(db, "produtos")) 
+    ]);
+    
     const precosLoja = precoSnap.exists() ? precoSnap.data() : {};
 
     prodSnap.forEach(d => {
-        const item = d.data(); const objPreco = precosLoja[item.codigo];
+        const item = d.data(); 
+        const objPreco = precosLoja[item.codigo]; // Procura o preço deste código na tabela da loja
+        
+        // Se o produto tiver preço cadastrado nesta tabela, ele aparece
         if (objPreco !== undefined && (typeof objPreco === 'object' ? (objPreco.visivel !== false) : true)) {
             let rawCat = (item.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            let safeCat = 'sorvete'; if (rawCat.includes('seco')) safeCat = 'seco'; else if (rawCat.includes('balde')) safeCat = 'balde'; else if (rawCat.includes('promo')) safeCat = 'promo';
-            produtosGlobais.push({ ...item, precoFinal: typeof objPreco === 'object' ? objPreco.preco : objPreco, catReal: safeCat });
+            let safeCat = 'sorvete'; 
+            if (rawCat.includes('seco')) safeCat = 'seco'; 
+            else if (rawCat.includes('balde')) safeCat = 'balde'; 
+            else if (rawCat.includes('promo')) safeCat = 'promo';
+            
+            produtosGlobais.push({ 
+                ...item, 
+                precoFinal: typeof objPreco === 'object' ? objPreco.preco : objPreco, 
+                catReal: safeCat 
+            });
         }
     });
+    
+    // Atualiza o título para mostrar a tabela em uso
+    document.getElementById('txtLoja').innerText = `${nomeLoja} (Tabela: ${nomeTabelaPreco.toUpperCase()})`;
+    
     renderizarTabelas();
 }
 
@@ -51,7 +95,7 @@ function renderizarTabelas() {
     produtosGlobais.forEach((p, i) => {
         const tbody = document.querySelector(`#tbl_${p.catReal} tbody`);
         if(tbody) {
-            let imgHtml = p.imagem ? `<img src="${p.imagem}" class="img-produto">` : `<div class="img-placeholder">🍨</div>`;
+            let imgHtml = p.imagem ? `<img src="${p.imagem}" class="img-produto">` : `<div class="img-placeholder">📷</div>`;
             tbody.innerHTML += `<tr id="tr_${i}"><td style="text-align: center;">${imgHtml}</td><td>${p.codigo}</td><td>${p.descricao}</td><td>${p.engradado}</td><td>R$ ${p.precoFinal.toFixed(2)}</td>
                 <td><input type="number" id="eng_${i}" placeholder="0" min="0" step="0.5" oninput="window.calcularTudo()"></td>
                 <td><input type="number" id="uni_${i}" placeholder="0" min="0" step="1" oninput="window.calcularTudo()"></td><td id="sub_${i}" style="font-weight:bold;">R$ 0.00</td></tr>`;
@@ -91,7 +135,7 @@ window.gerarExcelPedido = async () => {
     const formaPagamento = document.getElementById('cliFormaPagamento').value; const prazo = document.getElementById('cliPrazo').value.trim();
     if(!razao) return alert("Preencha a Razão Social do Cliente!");
     
-    let itensSelecionados = produtosGlobais.filter(p => p.calcTotalUnidades > 0).map(p => ({ codigo: p.codigo, descricao: p.descricao, precoFinal: p.precoFinal, calcTotalUnidades: p.calcTotalUnidades }));
+    let itensSelecionados = produtosGlobais.filter(p => p.calcTotalUnidades > 0).map(p => ({ codigo: p.codigo, descricao: p.descricao, precoFinal: p.precoFinal, calcTotalUnidades: p.calcTotalUnidades, catReal: p.catReal }));
     if (itensSelecionados.length === 0) return alert("Preencha alguma quantidade!");
 
     const btn = document.querySelector('.btn-primario'); btn.innerText = "⏳ A GERAR PLANILHA..."; btn.disabled = true;
