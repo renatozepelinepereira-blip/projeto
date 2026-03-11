@@ -9,15 +9,12 @@ const nomeLoja = localStorage.getItem('nome') || userId;
 if(!userId) window.location.href = 'index.html';
 document.getElementById('txtLoja').innerText = nomeLoja;
 
-let produtosGlobais = [];
-let clientesSalvos = [];
-
 window.toggleMenu = () => {
     document.getElementById('sidebar').classList.toggle('open');
     document.getElementById('overlay').classList.toggle('show');
 };
 
-// Lógica de Pagamento
+// --- BLOQUEIO DE PRAZO ---
 document.getElementById('cliFormaPagamento').addEventListener('change', (e) => {
     const prazo = document.getElementById('cliPrazo');
     if(e.target.value === 'A vista') {
@@ -28,13 +25,10 @@ document.getElementById('cliFormaPagamento').addEventListener('change', (e) => {
     }
 });
 
-// A função gerarExcelPedido deve conter a gravação:
-// await addDoc(collection(db, "historico"), { ..., dadosPlanilha: JSON.stringify(dadosBackup) });
-
 async function iniciar() {
     const userSnap = await getDoc(doc(db, "usuarios", userId));
-    const p = userSnap.data().planilhas || { venda: true };
-    if(p.venda === false) window.location.href = 'transferencia.html';
-    // ... restante do carregamento de produtos
+    const p = userSnap.data()?.planilhas || { venda: true };
+    if(p.venda === false) { window.location.href = 'transferencia.html'; return; }
+    // Carregamento de produtos... (igual às versões anteriores)
 }
 iniciar();
