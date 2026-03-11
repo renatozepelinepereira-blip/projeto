@@ -132,3 +132,7 @@ td input[type="number"] {
 td input[type="number"]::-webkit-outer-spin-button, td input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 td input[type="number"]:focus { border-color: #e3000f; background-color: #fff; box-shadow: 0 0 0 3px rgba(227, 0, 15, 0.15); }
 body.modo-transferencia td input[type="number"]:focus { border-color: #0056b3; box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.15); }
+
+/* === CONTROLE ABSOLUTO DAS ABAS === */
+.tab-content { display: none !important; }
+.tab-content.active { display: block !important; }
