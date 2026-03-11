@@ -1,8 +1,18 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8"><title>Venda - Eskimó</title>
-    <link rel="stylesheet" href="./css/app.css">
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Venda - Eskimó</title>
+    <link rel="stylesheet" href="./css/global.css">
+    <style>
+        .client-box { background: #fffafa; padding: 20px; border-radius: 10px; margin-bottom: 25px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 20px; border: 1px solid #ffe6e6; border-left: 5px solid #e3000f; }
+        .tabs { display: flex; gap: 8px; border-bottom: 2px solid #eaeaea; margin-bottom: 20px; }
+        .tab-btn { background: none; border: none; padding: 12px 24px; cursor: pointer; color: #888; font-weight: bold; font-size: 15px; border-bottom: 3px solid transparent; }
+        .tab-btn.active { color: #e3000f; border-bottom-color: #e3000f; }
+        .resumo-box { background: white; border: 2px solid #e3000f; padding: 20px; border-radius: 12px; margin-top: 30px; }
+        .resumo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; }
+        .resumo-item { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #eee; }
+        .resumo-item span { display: block; font-size: 18px; font-weight: bold; color: #e3000f; margin-top: 5px; }
+    </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </head>
@@ -12,42 +22,43 @@
         <h2>Menu Eskimó</h2>
         <a href="loja.html" class="active">🛒 Venda</a>
         <a href="transferencia.html">🔄 Transferência</a>
-        <a href="historico.html">📜 Histórico de Planilhas</a>
-        <a href="#" onclick="localStorage.clear(); window.location.href='index.html'" style="color: #dc3545; margin-top: auto; border-top: 1px solid #eee;">🚪 Sair</a>
+        <a href="historico.html">📜 Histórico</a>
+        <a href="#" onclick="localStorage.clear(); window.location.href='index.html'" style="color: #dc3545; margin-top: auto;">🚪 Sair</a>
     </div>
     <div id="overlay" class="overlay" onclick="window.toggleMenu()"></div>
 
     <div class="container">
-        <header><div class="header-left"><button class="menu-btn" onclick="window.toggleMenu()">☰</button><h1>Filial: <span id="txtLoja"></span></h1></div></header>
-        <datalist id="listaNomesClientes"></datalist><datalist id="listaCnpjClientes"></datalist>
+        <header><div class="header-left"><button class="menu-btn" onclick="window.toggleMenu()">☰</button><h1>Venda: <span id="txtLoja"></span></h1></div></header>
+
         <div class="client-box">
-            <div><label><b>Razão Social</b></label><input type="text" id="cliRazao" list="listaNomesClientes" autocomplete="off"></div>
-            <div><label><b>CNPJ/CPF</b></label><input type="text" id="cliCnpj" list="listaCnpjClientes" autocomplete="off"></div>
-            <div><label><b>Pagamento</b></label><select id="cliFormaPagamento"><option value="A vista">A vista</option><option value="Boleto">Boleto</option></select></div>
-            <div><label><b>Prazo</b></label><input type="text" id="cliPrazo" disabled style="background-color: #e9ecef; cursor: not-allowed;"></div>
+            <div><label>Razão Social</label><input type="text" id="cliRazao" list="listaNomesClientes" autocomplete="off"></div>
+            <div><label>CPF / CNPJ</label><input type="text" id="cliCnpj" list="listaCnpjClientes" autocomplete="off"></div>
+            <div><label>Pagamento</label><select id="cliFormaPagamento"><option value="A vista">A vista</option><option value="Boleto">Boleto</option></select></div>
+            <div><label>Prazo</label><input type="text" id="cliPrazo" disabled style="background-color: #f0f0f0;" placeholder="Bloqueado"></div>
         </div>
-        <div class="tabs" id="tabContainer">
-            <button class="tab-btn" id="btnTabSorvete" onclick="window.mudarAba('sorvete')">🍨 Sorvetes</button>
+        <datalist id="listaNomesClientes"></datalist><datalist id="listaCnpjClientes"></datalist>
+
+        <div class="tabs">
+            <button class="tab-btn active" id="btnTabSorvete" onclick="window.mudarAba('sorvete')">🍨 Sorvetes</button>
             <button class="tab-btn" id="btnTabSeco" onclick="window.mudarAba('seco')">📦 Secos</button>
             <button class="tab-btn" id="btnTabBalde" onclick="window.mudarAba('balde')">🪣 Baldes</button>
-            <button class="tab-btn" id="btnTabPromo" onclick="window.mudarAba('promo')" style="color:#e0a800;">⭐ PROMOÇÕES</button>
+            <button class="tab-btn" id="btnTabPromo" onclick="window.mudarAba('promo')" style="color:#e0a800;">⭐ Promoções</button>
         </div>
-        <div id="content_sorvete" class="tab-content"><div class="discount-bar"><label>Desconto (%):</label><input type="number" id="desc_sorvete" value="0" oninput="window.calcularTudo()"></div><table id="tbl_sorvete"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
-        <div id="content_seco" class="tab-content"><div class="discount-bar"><label>Desconto (%):</label><input type="number" id="desc_seco" value="0" oninput="window.calcularTudo()"></div><table id="tbl_seco"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
-        <div id="content_balde" class="tab-content"><div class="discount-bar"><label>Desconto (%):</label><input type="number" id="desc_balde" value="0" oninput="window.calcularTudo()"></div><table id="tbl_balde"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
-        <div id="content_promo" class="tab-content"><div class="discount-bar"><label>Desconto (%):</label><input type="number" id="desc_promo" value="0" oninput="window.calcularTudo()"></div><table id="tbl_promo"><thead><tr><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço Promo</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+
+        <div id="content_sorvete" class="tab-content active"><table id="tbl_sorvete"><thead><tr><th style="width: 50px; text-align: center;">📷</th><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+        <div id="content_seco" class="tab-content"><table id="tbl_seco"><thead><tr><th style="width: 50px; text-align: center;">📷</th><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+        <div id="content_balde" class="tab-content"><table id="tbl_balde"><thead><tr><th style="width: 50px; text-align: center;">📷</th><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
+        <div id="content_promo" class="tab-content"><table id="tbl_promo"><thead><tr><th style="width: 50px; text-align: center;">📷</th><th>Cód</th><th>Produto</th><th>Cx</th><th>Preço</th><th>Qtd Cx</th><th>Qtd Un</th><th>Subtotal</th></tr></thead><tbody></tbody></table></div>
 
         <div class="resumo-box">
-            <h2>Resumo (Valores Líquidos)</h2>
-            <div class="resumo-grid grid-5">
-                <div class="resumo-item">Sorvetes<span id="resValSorvete">R$ 0,00</span></div>
-                <div class="resumo-item">Secos<span id="resValSeco">R$ 0,00</span></div>
-                <div class="resumo-item">Baldes<span id="resValBalde">R$ 0,00</span></div>
-                <div class="resumo-item">Promo<span id="resValPromo">R$ 0,00</span></div>
-                <div class="resumo-item" style="background:#ffe6e6">Total Unidades<span id="resQtdTotal">0 un</span></div>
+            <div class="resumo-grid">
+                <div class="resumo-item"><b>Sorvetes</b><span id="resValSorvete">R$ 0,00</span></div>
+                <div class="resumo-item"><b>Secos</b><span id="resValSeco">R$ 0,00</span></div>
+                <div class="resumo-item"><b>Baldes</b><span id="resValBalde">R$ 0,00</span></div>
+                <div class="resumo-item" style="border-color:#e0a800"><b>Promo</b><span id="resValPromo" style="color:#e0a800">R$ 0,00</span></div>
+                <div class="resumo-item" style="background:#fff5f5"><b>Total Geral</b><span id="valComDesc">R$ 0,00</span></div>
             </div>
-            <div class="total-final"><b>TOTAL: <span id="valComDesc">R$ 0,00</span></b></div>
-            <button class="btn-gerar" onclick="window.gerarExcelPedido()">⬇️ GERAR PLANILHA EXCEL</button>
+            <button class="btn-primario" style="width:100%; margin-top:20px; padding:20px; font-size:18px;" onclick="window.gerarExcelPedido()">⬇️ GERAR PEDIDO EM EXCEL</button>
         </div>
     </div>
     <script type="module" src="./js/loja.js"></script>
