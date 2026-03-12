@@ -21,7 +21,7 @@ window.mudarSecao = (id) => {
     document.getElementById('sec-' + id).classList.add('active');
     document.getElementById('nav-' + id)?.classList.add('active');
     if(id === 'dashboard') carregarDashboard();
-    if(id === 'produtos') carregarProdutos();
+    if(id === 'produtos') { carregarTabelasPrecos(); carregarProdutos(); } // Garante que o select estará pronto
     if(id === 'precos') carregarTabelasPrecos();
     if(id === 'lojas') carregarLojas();
 };
@@ -59,43 +59,75 @@ window.visualizarLog = (id) => {
     document.getElementById('conteudoDetalhesLog').innerHTML = html; document.getElementById('btnRegerarPlanilhaModal').onclick = () => window.regerar(id); document.getElementById('modalDetalhesLog').style.display = 'flex';
 };
 
+// --- NAVEGAÇÃO DAS ABAS DO CATÁLOGO ---
+window.mudarAbaAdminCat = (cat) => {
+    document.querySelectorAll('.admin-cat-tab').forEach(b => { b.style.background = 'transparent'; b.style.color = '#64748b'; b.style.boxShadow = 'none'; });
+    document.querySelectorAll('.admin-cat-content').forEach(c => c.style.display = 'none');
+    
+    const btn = document.getElementById('btnAdminTab' + cat.charAt(0).toUpperCase() + cat.slice(1));
+    if(btn) { btn.style.background = 'white'; btn.style.color = 'var(--primary)'; btn.style.boxShadow = 'var(--shadow-sm)'; }
+    
+    const content = document.getElementById('content_admin_' + cat);
+    if(content) content.style.display = 'block';
+};
+
 window.previewImagemLocal = (event) => { const file = event.target.files[0]; const pv = document.getElementById('previewFoto'); if(file) { pv.src = URL.createObjectURL(file); pv.style.display = 'block'; } };
 
+// --- PRODUTOS E CATÁLOGO COM ABAS ---
 async function carregarProdutos() {
-    const selCat = document.getElementById('selectFiltroTabelaCat');
-    if (selCat.options.length === 0) {
-        const sT = await getDocs(collection(db, "precos"));
-        selCat.innerHTML = '<option value="">📋 Apenas Catálogo (Sem Preço)</option>';
-        sT.forEach(d => selCat.innerHTML += `<option value="${d.id}">💲 Tabela: ${d.id.toUpperCase()}</option>`);
-    }
-
-    const tabelaSelecionada = selCat.value;
-    const thPreco = document.getElementById('thPrecoCat');
+    const tabelaSelecionada = document.getElementById('selectFiltroTabelaCat').value;
     
+    document.querySelectorAll('.thPrecoCat').forEach(th => {
+        if (tabelaSelecionada) {
+            th.innerText = `Preço (${tabelaSelecionada.toUpperCase()})`;
+            th.style.display = 'table-cell';
+        } else {
+            th.style.display = 'none';
+        }
+    });
+
     let precosTabela = {};
     if (tabelaSelecionada) {
         const snapPrecos = await getDoc(doc(db, "precos", tabelaSelecionada));
         if (snapPrecos.exists()) precosTabela = snapPrecos.data();
-        thPreco.innerText = `Preço (${tabelaSelecionada.toUpperCase()})`;
-        thPreco.style.display = 'table-cell';
-    } else { thPreco.style.display = 'none'; }
+    }
 
     const snap = await getDocs(collection(db, "produtos"));
-    let html = ""; listaProdutosAdmin = [];
+    let htmlBuffers = { sorvete: "", seco: "", balde: "", promo: "" };
+    listaProdutosAdmin = [];
     
     snap.forEach(d => {
         const p = { id: d.id, ...d.data() }; 
         if (tabelaSelecionada) p.precoAtual = precosTabela[p.codigo] !== undefined ? precosTabela[p.codigo] : null;
         listaProdutosAdmin.push(p);
         
+        let rawCat = (p.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        let cat = 'sorvete'; 
+        if (rawCat.includes('seco')) cat = 'seco'; else if (rawCat.includes('balde')) cat = 'balde'; else if (rawCat.includes('promo')) cat = 'promo';
+
         let htmlPreco = '';
         if (tabelaSelecionada) {
             const val = p.precoAtual !== null ? `R$ ${parseFloat(p.precoAtual).toFixed(2)}` : '<span style="color:#ef4444;font-size:12px;">Sem Preço</span>';
             htmlPreco = `<td style="font-weight:900; color:var(--primary); font-size:15px;">${val}</td>`;
         }
-        html += `<tr><td><img src="${p.imagem || ''}" class="img-produto" onerror="this.src='https://placehold.co/40?text=📦'"></td><td><b>${p.codigo}</b></td><td>${p.descricao}</td><td>${p.engradado}</td><td><span style="background:#e2e8f0; padding:4px 8px; border-radius:6px; font-size:12px;">${p.categoria || 'sorvete'}</span></td>${htmlPreco}<td style="display: flex; gap: 8px; justify-content: center;"><button class="btn-small" style="background:#3b82f6; color:white;" onclick="window.abrirEdicaoProduto('${p.codigo}')">✏️</button><button class="btn-small" style="background:#ef4444; color:white;" onclick="window.excluirProduto('${p.codigo}')">🗑️</button></td></tr>`;
+        
+        htmlBuffers[cat] += `<tr>
+            <td><img src="${p.imagem || ''}" class="img-produto" onerror="this.src='https://placehold.co/40?text=📦'"></td>
+            <td><b>${p.codigo}</b></td>
+            <td>${p.descricao}</td>
+            <td>${p.engradado}</td>
+            ${htmlPreco}
+            <td style="display: flex; gap: 8px; justify-content: center;">
+                <button class="btn-small" style="background:#3b82f6; color:white;" onclick="window.abrirEdicaoProduto('${p.codigo}')">✏️</button>
+                <button class="btn-small" style="background:#ef4444; color:white;" onclick="window.excluirProduto('${p.codigo}')">🗑️</button>
+            </td>
+        </tr>`;
     });
-    document.getElementById('corpoTabelaProdutos').innerHTML = html;
+
+    document.getElementById('corpoAdminSorvete').innerHTML = htmlBuffers.sorvete || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
+    document.getElementById('corpoAdminSeco').innerHTML = htmlBuffers.seco || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
+    document.getElementById('corpoAdminBalde').innerHTML = htmlBuffers.balde || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
+    document.getElementById('corpoAdminPromo').innerHTML = htmlBuffers.promo || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
 }
 
 window.abrirEdicaoProduto = (cod) => { 
@@ -157,13 +189,7 @@ window.importarTabelaPrecos = async () => {
             for(let i = 1; i < json.length; i++) { 
                 if(!json[i] || json[i].length === 0) continue;
                 
-                // LEITURA EXATA DAS 5 COLUNAS A, B, C, D, E
-                let rawCod = json[i][0];   // A
-                let rawDesc = json[i][1];  // B
-                let rawEng = json[i][2];   // C
-                let rawPreco = json[i][3]; // D
-                let rawCat = json[i][4];   // E
-                
+                let rawCod = json[i][0];   let rawDesc = json[i][1];  let rawEng = json[i][2];   let rawPreco = json[i][3]; let rawCat = json[i][4];   
                 if(rawCod === undefined || rawPreco === undefined) continue;
                 
                 let cod = String(rawCod).trim(); 
@@ -186,18 +212,42 @@ window.importarTabelaPrecos = async () => {
             await setDoc(doc(db, "precos", nome), precos, { merge: true }); 
             await Promise.all(promessasProdutos);
             alert(`🚀 INCRÍVEL! ${importados} produtos processados.\nTabela ${nome.toUpperCase()} salva e Catálogo Atualizado!`); 
-            carregarTabelasPrecos(); carregarProdutos(); 
-        } catch(err) { alert("Erro ao ler o Excel."); } finally { btn.innerText = "⚡ Importar Tabela"; }
+            
+            // Recarrega tudo e força o seletor a ir para a nova tabela
+            await carregarTabelasPrecos(); 
+            document.getElementById('selectFiltroTabelaCat').value = nome;
+            carregarProdutos(); 
+            
+        } catch(err) { alert("Erro ao ler o Excel."); } finally { btn.innerText = "⚡ Importar Tabela"; document.getElementById('nomeTabelaPreco').value = ""; document.getElementById('fileCsvPrecos').value = ""; }
     }; 
     reader.readAsArrayBuffer(file); 
 };
 
+// --- GESTOR DE TABELAS CENTRALIZADO ---
 async function carregarTabelasPrecos() {
     const sT = await getDocs(collection(db, "precos"));
-    const selT = document.getElementById('selectTabelaAssociar');
-    selT.innerHTML = '<option value="">Selecione a Tabela...</option>';
+    
+    const selVincular = document.getElementById('selectTabelaAssociar');
+    const selExcluir = document.getElementById('selectTabelaExcluir');
+    const selCat = document.getElementById('selectFiltroTabelaCat');
+    
+    // Salva o que estava selecionado no Catálogo para não sumir ao recarregar
+    const valAtualCat = selCat.value;
+
+    selVincular.innerHTML = '<option value="">Selecione a Tabela...</option>';
+    selExcluir.innerHTML = '<option value="">Selecione a Tabela para EXCLUIR...</option>';
+    selCat.innerHTML = '<option value="">📋 Apenas Catálogo (Sem Preço)</option>';
     let optionsHtml = '<option value="">(Nenhuma)</option>';
-    sT.forEach(d => { selT.innerHTML += `<option value="${d.id}">${d.id.toUpperCase()}</option>`; optionsHtml += `<option value="${d.id}">${d.id.toUpperCase()}</option>`; });
+
+    sT.forEach(d => { 
+        const opt = `<option value="${d.id}">${d.id.toUpperCase()}</option>`;
+        selVincular.innerHTML += opt; 
+        selExcluir.innerHTML += opt;
+        selCat.innerHTML += opt;
+        optionsHtml += opt; 
+    });
+
+    selCat.value = valAtualCat; // Devolve a seleção
     document.querySelectorAll('.sel-tabelas-loja').forEach(sel => sel.innerHTML = optionsHtml);
 
     const sL = await getDocs(collection(db, "usuarios"));
@@ -231,6 +281,27 @@ async function carregarTabelasPrecos() {
     divsLojas.sort((a, b) => a.querySelector('input').getAttribute('data-search').localeCompare(b.querySelector('input').getAttribute('data-search')));
     divsLojas.forEach(div => cont.appendChild(div));
 }
+
+// --- NOVO: EXCLUIR TABELA ---
+window.excluirTabelaPreco = async () => {
+    const tab = document.getElementById('selectTabelaExcluir').value;
+    if(!tab) return alert("Selecione uma tabela para excluir!");
+    
+    if(confirm(`🚨 ATENÇÃO: Tem certeza absoluta que deseja excluir a tabela ${tab.toUpperCase()}?\n\nIsso apagará todos os preços nela contidos. Lojas vinculadas a ela não conseguirão gerar pedidos.`)) {
+        try {
+            await deleteDoc(doc(db, "precos", tab));
+            alert("Tabela excluída com sucesso!");
+            
+            const selCat = document.getElementById('selectFiltroTabelaCat');
+            if(selCat.value === tab) selCat.value = ""; // Reseta o filtro se a pessoa estava vendo a tabela apagada
+            
+            await carregarTabelasPrecos();
+            carregarProdutos();
+        } catch(e) {
+            alert("Erro ao excluir tabela: " + e.message);
+        }
+    }
+};
 
 window.aoSelecionarTabela = () => {
     const tab = document.getElementById('selectTabelaAssociar').value.toLowerCase();
