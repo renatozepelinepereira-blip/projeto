@@ -3,28 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vendas - Eskimó</title>
+    <title>Nova Venda - Eskimó</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍨</text></svg>">
     <link rel="stylesheet" href="./css/loja.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js" defer></script>
 </head>
 <body>
-    <div class="sidebar-admin">
-        <div class="sidebar-header"><span class="sidebar-logo-icon">🍨</span><h2 class="sidebar-title">Eskimó</h2></div>
-        <div class="nav-links">
-            <button class="active"><i>🛒</i> <span>Nova Venda</span></button>
-            <button onclick="window.location.href='transferencia.html'"><i>🔄</i> <span>Transferência</span></button>
-            <button onclick="window.location.href='historico.html'"><i>📜</i> <span>Histórico</span></button>
-            <button onclick="localStorage.clear(); window.location.href='index.html'" style="margin-top:auto; color:#ef4444;"><i>🚪</i> <span>Sair</span></button>
+
+    <div class="top-header">
+        <div class="top-header-left">
+            <button class="menu-btn" onclick="window.toggleMenu()">☰</button>
+            <div class="logo-container">🍨 Eskimó</div>
         </div>
+        <div class="store-badge" id="txtLoja">Carregando...</div>
     </div>
 
-    <div class="main-content">
-        <div class="section-title">
-            <span>Portal de Vendas</span>
-            <span class="store-badge" id="txtLoja">Carregando...</span>
+    <div class="sidebar">
+        <div class="sidebar-head">
+            <h2>🍨 Eskimó</h2>
+            <button class="close-btn" onclick="window.toggleMenu()">×</button>
         </div>
+        <div class="sidebar-links">
+            <button class="active"><i>🛒</i> Nova Venda</button>
+            <button onclick="window.location.href='transferencia.html'"><i>🔄</i> Transferência</button>
+            <button onclick="window.location.href='historico.html'"><i>📜</i> Histórico</button>
+            <button onclick="localStorage.clear(); window.location.href='index.html'" style="margin-top:auto; color:#ef4444;"><i>🚪</i> Sair</button>
+        </div>
+    </div>
+    <div class="overlay" onclick="window.toggleMenu()"></div>
+
+    <div class="container">
+        <h2 class="section-title">Portal de Vendas</h2>
 
         <div class="card-panel client-box">
             <div><label>Razão Social do Cliente</label><input type="text" id="cliRazao" list="listaNomesClientes" placeholder="Ex: Supermercado XYZ"></div>
@@ -43,18 +53,18 @@
         <div class="table-container">
             <div id="content_sorvete" class="tab-content active">
                 <table id="tbl_sorvete">
-                    <thead style="position: sticky; top: 0; z-index: 1;"><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço un.</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead>
+                    <thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço un.</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
             <div id="content_seco" class="tab-content">
-                <table id="tbl_seco"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço un.</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
+                <table id="tbl_seco"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço un.</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
             </div>
             <div id="content_balde" class="tab-content">
-                <table id="tbl_balde"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço un.</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
+                <table id="tbl_balde"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço un.</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
             </div>
             <div id="content_promo" class="tab-content">
-                <table id="tbl_promo"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço un.</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
+                <table id="tbl_promo"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço un.</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
             </div>
         </div>
 
@@ -65,7 +75,7 @@
                     <span id="valComDesc">R$ 0,00</span>
                 </div>
                 <button onclick="window.gerarExcelPedido()" class="btn-sucesso">
-                    <span style="font-size: 20px;">⬇️</span> Gerar Pedido Excel
+                    <span style="font-size: 22px;">⬇️</span> Gerar Pedido Excel
                 </button>
             </div>
         </div>
