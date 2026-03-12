@@ -136,6 +136,87 @@ window.salvarProduto = async () => {
 };
 window.excluirProduto = async (cod) => { if(confirm(`ATENÇÃO: Excluir permanentemente o produto ${cod}?`)) { try { await deleteDoc(doc(db, "produtos", cod)); carregarProdutos(); } catch(e) { alert("Erro ao excluir."); } } };
 
+
+// ============================================================================
+// --- LEITOR DE EXCEL MÁGICO (Atualiza PREÇOS + CATÁLOGO automaticamente) ---
+// ============================================================================
+window.importarTabelaPrecos = async () => { 
+    const nome = document.getElementById('nomeTabelaPreco').value.trim().toLowerCase(); 
+    const file = document.getElementById('fileCsvPrecos').files[0]; 
+    if(!nome || !file) return alert("Preencha o nome e selecione o arquivo!"); 
+    
+    const btn = document.querySelector('#sec-precos .btn-primario');
+    btn.innerText = "⏳ Importando e Atualizando Catálogo...";
+    
+    const reader = new FileReader(); 
+    reader.onload = async (e) => { 
+        try {
+            const data = new Uint8Array(e.target.result); 
+            const wb = XLSX.read(data, {type: 'array'}); 
+            const sheet = wb.Sheets[wb.SheetNames[0]]; 
+            const json = XLSX.utils.sheet_to_json(sheet, {header: 1}); 
+            
+            let precos = {}; 
+            let importados = 0;
+            const promessasProdutos = [];
+            
+            // O loop começa em 1 para pular o cabeçalho (linha 0)
+            for(let i = 1; i < json.length; i++) { 
+                if(!json[i] || json[i].length === 0) continue;
+                
+                // LEITURA ESTRITA DAS COLUNAS SOLICITADAS:
+                let rawCod = json[i][0];   // Coluna A
+                let rawDesc = json[i][1];  // Coluna B
+                let rawEng = json[i][2];   // Coluna C
+                let rawPreco = json[i][3]; // Coluna D
+                let rawCat = json[i][4];   // Coluna E
+                
+                if(rawCod === undefined || rawPreco === undefined) continue;
+                
+                let cod = String(rawCod).trim(); 
+                let precoStr = String(rawPreco).replace(/[R$\s]/g, '').replace(',', '.');
+                let precoVal = parseFloat(precoStr);
+                
+                if(cod && !isNaN(precoVal)) {
+                    // 1. Salva o Preço na memória para gravar na tabela
+                    precos[cod] = precoVal;
+                    
+                    // 2. Prepara o produto para atualizar o Catálogo (mantém a imagem intacta via merge:true)
+                    let dadosProduto = { codigo: cod };
+                    if (rawDesc !== undefined) dadosProduto.descricao = String(rawDesc).trim();
+                    if (rawEng !== undefined) dadosProduto.engradado = String(rawEng).trim();
+                    if (rawCat !== undefined) dadosProduto.categoria = String(rawCat).trim().toLowerCase();
+                    
+                    promessasProdutos.push(setDoc(doc(db, "produtos", cod), dadosProduto, { merge: true }));
+                    
+                    importados++;
+                }
+            } 
+            
+            if(importados === 0) {
+                alert("Nenhum item válido encontrado! Verifique se as colunas estão certas (A=Cód, B=Desc, C=Engrad, D=Preço, E=Cat).");
+                return;
+            }
+            
+            // GRAVA TUDO NO FIREBASE AO MESMO TEMPO
+            await setDoc(doc(db, "precos", nome), precos, { merge: true }); 
+            await Promise.all(promessasProdutos);
+            
+            alert(`🚀 INCRÍVEL! ${importados} produtos processados.\n\nA tabela de preços ${nome.toUpperCase()} foi salva e o Catálogo Geral foi atualizado com as descrições, categorias e engradados!`); 
+            
+            carregarTabelasPrecos(); 
+            carregarProdutos(); 
+        } catch(err) {
+            console.error(err);
+            alert("Erro ao ler o arquivo Excel.");
+        } finally {
+            btn.innerText = "⚡ Importar Tabela";
+        }
+    }; 
+    reader.readAsArrayBuffer(file); 
+};
+
+
 // --- PREÇOS E VÍNCULOS DE MÓDULOS ---
 async function carregarTabelasPrecos() {
     const sT = await getDocs(collection(db, "precos"));
@@ -160,7 +241,6 @@ async function carregarTabelasPrecos() {
         const d = u.data(); const fil = extrairFilial(d.cnpj);
         const txt = `[FILIAL ${fil}] ${d.nomeLoja || u.id} - ${d.cnpj || ""}`.toUpperCase();
         
-        // Puxa as tabelas da loja
         const tp = d.tabelasPreco || {};
         const vVenda = (tp.venda || d.tabelaPreco || '').toLowerCase();
         const vTransf = (tp.transferencia || 'tf').toLowerCase();
@@ -232,7 +312,7 @@ window.vincularTabelaEmMassa = async () => {
 
 window.filtrarLojasChecklist = () => { const t = document.getElementById('buscaFilialVinculo').value.toUpperCase(); document.querySelectorAll('.loja-check-item').forEach(i => { i.style.display = i.querySelector('input').getAttribute('data-search').includes(t) ? 'flex' : 'none'; }); };
 window.marcarTodosLojas = (v) => document.querySelectorAll('.chk-loja').forEach(c => { if(c.parentElement.style.display !== 'none') c.checked = v; });
-window.importarTabelaPrecos = async () => { const nome = document.getElementById('nomeTabelaPreco').value.trim().toLowerCase(); const file = document.getElementById('fileCsvPrecos').files[0]; if(!nome || !file) return alert("Preencha o nome e selecione o arquivo!"); const reader = new FileReader(); reader.onload = async (e) => { const data = new Uint8Array(e.target.result); const wb = XLSX.read(data, {type: 'array'}); const sheet = wb.Sheets[wb.SheetNames[0]]; const json = XLSX.utils.sheet_to_json(sheet, {header: 1}); let precos = {}; for(let i = 1; i < json.length; i++) { if(json[i][0] && json[i][1]) precos[String(json[i][0]).trim()] = parseFloat(String(json[i][1]).replace(',', '.')); } await setDoc(doc(db, "precos", nome), precos, { merge: true }); alert("Tabela Importada!"); carregarTabelasPrecos(); carregarProdutos(); }; reader.readAsArrayBuffer(file); };
+
 
 // --- GESTÃO DE LOJAS AVANÇADA ---
 async function carregarLojas() {
