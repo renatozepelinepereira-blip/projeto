@@ -1,171 +1,33 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Administrativo - Eskimó</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍨</text></svg>">
-    
-    <link rel="stylesheet" href="./css/admin.css">
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js" defer></script>
-</head>
-<body>
-    
-    <div class="sidebar-admin">
-        <div class="sidebar-header">
-            <span class="sidebar-logo-icon">🍨</span>
-            <h2 class="sidebar-title">Admin</h2>
+<div id="sec-precos" class="secao">
+    <h2 class="section-title">Gestão de Tabelas e Vínculos</h2>
+    <div class="grid-2">
+        <div class="card-panel">
+            <h3>1. Importar Excel de Preços</h3>
+            <label>Nome da Tabela (Ex: TF, PM01)</label>
+            <input type="text" id="nomeTabelaPreco" placeholder="Nome da Tabela">
+            <input type="file" id="fileCsvPrecos" accept=".xlsx, .csv">
+            <button onclick="window.importarTabelaPrecos()" class="btn-primario" style="width:100%;">⚡ Importar Tabela</button>
         </div>
-        <div class="nav-links">
-            <button onclick="window.mudarSecao('dashboard')" class="active" id="nav-dashboard"><i>📊</i> <span>Dashboard</span></button>
-            <button onclick="window.mudarSecao('produtos')" id="nav-produtos"><i>📦</i> <span>Catálogo</span></button>
-            <button onclick="window.mudarSecao('precos')" id="nav-precos"><i>💲</i> <span>Preços</span></button>
-            <button onclick="window.mudarSecao('lojas')" id="nav-lojas"><i>🏪</i> <span>Lojas</span></button>
-            <button onclick="window.mudarSecao('backup')" id="nav-backup"><i>💾</i> <span>Backup</span></button>
-            <button onclick="localStorage.clear(); window.location.href='index.html'" style="margin-top:auto; color:#ff7675;"><i>🚪</i> <span>Sair</span></button>
-        </div>
-    </div>
 
-    <div class="main-content">
-        <div id="sec-dashboard" class="secao active">
-            <h2 class="section-title">Visão Geral</h2>
-            <div class="dash-cards">
-                <div class="card-stat"><h3>Lojas Ativas</h3><div class="valor" id="dashLojas">0</div></div>
-                <div class="card-stat" style="border-left-color: #0056b3;"><h3>Produtos Catálogo</h3><div class="valor" id="dashProdutos">0</div></div>
-                <div class="card-stat" style="border-left-color: #28a745; min-width: 320px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
-                        <h3 style="margin:0;">Planilhas</h3>
-                        <div style="display:flex; gap:5px; align-items:center;">
-                            <input type="date" id="dataInicio" onchange="window.carregarDashboard()" style="width:115px; padding:2px; font-size:10px;">
-                            <span style="font-size:10px;">até</span>
-                            <input type="date" id="dataFim" onchange="window.carregarDashboard()" style="width:115px; padding:2px; font-size:10px;">
-                        </div>
+        <div class="card-panel">
+            <h3>2. Vincular Tabela às Filiais</h3>
+            <label>Selecione a Tabela Destino</label>
+            <select id="selectTabelaAssociar" style="margin-bottom: 10px; border: 2px solid #e3000f;"></select>
+            
+            <div style="margin: 10px 0; background: #f8f9fa; padding: 10px; border-radius: 8px;">
+                <label>🔍 Pesquisar Filial (Nome ou Número)</label>
+                <input type="text" id="buscaFilialVinculo" placeholder="Ex: 003 ou Canoas..." oninput="window.filtrarLojasChecklist()" style="margin-bottom: 5px;">
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <button onclick="window.marcarTodosLojas(true)" class="btn-small" style="background:#6c757d; width:auto; padding:0 10px; font-size:11px;">Marcar Todos</button>
+                    <button onclick="window.marcarTodosLojas(false)" class="btn-small" style="background:#6c757d; width:auto; padding:0 10px; font-size:11px;">Desmarcar Todos</button>
+                </div>
+
+                <div id="listaLojasChecklist" style="max-height: 250px; overflow-y: auto; background: white; border: 1px solid #ddd; padding: 10px; border-radius: 5px;">
                     </div>
-                    <div class="valor" id="dashPlanilhas">0</div>
-                </div>
             </div>
 
-            <div class="card-panel">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                    <h3 style="margin: 0; color: #444;">Últimas Atividades</h3>
-                    <button onclick="window.toggleTabelaHistorico()" class="btn-secundario" id="btnToggleHist">👁️ Esconder Histórico</button>
-                </div>
-                <div id="wrapperHistorico">
-                    <input type="text" id="pesquisaLogAdmin" placeholder="🔍 Filtrar por texto..." style="margin-bottom:15px; padding:10px; width:100%;">
-                    <div style="max-height: 400px; overflow-y: auto;">
-                        <table>
-                            <thead><tr><th>Data</th><th>Loja</th><th>Ação</th><th>Destino</th><th>Ações</th></tr></thead>
-                            <tbody id="corpoTabelaHistorico"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="sec-produtos" class="secao">
-            <h2 class="section-title">Produtos</h2>
-            <div class="card-panel">
-                <button onclick="window.abrirNovoProduto()" class="btn-sucesso">+ Novo Produto</button>
-                <div style="max-height: 550px; overflow-y: auto; margin-top:15px;">
-                    <table>
-                        <thead><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Cat.</th><th>Ação</th></tr></thead>
-                        <tbody id="corpoTabelaProdutos"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div id="sec-precos" class="secao">
-            <h2 class="section-title">Preços</h2>
-            <div class="grid-2">
-                <div class="card-panel">
-                    <h3>1. Importar Excel de Preços</h3>
-                    <label>Nome da Tabela (Ex: TF, PM01)</label>
-                    <input type="text" id="nomeTabelaPreco" placeholder="Nome da Tabela">
-                    <input type="file" id="fileCsvPrecos" accept=".xlsx, .csv">
-                    <button onclick="window.importarTabelaPrecos()" class="btn-primario" style="width:100%;">⚡ Importar</button>
-                </div>
-                <div class="card-panel">
-                    <h3>2. Vincular Tabela à Loja</h3>
-                    <label>Selecione a Loja</label>
-                    <select id="selectLojaAssociar"></select>
-                    <label>Selecione a Tabela</label>
-                    <select id="selectTabelaAssociar"></select>
-                    <button onclick="window.associarTabelaLoja()" class="btn-sucesso" style="width:100%; margin-top:10px;">💾 Vincular</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="sec-lojas" class="secao">
-            <h2 class="section-title">Lojas</h2>
-            <div class="card-panel">
-                <button onclick="window.abrirNovaLoja()" class="btn-sucesso">+ Nova Loja</button>
-                <table style="margin-top:15px;">
-                    <thead><tr><th>Login</th><th>Nome</th><th>CNPJ</th><th>Tabela</th><th>Ação</th></tr></thead>
-                    <tbody id="corpoTabelaLojas"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div id="sec-backup" class="secao">
-            <h2 class="section-title">Backup</h2>
-            <div class="grid-2">
-                <div class="card-panel" style="text-align:center;">
-                    <p>Baixar todos os dados (.zip)</p><br>
-                    <button onclick="window.gerarBackupCompleto()" id="btnGerarBackup" class="btn-sucesso" style="width:100%;">⬇️ Baixar Backup</button>
-                </div>
-                <div class="card-panel" style="text-align:center; border: 2px dashed #e3000f;">
-                    <p>Restaurar a partir de .zip</p><br>
-                    <input type="file" id="fileRestoreZip" accept=".zip">
-                    <button onclick="window.restaurarBackupCompleto()" id="btnRestaurarBackup" class="btn-primario" style="width:100%;">⚡ Restaurar Dados</button>
-                </div>
-            </div>
+            <button onclick="window.vincularTabelaEmMassa()" class="btn-sucesso" style="width:100%; padding: 15px; font-size: 16px;">💾 Aplicar Tabela às Selecionadas</button>
         </div>
     </div>
-
-    <div class="modal-overlay" id="modalProduto">
-        <div class="modal-content">
-            <h3 id="titModalProduto">Produto</h3>
-            <input type="hidden" id="prodEditImagemUrl">
-            <div class="grid-2">
-                <div><label>Código</label><input type="text" id="prodEditCodigo"></div>
-                <div><label>Engradado</label><input type="number" id="prodEditEngradado"></div>
-            </div>
-            <label>Descrição</label><input type="text" id="prodEditDescricao">
-            <label>Categoria (sorvete, seco, balde, promo)</label><input type="text" id="prodEditCategoria">
-            <label>Foto do Produto</label><input type="file" id="prodEditImagemFile" accept="image/*">
-            <div style="text-align:center;"><img id="previewFoto" src="" style="width:100px; height:100px; object-fit:cover; display:none; border-radius:8px; margin:10px; border: 1px solid #ddd;"></div>
-            <button onclick="window.salvarProduto()" id="btnSalvarProd" class="btn-sucesso" style="width:100%">Salvar Produto</button>
-            <button onclick="window.fecharModal('modalProduto')" class="btn-secundario" style="width:100%; margin-top:10px;">Cancelar</button>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="modalLoja">
-        <div class="modal-content">
-            <h3 id="titModalLoja">Loja / Usuário</h3>
-            <input type="hidden" id="lojaEditIsNew">
-            <label>Login (Usuário)</label><input type="text" id="lojaEditId">
-            <label>Senha</label><input type="text" id="lojaEditSenha" placeholder="Digite a nova senha">
-            <label>Razão Social</label><input type="text" id="lojaEditNome">
-            <label>CNPJ</label><input type="text" id="lojaEditCnpj">
-            <button onclick="window.salvarLoja()" class="btn-sucesso" style="width:100%">Salvar Loja</button>
-            <button onclick="window.fecharModal('modalLoja')" class="btn-secundario" style="width:100%; margin-top:10px;">Cancelar</button>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="modalDetalhesLog">
-        <div class="modal-content" style="width: 700px;">
-            <h2 style="color:#e3000f; margin-bottom:15px;">Detalhes da Planilha</h2>
-            <div id="conteudoDetalhesLog" style="background:#f8f9fa; padding:20px; border-radius:8px; margin-bottom:15px; border:1px solid #ddd; max-height: 300px; overflow-y: auto;"></div>
-            <button id="btnRegerarPlanilhaModal" class="btn-sucesso" style="width:100%; padding:15px;">⬇️ Baixar Excel</button>
-            <button onclick="window.fecharModal('modalDetalhesLog')" class="btn-secundario" style="width:100%; margin-top:10px; padding:15px;">Fechar</button>
-        </div>
-    </div>
-
-    <script type="module" src="./js/admin.js"></script>
-</body>
-</html>
+</div>
