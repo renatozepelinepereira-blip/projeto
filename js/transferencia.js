@@ -1,7 +1,7 @@
 import { db } from "./api/firebase.js";
 import { processarExcelVenda } from "./utils/excel.js";
 import { iniciarInterfaceGlobais } from "./utils/interface.js";
-import { getDocs, collection } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import { getDocs, getDoc, doc, collection } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
 const userId = localStorage.getItem('user'); 
 const nomeLoja = localStorage.getItem('nome') || userId;
@@ -9,9 +9,23 @@ if(!userId) window.location.href = 'index.html';
 
 let produtosGlobais = []; 
 let filiaisSalvas = [];
+window.filialDestinoNomeReal = ""; 
 
 iniciarInterfaceGlobais();
 document.getElementById('txtLoja').innerText = nomeLoja;
+
+// NAVEGAÇÃO COM ENTER
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type === 'number') {
+        e.preventDefault();
+        const inputs = Array.from(document.querySelectorAll('.tab-content.active input[type="number"]:not([disabled])'));
+        const index = inputs.indexOf(e.target);
+        if (index > -1 && index < inputs.length - 1) {
+            inputs[index + 1].focus();
+            inputs[index + 1].select();
+        }
+    }
+});
 
 window.mudarAba = (cat) => { 
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
@@ -20,20 +34,39 @@ window.mudarAba = (cat) => {
     document.getElementById('content_' + cat).classList.add('active'); 
 };
 
+function extrairFilial(cnpj) {
+    if (!cnpj) return "";
+    const match = cnpj.match(/\/(\d{4})/);
+    return match ? parseInt(match[1], 10) : "";
+}
+
 async function iniciar() {
+    // Verifica permissão para ocultar botão de Venda
+    const userSnap = await getDoc(doc(db, "usuarios", userId));
+    const dadosUsuario = userSnap.data() || {};
+    if (dadosUsuario.planilhas?.venda === false && userId !== 'admin') {
+        const btnVenda = document.getElementById('btnNavVenda');
+        if (btnVenda) btnVenda.style.display = 'none';
+    }
+
     const uSnap = await getDocs(collection(db, "usuarios"));
     const listaNomes = document.getElementById('listaFiliais');
     uSnap.forEach(u => { 
         if(u.id !== 'admin' && u.id !== userId) {
             const f = u.data();
+            const num = extrairFilial(f.cnpj);
+            f.textoBusca = `[Filial ${num}] ${f.nomeLoja || u.id} - ${f.cnpj || ''}`;
             filiaisSalvas.push(f);
-            listaNomes.innerHTML += `<option value="${f.nomeLoja || u.id}">`; 
+            listaNomes.innerHTML += `<option value="${f.textoBusca}">`; 
         }
     });
 
     document.getElementById('cliRazao').addEventListener('change', (e) => {
-        const filial = filiaisSalvas.find(c => c.nomeLoja === e.target.value);
-        if(filial) document.getElementById('cliCnpj').value = filial.cnpj || '';
+        const filial = filiaisSalvas.find(c => c.textoBusca === e.target.value);
+        if(filial) {
+            document.getElementById('cliCnpj').value = filial.cnpj || '';
+            window.filialDestinoNomeReal = filial.nomeLoja || filial.id;
+        }
     });
 
     const prodSnap = await getDocs(collection(db, "produtos"));
@@ -70,18 +103,12 @@ window.calcularTudo = () => {
         let inputEng = document.getElementById(`eng_${i}`); let inputUni = document.getElementById(`uni_${i}`); 
         if(!inputEng || !inputUni) return;
         
-        let cxStr = inputEng.value;
-        let cx = parseFloat(cxStr) || 0; 
-        let un = parseFloat(inputUni.value) || 0;
-
+        let cxStr = inputEng.value; let cx = parseFloat(cxStr) || 0; let un = parseFloat(inputUni.value) || 0;
         if (cxStr !== "" && (cx * 10) % 5 !== 0) { alert(`Apenas múltiplos de 0.5 nas caixas.`); inputEng.value = ""; cx = 0; }
         if (inputUni.value !== "" && un % 1 !== 0) { alert(`Apenas unidades inteiras.`); inputUni.value = ""; un = 0; }
         
-        let cap = parseFloat(p.engradado) || 1; 
-        let qtd = (cx * cap) + un; 
-        
-        p.calcTotalUnidades = qtd; 
-        p.calcSubtotal = 0;
+        let cap = parseFloat(p.engradado) || 1; let qtd = (cx * cap) + un; 
+        p.calcTotalUnidades = qtd; p.calcSubtotal = 0;
         
         let tr = document.getElementById(`tr_${i}`); 
         if (tr) { if (qtd > 0) tr.classList.add('linha-destaque'); else tr.classList.remove('linha-destaque'); }
@@ -89,7 +116,7 @@ window.calcularTudo = () => {
 };
 
 window.gerarExcelTransferencia = async () => {
-    const razao = document.getElementById('cliRazao').value.trim();
+    const razao = window.filialDestinoNomeReal || document.getElementById('cliRazao').value.trim();
     if(!razao) return alert("Selecione a Filial de Destino!");
     
     let itens = produtosGlobais.filter(p => p.calcTotalUnidades > 0);
@@ -101,8 +128,9 @@ window.gerarExcelTransferencia = async () => {
     try { 
         await processarExcelVenda({ userId, nomeLoja, razao, cnpj: document.getElementById('cliCnpj').value, formaPagamento: 'Transferência', prazo: '-', totalV: 0, itens, isTransferencia: true }); 
         alert("✅ Transferência gerada com sucesso!");
+        window.location.reload(); // Limpa a tela após sucesso
     } catch (e) { alert("Falha: " + e.message); } 
-    finally { btn.innerHTML = "<span style='font-size: 22px; margin-right: 10px;'>⬇️</span> Gerar Transferência Excel"; btn.disabled = false; }
+    finally { btn.innerHTML = "<span style='font-size: 18px; margin-right: 8px;'>⬇️</span> Gerar Transferência Excel"; btn.disabled = false; }
 };
 
 iniciar();
