@@ -9,7 +9,7 @@ if(!userId) window.location.href = 'index.html';
 
 let produtosGlobais = []; 
 let clientesSalvos = [];
-window.descontosMaxGlobais = { sorvete: 0, acai: 0, seco: 0, balde: 0, promo: 0 };
+window.descontosMaxGlobais = { sorvete: 100, acai: 100, seco: 100, balde: 100, promo: 100 };
 window.resumoGlobal = { totalV: 0, qtdTotal: 0, descontos: {} };
 
 iniciarInterfaceGlobais();
@@ -46,18 +46,25 @@ async function iniciar() {
         window.location.replace('transferencia.html'); return; 
     }
 
+    // REGRA DE DESCONTO LIVRE: Se estiver em branco ou indefinido, é 100% (Livre)
+    const getLimit = (val) => { if(val === undefined || val === null || val === "") return 100; return parseFloat(val); };
+    
     const dmax = dadosUsuario.descontosMax || {};
     window.descontosMaxGlobais = { 
-        sorvete: isAdmin ? 100 : (dmax.sorvete !== undefined ? parseFloat(dmax.sorvete) : 0), 
-        acai: isAdmin ? 100 : (dmax.acai !== undefined ? parseFloat(dmax.acai) : 0), 
-        seco: isAdmin ? 100 : (dmax.seco !== undefined ? parseFloat(dmax.seco) : 0), 
-        balde: isAdmin ? 100 : (dmax.balde !== undefined ? parseFloat(dmax.balde) : 0), 
-        promo: isAdmin ? 100 : (dmax.promo !== undefined ? parseFloat(dmax.promo) : 0) 
+        sorvete: isAdmin ? 100 : getLimit(dmax.sorvete), 
+        acai: isAdmin ? 100 : getLimit(dmax.acai), 
+        seco: isAdmin ? 100 : getLimit(dmax.seco), 
+        balde: isAdmin ? 100 : getLimit(dmax.balde), 
+        promo: isAdmin ? 100 : getLimit(dmax.promo) 
     };
     
     Object.keys(window.descontosMaxGlobais).forEach(k => { 
         let el = document.getElementById('max_desc_' + k); 
-        if(el) el.innerText = isAdmin ? `Máx: Livre` : `Máx: ${window.descontosMaxGlobais[k]}%`; 
+        let maxVal = window.descontosMaxGlobais[k];
+        if(el) {
+            if(maxVal === 100) { el.innerText = `Máx: Livre`; el.style.color = '#059669'; el.style.background = '#d1fae5'; } 
+            else { el.innerText = `Máx: ${maxVal}%`; el.style.color = '#ef4444'; el.style.background = '#fee2e2'; }
+        }
     });
 
     const tabelas = dadosUsuario.tabelasPreco || {};
