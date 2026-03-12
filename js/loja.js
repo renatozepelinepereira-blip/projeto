@@ -75,10 +75,13 @@ async function iniciar() {
         let el = document.getElementById('max_desc_' + k); 
         let maxVal = window.descontosMaxGlobais[k];
         if(el) {
-            if(maxVal === 100) { 
-                el.style.display = 'none'; // Sumiu a palavra livre
+            if(maxVal >= 100) { 
+                el.style.display = 'none'; 
+                el.innerText = '';
             } else { 
-               el.style.color = '#ef4444'; 
+                el.style.display = 'inline-block';
+                el.innerText = `Máx: ${maxVal}%`; 
+                el.style.color = '#ef4444'; 
                 el.style.background = '#fee2e2'; 
             }
         }
@@ -130,10 +133,9 @@ async function iniciar() {
         const idx = produtosGlobais.length;
         produtosGlobais.push({ ...item, precoFinal: precoSeguro, catReal: cat });
         
-        // CONSTRUÇÃO BLINDADA CONTRA O CSS ANTIGO
         let hasImg = (item.imagem && item.imagem.trim() !== "");
         let imgHtml = hasImg 
-            ? `<img src="${item.imagem}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; cursor: zoom-in;" loading="lazy" onmouseenter="window.mostrarZoom('${item.imagem}')" onmouseleave="window.esconderZoom()">`
+            ? `<img src="${item.imagem}" class="img-produto" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; cursor: zoom-in;" loading="lazy" onmouseenter="window.mostrarZoom('${item.imagem}')" onmouseleave="window.esconderZoom()">`
             : `<div style="width: 40px; height: 40px; display:flex; align-items:center; justify-content:center; background:#f1f5f9; font-size:20px; border-radius:6px; border: 1px solid #e2e8f0; cursor: default;">📦</div>`;
 
         let corPreco = precoSeguro > 0 ? '#10b981' : '#ef4444';
@@ -180,27 +182,50 @@ window.calcularTudo = () => {
     });
 
     let desc = {
-        sorvete: parseFloat(document.getElementById('desc_sorvete').value) || 0,
-        acai: parseFloat(document.getElementById('desc_acai').value) || 0,
-        seco: parseFloat(document.getElementById('desc_seco').value) || 0,
-        balde: parseFloat(document.getElementById('desc_balde').value) || 0,
-        promo: parseFloat(document.getElementById('desc_promo').value) || 0
+        sorvete: parseInt(document.getElementById('desc_sorvete').value) || 0,
+        acai: parseInt(document.getElementById('desc_acai').value) || 0,
+        seco: parseInt(document.getElementById('desc_seco').value) || 0,
+        balde: parseInt(document.getElementById('desc_balde').value) || 0,
+        promo: parseInt(document.getElementById('desc_promo').value) || 0
     };
 
     Object.keys(desc).forEach(k => {
+        let el = document.getElementById('desc_' + k);
         let max = window.descontosMaxGlobais[k];
+        
         if (desc[k] > max) { 
-            alert(`ATENÇÃO: O desconto máximo permitido para ${k.toUpperCase()} é ${max}%`); 
+            alert(`ATENÇÃO: O desconto máximo permitido para a aba de ${k.toUpperCase()} é ${max}%`); 
             desc[k] = max; 
-            document.getElementById('desc_' + k).value = max; 
+            if(el) el.value = max; 
         }
     });
     
+    // CÁLCULO DO VALOR BRUTO E DESCONTO EM REAIS
+    let totalGeralBruto = 0;
+    Object.keys(totaisCat).forEach(k => { totalGeralBruto += totaisCat[k]; });
+
     let totalGeralDescontado = 0;
     Object.keys(totaisCat).forEach(k => { totalGeralDescontado += totaisCat[k] * (1 - desc[k] / 100); });
+    
+    let valorEconomizado = totalGeralBruto - totalGeralDescontado;
 
+    // Atualiza interface do rodapé
     document.getElementById('valComDesc').innerText = "R$ " + totalGeralDescontado.toFixed(2); 
     document.getElementById('qtdTotal').innerText = qtdTotalGeral;
+    
+    let divBruto = document.getElementById('divResumoBruto');
+    let divDesc = document.getElementById('divResumoDesconto');
+
+    if(valorEconomizado > 0) {
+        document.getElementById('valBruto').innerText = "R$ " + totalGeralBruto.toFixed(2);
+        document.getElementById('valDesconto').innerText = "- R$ " + valorEconomizado.toFixed(2);
+        divBruto.style.display = 'flex';
+        divDesc.style.display = 'flex';
+    } else {
+        divBruto.style.display = 'none';
+        divDesc.style.display = 'none';
+    }
+
     window.resumoGlobal = { totalV: totalGeralDescontado, qtdTotal: qtdTotalGeral, descontos: desc };
 };
 
