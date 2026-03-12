@@ -68,10 +68,12 @@
             <h2 class="section-title">Catálogo e Preços</h2>
             <div class="card-panel">
                 
-                <div style="display: grid; grid-template-columns: auto 1fr auto; gap: 15px; margin-bottom: 20px; align-items: center; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
-                    <button onclick="window.abrirNovoProduto()" class="btn-primario" style="white-space: nowrap; margin: 0;">+ Novo Produto</button>
-                    <input type="text" id="buscaCatalogoAdmin" placeholder="🔍 Buscar código ou descrição..." oninput="window.filtrarCatalogo()" style="margin: 0; width: 100%;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; align-items: center; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
+                    <button onclick="window.abrirNovoProduto()" class="btn-primario" style="white-space: nowrap; margin: 0; flex-shrink: 0;">+ Novo Produto</button>
+                    
+                    <input type="text" id="buscaCatalogoAdmin" placeholder="🔍 Buscar código ou descrição..." oninput="window.filtrarCatalogo()" style="margin: 0; flex-grow: 1; min-width: 200px;">
+                    
+                    <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
                         <label style="margin: 0; font-size: 14px; font-weight: 700; white-space: nowrap;">✏️ Editar Preços:</label>
                         <select id="selectFiltroTabelaCat" onchange="window.carregarProdutos()" style="width: auto; min-width: 200px; margin: 0; padding: 10px; border-radius: 8px; border: 2px solid var(--primary); font-weight: bold; background: white; color: var(--primary);">
                             <option value="">📋 Catálogo Base</option>
@@ -89,19 +91,34 @@
 
                 <div style="max-height: 500px; overflow-y: auto;">
                     <div id="content_admin_sorvete" class="admin-cat-content" style="display: block;">
-                        <table style="width: 100%; border-collapse: collapse;"><thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th style="width: 60px; text-align: center;">Foto</th><th style="text-align: left;">Cód</th><th style="text-align: left;">Descrição</th><th style="text-align: center;">Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary); text-align: center;">Preço</th><th style="text-align: center; width: 100px;">Ações</th></tr></thead><tbody id="corpoAdminSorvete"></tbody></table>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th style="width: 60px; text-align: center;">Foto</th><th style="width: 100px; text-align: left;">Cód</th><th style="text-align: left;">Descrição</th><th style="width: 80px; text-align: center;">Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary); text-align: center; width: 120px;">Preço</th><th style="width: 100px; text-align: center;">Ações</th></tr></thead>
+                            <tbody id="corpoAdminSorvete"></tbody>
+                        </table>
                     </div>
                     <div id="content_admin_acai" class="admin-cat-content" style="display: none;">
-                        <table style="width: 100%; border-collapse: collapse;"><thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th style="width: 60px; text-align: center;">Foto</th><th style="text-align: left;">Cód</th><th style="text-align: left;">Descrição</th><th style="text-align: center;">Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary); text-align: center;">Preço</th><th style="text-align: center; width: 100px;">Ações</th></tr></thead><tbody id="corpoAdminAcai"></tbody></table>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th style="width: 60px; text-align: center;">Foto</th><th style="width: 100px; text-align: left;">Cód</th><th style="text-align: left;">Descrição</th><th style="width: 80px; text-align: center;">Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary); text-align: center; width: 120px;">Preço</th><th style="width: 100px; text-align: center;">Ações</th></tr></thead>
+                            <tbody id="corpoAdminAcai"></tbody>
+                        </table>
                     </div>
                     <div id="content_admin_seco" class="admin-cat-content" style="display: none;">
-                        <table style="width: 100%; border-collapse: collapse;"><thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th style="width: 60px; text-align: center;">Foto</th><th style="text-align: left;">Cód</th><th style="text-align: left;">Descrição</th><th style="text-align: center;">Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary); text-align: center;">Preço</th><th style="text-align: center; width: 100px;">Ações</th></tr></thead><tbody id="corpoAdminSeco"></tbody></table>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th style="width: 60px; text-align: center;">Foto</th><th style="width: 100px; text-align: left;">Cód</th><th style="text-align: left;">Descrição</th><th style="width: 80px; text-align: center;">Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary); text-align: center; width: 120px;">Preço</th><th style="width: 100px; text-align: center;">Ações</th></tr></thead>
+                            <tbody id="corpoAdminSeco"></tbody>
+                        </table>
                     </div>
                     <div id="content_admin_balde" class="admin-cat-content" style="display: none;">
-                        <table style="width: 100%; border-collapse: collapse;"><thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th style="width: 60px; text-align: center;">Foto</th><th style="text-align: left;">Cód</th><th style="text-align: left;">Descrição</th><th style="text-align: center;">Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary); text-align: center;">Preço</th><th style="text-align: center; width: 100px;">Ações</th></tr></thead><tbody id="corpoAdminBalde"></tbody></table>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th style="width: 60px; text-align: center;">Foto</th><th style="width: 100px; text-align: left;">Cód</th><th style="text-align: left;">Descrição</th><th style="width: 80px; text-align: center;">Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary); text-align: center; width: 120px;">Preço</th><th style="width: 100px; text-align: center;">Ações</th></tr></thead>
+                            <tbody id="corpoAdminBalde"></tbody>
+                        </table>
                     </div>
                     <div id="content_admin_promo" class="admin-cat-content" style="display: none;">
-                        <table style="width: 100%; border-collapse: collapse;"><thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th style="width: 60px; text-align: center;">Foto</th><th style="text-align: left;">Cód</th><th style="text-align: left;">Descrição</th><th style="text-align: center;">Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary); text-align: center;">Preço</th><th style="text-align: center; width: 100px;">Ações</th></tr></thead><tbody id="corpoAdminPromo"></tbody></table>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th style="width: 60px; text-align: center;">Foto</th><th style="width: 100px; text-align: left;">Cód</th><th style="text-align: left;">Descrição</th><th style="width: 80px; text-align: center;">Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary); text-align: center; width: 120px;">Preço</th><th style="width: 100px; text-align: center;">Ações</th></tr></thead>
+                            <tbody id="corpoAdminPromo"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
