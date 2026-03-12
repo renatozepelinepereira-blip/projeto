@@ -67,23 +67,17 @@
         <div id="sec-produtos" class="secao">
             <h2 class="section-title">Catálogo e Preços</h2>
             <div class="card-panel">
-                
                 <div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
                     <button onclick="window.abrirNovoProduto()" class="btn-primario">+ Novo Produto</button>
                     <div style="flex-grow: 1;"></div>
                     <label style="margin: 0; font-size: 15px; font-weight: 700;">✏️ Editar preços da Tabela:</label>
                     <select id="selectFiltroTabelaCat" onchange="window.carregarProdutos()" style="width: 250px; margin: 0; padding: 12px; border-radius: 8px; border: 2px solid var(--primary); font-weight: bold; background: white; color: var(--primary);"></select>
                 </div>
-
                 <div style="max-height: 550px; overflow-y: auto;">
                     <table>
                         <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;">
                             <tr>
-                                <th>Foto</th>
-                                <th>Cód</th>
-                                <th>Descrição</th>
-                                <th>Engr.</th>
-                                <th>Cat.</th>
+                                <th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Cat.</th>
                                 <th id="thPrecoCat" style="display: none; color: var(--primary);">Preço</th>
                                 <th style="text-align: center;">Ações</th>
                             </tr>
@@ -98,17 +92,30 @@
             <h2 class="section-title">Vínculo e Preços</h2>
             <div class="grid-2">
                 <div class="card-panel">
-                    <h3 style="margin-bottom: 15px;">1. Importar Excel em Massa</h3>
-                    <label>Nome (Ex: TF, PM01)</label>
-                    <input type="text" id="nomeTabelaPreco" placeholder="Nome da Tabela">
-                    <label>Arquivo</label>
+                    <h3 style="margin-bottom: 15px;">1. Importar Excel</h3>
+                    <label>Nome da Tabela (Ex: PRODUTO_A1, PROMO_X)</label>
+                    <input type="text" id="nomeTabelaPreco" placeholder="Ex: PRODUTO_A1">
+                    <label>Arquivo CSV ou Excel</label>
                     <input type="file" id="fileCsvPrecos" accept=".xlsx, .csv">
                     <button onclick="window.importarTabelaPrecos()" class="btn-primario" style="width:100%;">⚡ Importar Tabela</button>
                 </div>
                 <div class="card-panel">
                     <h3 style="margin-bottom: 15px;">2. Vínculo em Massa</h3>
-                    <label>Selecione a Tabela para ver as filiais vinculadas</label>
-                    <select id="selectTabelaAssociar" style="border: 2px solid var(--primary);" onchange="window.aoSelecionarTabela()"></select>
+                    <div class="grid-2" style="gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label>1. Finalidade (Módulo)</label>
+                            <select id="tipoVinculoTabela" style="border: 2px solid var(--primary); width: 100%; margin-top: 6px;" onchange="window.aoSelecionarTabela()">
+                                <option value="venda">🛒 Venda (Sorvetes/Secos)</option>
+                                <option value="transferencia">🔄 Transferência</option>
+                                <option value="promocao">🌟 Promoções</option>
+                                <option value="balde">🪣 Baldes</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>2. Tabela de Preço</label>
+                            <select id="selectTabelaAssociar" style="border: 2px solid var(--primary); width: 100%; margin-top: 6px;" onchange="window.aoSelecionarTabela()"></select>
+                        </div>
+                    </div>
                     
                     <div style="margin: 15px 0; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
                         <label>Buscar Filial</label>
@@ -130,7 +137,7 @@
                 <button onclick="window.abrirNovaLoja()" class="btn-primario">+ Nova Loja</button>
                 <table style="margin-top:20px;">
                     <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;">
-                        <tr><th>Login</th><th>Nome</th><th>CNPJ</th><th>Tabela Atual</th><th style="text-align: center;">Ação</th></tr>
+                        <tr><th>Login</th><th>Nome</th><th>CNPJ</th><th>Tabelas Vinculadas</th><th style="text-align: center;">Ação</th></tr>
                     </thead>
                     <tbody id="corpoTabelaLojas"></tbody>
                 </table>
@@ -140,17 +147,8 @@
         <div id="sec-backup" class="secao">
             <h2 class="section-title">Backup do Sistema</h2>
             <div class="grid-2">
-                <div class="card-panel" style="text-align:center;">
-                    <div style="font-size: 40px; margin-bottom: 15px;">📦</div>
-                    <h3 style="margin-bottom: 15px;">Exportar Dados</h3>
-                    <button onclick="window.gerarBackupCompleto()" id="btnGerarBackup" class="btn-primario" style="width:100%;">⬇️ Baixar Backup (.zip)</button>
-                </div>
-                <div class="card-panel" style="text-align:center; border: 2px dashed var(--primary); background: #fef2f2;">
-                    <div style="font-size: 40px; margin-bottom: 15px;">🔄</div>
-                    <h3 style="margin-bottom: 15px; color: var(--primary);">Restaurar Sistema</h3>
-                    <input type="file" id="fileRestoreZip" accept=".zip">
-                    <button onclick="window.restaurarBackupCompleto()" id="btnRestaurarBackup" class="btn-sucesso" style="width:100%;">⚡ Restaurar Dados</button>
-                </div>
+                <div class="card-panel" style="text-align:center;"><div style="font-size: 40px; margin-bottom: 15px;">📦</div><h3 style="margin-bottom: 15px;">Exportar Dados</h3><button onclick="window.gerarBackupCompleto()" id="btnGerarBackup" class="btn-primario" style="width:100%;">⬇️ Baixar Backup (.zip)</button></div>
+                <div class="card-panel" style="text-align:center; border: 2px dashed var(--primary); background: #fef2f2;"><div style="font-size: 40px; margin-bottom: 15px;">🔄</div><h3 style="margin-bottom: 15px; color: var(--primary);">Restaurar Sistema</h3><input type="file" id="fileRestoreZip" accept=".zip"><button onclick="window.restaurarBackupCompleto()" id="btnRestaurarBackup" class="btn-sucesso" style="width:100%;">⚡ Restaurar Dados</button></div>
             </div>
         </div>
     </div>
@@ -159,33 +157,22 @@
         <div class="modal-content">
             <h2 style="margin-bottom: 20px; color: var(--primary);" id="titModalProduto">Produto</h2>
             <input type="hidden" id="prodEditImagemUrl">
-            
             <div class="grid-2" style="gap: 15px;">
                 <div><label>Código</label><input type="text" id="prodEditCodigo"></div>
                 <div><label>Engradado (Qtd)</label><input type="number" id="prodEditEngradado"></div>
             </div>
-            
             <div class="grid-2" style="gap: 15px;">
                 <div><label>Descrição</label><input type="text" id="prodEditDescricao"></div>
                 <div><label>Categoria</label><input type="text" id="prodEditCategoria" placeholder="Ex: sorvete, seco..."></div>
             </div>
-
             <div id="divPrecoEdit" style="display: none; margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
                 <label style="color: var(--text-main);">Preço na Tabela <span id="lblNomeTabelaEdit" style="color:var(--primary); font-weight:900; background: #fef2f2; padding: 4px 8px; border-radius: 4px;"></span> (R$)</label>
                 <input type="number" id="prodEditPreco" step="0.01" placeholder="Ex: 10.50" style="font-size: 20px; font-weight: bold; color: var(--primary); border-color: var(--primary);">
             </div>
-            
-            <label style="margin-top: 15px; display: block;">Foto do Produto (Opcional)</label>
+            <label style="margin-top: 15px; display: block;">Foto do Produto</label>
             <input type="file" id="prodEditImagemFile" accept="image/*" onchange="window.previewImagemLocal(event)">
-            
-            <div style="text-align:center;">
-                <img id="previewFoto" src="" style="width:140px; height:140px; object-fit:cover; display:none; border-radius:12px; margin:10px auto; border:1px solid var(--border); box-shadow: var(--shadow-sm);">
-            </div>
-            
-            <div class="grid-2" style="gap: 15px; margin-top: 20px;">
-                <button onclick="window.fecharModal('modalProduto')" class="btn-secundario" style="width:100%;">Cancelar</button>
-                <button onclick="window.salvarProduto()" id="btnSalvarProd" class="btn-primario" style="width:100%;">Salvar Produto</button>
-            </div>
+            <div style="text-align:center;"><img id="previewFoto" src="" style="width:140px; height:140px; object-fit:cover; display:none; border-radius:12px; margin:10px auto; border:1px solid var(--border);"></div>
+            <div class="grid-2" style="gap: 15px; margin-top: 20px;"><button onclick="window.fecharModal('modalProduto')" class="btn-secundario" style="width:100%;">Cancelar</button><button onclick="window.salvarProduto()" id="btnSalvarProd" class="btn-primario" style="width:100%;">Salvar Produto</button></div>
         </div>
     </div>
 
@@ -196,34 +183,34 @@
             <label>Login (Usuário)</label><input type="text" id="lojaEditId">
             <div class="grid-2" style="gap: 15px;">
                 <div><label>Nova Senha</label><input type="password" id="lojaEditSenha" placeholder="Deixe em branco para manter"></div>
-                <div style="display: flex; align-items: flex-end; padding-bottom: 16px;"><button type="button" onclick="window.resetarSenhaPadrao()" class="btn-secundario" style="width: 100%; font-size: 13px; border: 1px solid #cbd5e1; background: #f8fafc;">🔄 Senha Padrão (123456)</button></div>
+                <div style="display: flex; align-items: flex-end; padding-bottom: 16px;"><button type="button" onclick="window.resetarSenhaPadrao()" class="btn-secundario" style="width: 100%; font-size: 13px;">🔄 Senha Padrão</button></div>
             </div>
-            <label>Razão Social</label><input type="text" id="lojaEditNome">
-            <label>CNPJ</label><input type="text" id="lojaEditCnpj">
-            <label style="margin-top: 20px; display: block; border-bottom: 2px solid var(--border); padding-bottom: 8px; font-size: 14px;">Controle de Permissões</label>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid var(--border);">
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; color: #334155;"><input type="checkbox" id="permVenda" style="width: 20px; height: 20px; margin: 0; cursor: pointer;"> Módulo de Vendas</label>
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; color: #334155;"><input type="checkbox" id="permTransf" style="width: 20px; height: 20px; margin: 0; cursor: pointer;"> Transferência</label>
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; color: #334155;"><input type="checkbox" id="permPromo" style="width: 20px; height: 20px; margin: 0; cursor: pointer;"> Aba Promoções</label>
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; color: #334155;"><input type="checkbox" id="permBalde" style="width: 20px; height: 20px; margin: 0; cursor: pointer;"> Aba Baldes</label>
+            <div class="grid-2" style="gap: 15px;">
+                <div><label>Razão Social</label><input type="text" id="lojaEditNome"></div>
+                <div><label>CNPJ</label><input type="text" id="lojaEditCnpj"></div>
             </div>
-            <div class="grid-2" style="gap: 15px; margin-top: 25px;">
-                <button onclick="window.fecharModal('modalLoja')" class="btn-secundario" style="width:100%;">Cancelar</button>
-                <button onclick="window.salvarLoja()" class="btn-primario" style="width:100%;">💾 Salvar Loja</button>
+
+            <label style="margin-top: 20px; display: block; border-bottom: 2px solid var(--border); padding-bottom: 8px; font-size: 14px;">Tabelas de Preço Vinculadas</label>
+            <div class="grid-2" style="gap: 10px; margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
+                <div><label>Venda (Sorv/Seco)</label><select id="lojaEditTabVenda" class="sel-tabelas-loja" style="margin-top:4px;"><option value="">(Padrão)</option></select></div>
+                <div><label>Transferência</label><select id="lojaEditTabTransf" class="sel-tabelas-loja" style="margin-top:4px;"><option value="">(Padrão)</option></select></div>
+                <div><label>Promoções</label><select id="lojaEditTabPromo" class="sel-tabelas-loja" style="margin-top:4px;"><option value="">(Padrão)</option></select></div>
+                <div><label>Baldes</label><select id="lojaEditTabBalde" class="sel-tabelas-loja" style="margin-top:4px;"><option value="">(Padrão)</option></select></div>
             </div>
+
+            <label style="margin-top: 20px; display: block; border-bottom: 2px solid var(--border); padding-bottom: 8px; font-size: 14px;">Controle de Acessos</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
+                <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="permVenda" style="width:18px;height:18px;margin:0;"> Módulo Vendas</label>
+                <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="permTransf" style="width:18px;height:18px;margin:0;"> Transferência</label>
+                <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="permPromo" style="width:18px;height:18px;margin:0;"> Aba Promoções</label>
+                <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="permBalde" style="width:18px;height:18px;margin:0;"> Aba Baldes</label>
+            </div>
+            
+            <div class="grid-2" style="gap: 15px; margin-top: 25px;"><button onclick="window.fecharModal('modalLoja')" class="btn-secundario" style="width:100%;">Cancelar</button><button onclick="window.salvarLoja()" class="btn-primario" style="width:100%;">💾 Salvar Loja</button></div>
         </div>
     </div>
 
-    <div class="modal-overlay" id="modalDetalhesLog">
-        <div class="modal-content" style="width: 700px; max-width: 95%;">
-            <h2 style="margin-bottom: 20px; color: var(--primary);">Detalhes do Registro</h2>
-            <div id="conteudoDetalhesLog" style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid var(--border); max-height: 400px; overflow-y: auto; font-size: 14px; margin-bottom: 20px;"></div>
-            <div style="display: flex; gap: 10px;">
-                <button onclick="window.fecharModal('modalDetalhesLog')" class="btn-secundario" style="flex: 1;">Fechar</button>
-                <button id="btnRegerarPlanilhaModal" class="btn-sucesso" style="flex: 1;">⬇️ Baixar Excel</button>
-            </div>
-        </div>
-    </div>
+    <div class="modal-overlay" id="modalDetalhesLog"><div class="modal-content" style="width: 700px; max-width: 95%;"><h2 style="margin-bottom: 20px; color: var(--primary);">Detalhes do Registro</h2><div id="conteudoDetalhesLog" style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid var(--border); max-height: 400px; overflow-y: auto; font-size: 14px; margin-bottom: 20px;"></div><div style="display: flex; gap: 10px;"><button onclick="window.fecharModal('modalDetalhesLog')" class="btn-secundario" style="flex: 1;">Fechar</button><button id="btnRegerarPlanilhaModal" class="btn-sucesso" style="flex: 1;">⬇️ Baixar Excel</button></div></div></div>
 
     <script type="module" src="./js/admin.js"></script>
 </body>
