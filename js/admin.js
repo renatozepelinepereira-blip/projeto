@@ -7,7 +7,10 @@ import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/fireba
 if(localStorage.getItem('tipo') !== 'admin') window.location.href = 'index.html';
 iniciarInterfaceGlobais();
 
-let historicoGlobal = {}; let listaProdutosAdmin = []; let listaLojasAdmin = []; let carregandoDash = false;
+let historicoGlobal = {}; 
+window.listaProdutosAdmin = []; 
+let listaLojasAdmin = []; 
+let carregandoDash = false;
 
 function extrairFilial(cnpj) {
     if (!cnpj) return "";
@@ -15,21 +18,22 @@ function extrairFilial(cnpj) {
     return match ? parseInt(match[1], 10) : "";
 }
 
-window.mudarSecao = (id) => {
+window.mudarSecao = async (id) => {
     document.querySelectorAll('.secao').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-links button').forEach(el => el.classList.remove('active'));
     document.getElementById('sec-' + id).classList.add('active');
     document.getElementById('nav-' + id)?.classList.add('active');
-    if(id === 'dashboard') carregarDashboard();
-    if(id === 'produtos') { carregarTabelasPrecos(); carregarProdutos(); } // Garante que o select estará pronto
-    if(id === 'precos') carregarTabelasPrecos();
-    if(id === 'lojas') carregarLojas();
+    
+    if(id === 'dashboard') window.carregarDashboard();
+    if(id === 'produtos') { await window.carregarTabelasPrecos(); await window.carregarProdutos(); } 
+    if(id === 'precos') window.carregarTabelasPrecos();
+    if(id === 'lojas') window.carregarLojas();
 };
 
 window.toggleTabelaHistorico = () => { const w = document.getElementById('wrapperHistorico'); const b = document.getElementById('btnToggleHist'); const isH = w.style.display === 'none'; w.style.display = isH ? 'block' : 'none'; b.innerText = isH ? '👁️ Esconder' : '👁️ Mostrar'; };
 window.filtrarLogDash = () => { const t = document.getElementById('pesquisaLogAdmin').value.toLowerCase(); document.querySelectorAll('.linha-hist-admin').forEach(i => { i.style.display = i.innerText.toLowerCase().includes(t) ? '' : 'none'; }); };
 
-async function carregarDashboard() {
+window.carregarDashboard = async () => {
     if(carregandoDash) return; carregandoDash = true;
     try {
         const dI = document.getElementById('dataInicio').value; const dF = document.getElementById('dataFim').value;
@@ -44,7 +48,7 @@ async function carregarDashboard() {
         });
         document.getElementById('corpoTabelaHistorico').innerHTML = html; document.getElementById('dashPlanilhas').innerText = cont;
     } finally { carregandoDash = false; }
-}
+};
 
 window.visualizarLog = (id) => {
     const log = historicoGlobal[id];
@@ -73,8 +77,8 @@ window.mudarAbaAdminCat = (cat) => {
 
 window.previewImagemLocal = (event) => { const file = event.target.files[0]; const pv = document.getElementById('previewFoto'); if(file) { pv.src = URL.createObjectURL(file); pv.style.display = 'block'; } };
 
-// --- PRODUTOS E CATÁLOGO COM ABAS ---
-async function carregarProdutos() {
+// === A FUNÇÃO GLOBAL QUE ATUALIZA A TABELA QUANDO VOCÊ SELECIONA NO MENU ===
+window.carregarProdutos = async () => {
     const tabelaSelecionada = document.getElementById('selectFiltroTabelaCat').value;
     
     document.querySelectorAll('.thPrecoCat').forEach(th => {
@@ -94,12 +98,12 @@ async function carregarProdutos() {
 
     const snap = await getDocs(collection(db, "produtos"));
     let htmlBuffers = { sorvete: "", seco: "", balde: "", promo: "" };
-    listaProdutosAdmin = [];
+    window.listaProdutosAdmin = [];
     
     snap.forEach(d => {
         const p = { id: d.id, ...d.data() }; 
         if (tabelaSelecionada) p.precoAtual = precosTabela[p.codigo] !== undefined ? precosTabela[p.codigo] : null;
-        listaProdutosAdmin.push(p);
+        window.listaProdutosAdmin.push(p);
         
         let rawCat = (p.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         let cat = 'sorvete'; 
@@ -124,14 +128,15 @@ async function carregarProdutos() {
         </tr>`;
     });
 
-    document.getElementById('corpoAdminSorvete').innerHTML = htmlBuffers.sorvete || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
-    document.getElementById('corpoAdminSeco').innerHTML = htmlBuffers.seco || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
-    document.getElementById('corpoAdminBalde').innerHTML = htmlBuffers.balde || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
-    document.getElementById('corpoAdminPromo').innerHTML = htmlBuffers.promo || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
-}
+    // Atualiza as abas separadamente
+    if (document.getElementById('corpoAdminSorvete')) document.getElementById('corpoAdminSorvete').innerHTML = htmlBuffers.sorvete || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
+    if (document.getElementById('corpoAdminSeco')) document.getElementById('corpoAdminSeco').innerHTML = htmlBuffers.seco || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
+    if (document.getElementById('corpoAdminBalde')) document.getElementById('corpoAdminBalde').innerHTML = htmlBuffers.balde || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
+    if (document.getElementById('corpoAdminPromo')) document.getElementById('corpoAdminPromo').innerHTML = htmlBuffers.promo || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
+};
 
 window.abrirEdicaoProduto = (cod) => { 
-    const p = listaProdutosAdmin.find(x => x.codigo === cod); if(!p) return; 
+    const p = window.listaProdutosAdmin.find(x => x.codigo === cod); if(!p) return; 
     document.getElementById('prodEditCodigo').value = p.codigo; document.getElementById('prodEditCodigo').disabled = true; document.getElementById('prodEditDescricao').value = p.descricao || ''; document.getElementById('prodEditCategoria').value = p.categoria || ''; document.getElementById('prodEditEngradado').value = p.engradado || ''; document.getElementById('prodEditImagemUrl').value = p.imagem || ''; 
     const tabelaSelecionada = document.getElementById('selectFiltroTabelaCat').value;
     const divPreco = document.getElementById('divPrecoEdit');
@@ -139,6 +144,7 @@ window.abrirEdicaoProduto = (cod) => {
     const pv = document.getElementById('previewFoto'); if(p.imagem) { pv.src = p.imagem; pv.style.display = 'block'; } else { pv.style.display = 'none'; } 
     document.getElementById('modalProduto').style.display = 'flex'; 
 };
+
 window.abrirNovoProduto = () => { 
     document.getElementById('prodEditCodigo').disabled = false; document.querySelectorAll('#modalProduto input[type="text"], #modalProduto input[type="number"]').forEach(i => i.value = ''); 
     const tabelaSelecionada = document.getElementById('selectFiltroTabelaCat').value;
@@ -146,6 +152,7 @@ window.abrirNovoProduto = () => {
     if (tabelaSelecionada) { document.getElementById('lblNomeTabelaEdit').innerText = tabelaSelecionada.toUpperCase(); divPreco.style.display = 'block'; } else { divPreco.style.display = 'none'; }
     document.getElementById('previewFoto').style.display = 'none'; document.getElementById('modalProduto').style.display = 'flex'; 
 };
+
 window.salvarProduto = async () => {
     const cod = document.getElementById('prodEditCodigo').value.trim();
     if(!cod) return alert("Código obrigatório!");
@@ -161,10 +168,11 @@ window.salvarProduto = async () => {
             const precoVal = document.getElementById('prodEditPreco').value;
             if (precoVal !== "") await setDoc(doc(db, "precos", tabelaSelecionada), { [cod]: parseFloat(precoVal) }, { merge: true });
         }
-        window.fecharModal('modalProduto'); carregarProdutos();
+        window.fecharModal('modalProduto'); window.carregarProdutos();
     } catch (e) { alert("Erro ao salvar."); } finally { btn.disabled = false; btn.innerText = "Salvar Produto"; }
 };
-window.excluirProduto = async (cod) => { if(confirm(`ATENÇÃO: Excluir permanentemente o produto ${cod}?`)) { try { await deleteDoc(doc(db, "produtos", cod)); carregarProdutos(); } catch(e) { alert("Erro ao excluir."); } } };
+
+window.excluirProduto = async (cod) => { if(confirm(`ATENÇÃO: Excluir permanentemente o produto ${cod}?`)) { try { await deleteDoc(doc(db, "produtos", cod)); window.carregarProdutos(); } catch(e) { alert("Erro ao excluir."); } } };
 
 window.importarTabelaPrecos = async () => { 
     const nome = document.getElementById('nomeTabelaPreco').value.trim().toLowerCase(); 
@@ -213,45 +221,43 @@ window.importarTabelaPrecos = async () => {
             await Promise.all(promessasProdutos);
             alert(`🚀 INCRÍVEL! ${importados} produtos processados.\nTabela ${nome.toUpperCase()} salva e Catálogo Atualizado!`); 
             
-            // Recarrega tudo e força o seletor a ir para a nova tabela
-            await carregarTabelasPrecos(); 
-            document.getElementById('selectFiltroTabelaCat').value = nome;
-            carregarProdutos(); 
+            await window.carregarTabelasPrecos(); 
+            const selCat = document.getElementById('selectFiltroTabelaCat');
+            if (selCat) { selCat.value = nome; window.carregarProdutos(); }
             
         } catch(err) { alert("Erro ao ler o Excel."); } finally { btn.innerText = "⚡ Importar Tabela"; document.getElementById('nomeTabelaPreco').value = ""; document.getElementById('fileCsvPrecos').value = ""; }
     }; 
     reader.readAsArrayBuffer(file); 
 };
 
-// --- GESTOR DE TABELAS CENTRALIZADO ---
-async function carregarTabelasPrecos() {
+window.carregarTabelasPrecos = async () => {
     const sT = await getDocs(collection(db, "precos"));
-    
     const selVincular = document.getElementById('selectTabelaAssociar');
     const selExcluir = document.getElementById('selectTabelaExcluir');
     const selCat = document.getElementById('selectFiltroTabelaCat');
     
-    // Salva o que estava selecionado no Catálogo para não sumir ao recarregar
-    const valAtualCat = selCat.value;
+    const valAtualCat = selCat ? selCat.value : "";
 
-    selVincular.innerHTML = '<option value="">Selecione a Tabela...</option>';
-    selExcluir.innerHTML = '<option value="">Selecione a Tabela para EXCLUIR...</option>';
-    selCat.innerHTML = '<option value="">📋 Apenas Catálogo (Sem Preço)</option>';
+    if(selVincular) selVincular.innerHTML = '<option value="">Selecione a Tabela...</option>';
+    if(selExcluir) selExcluir.innerHTML = '<option value="">Selecione a Tabela para EXCLUIR...</option>';
+    if(selCat) selCat.innerHTML = '<option value="">📋 Apenas Catálogo (Sem Preço)</option>';
     let optionsHtml = '<option value="">(Nenhuma)</option>';
 
     sT.forEach(d => { 
         const opt = `<option value="${d.id}">${d.id.toUpperCase()}</option>`;
-        selVincular.innerHTML += opt; 
-        selExcluir.innerHTML += opt;
-        selCat.innerHTML += opt;
+        if(selVincular) selVincular.innerHTML += opt; 
+        if(selExcluir) selExcluir.innerHTML += opt;
+        if(selCat) selCat.innerHTML += opt;
         optionsHtml += opt; 
     });
 
-    selCat.value = valAtualCat; // Devolve a seleção
+    if(selCat) selCat.value = valAtualCat; 
     document.querySelectorAll('.sel-tabelas-loja').forEach(sel => sel.innerHTML = optionsHtml);
 
     const sL = await getDocs(collection(db, "usuarios"));
     const cont = document.getElementById('listaLojasChecklist');
+    if(!cont) return;
+    
     cont.innerHTML = '';
     let divsLojas = [];
     sL.forEach(u => {
@@ -280,26 +286,20 @@ async function carregarTabelasPrecos() {
     });
     divsLojas.sort((a, b) => a.querySelector('input').getAttribute('data-search').localeCompare(b.querySelector('input').getAttribute('data-search')));
     divsLojas.forEach(div => cont.appendChild(div));
-}
+};
 
-// --- NOVO: EXCLUIR TABELA ---
 window.excluirTabelaPreco = async () => {
     const tab = document.getElementById('selectTabelaExcluir').value;
     if(!tab) return alert("Selecione uma tabela para excluir!");
-    
-    if(confirm(`🚨 ATENÇÃO: Tem certeza absoluta que deseja excluir a tabela ${tab.toUpperCase()}?\n\nIsso apagará todos os preços nela contidos. Lojas vinculadas a ela não conseguirão gerar pedidos.`)) {
+    if(confirm(`🚨 ATENÇÃO: Deseja excluir a tabela ${tab.toUpperCase()}?\n\nIsso apagará todos os preços nela contidos.`)) {
         try {
             await deleteDoc(doc(db, "precos", tab));
             alert("Tabela excluída com sucesso!");
-            
             const selCat = document.getElementById('selectFiltroTabelaCat');
-            if(selCat.value === tab) selCat.value = ""; // Reseta o filtro se a pessoa estava vendo a tabela apagada
-            
-            await carregarTabelasPrecos();
-            carregarProdutos();
-        } catch(e) {
-            alert("Erro ao excluir tabela: " + e.message);
-        }
+            if(selCat && selCat.value === tab) selCat.value = ""; 
+            await window.carregarTabelasPrecos();
+            window.carregarProdutos();
+        } catch(e) { alert("Erro ao excluir: " + e.message); }
     }
 };
 
@@ -325,13 +325,14 @@ window.vincularTabelaEmMassa = async () => {
     const ids = Array.from(document.querySelectorAll('.chk-loja:checked')).map(c => c.value);
     if(!tab || !ids.length) return alert("Selecione a tabela e marque as lojas na lista!");
     const btn = document.querySelector('#sec-precos .btn-sucesso'); btn.innerText = "⏳ Aplicando...";
-    try { await Promise.all(ids.map(id => setDoc(doc(db, "usuarios", id), { tabelasPreco: { [tipo]: tab } }, { merge: true }))); alert("Vínculo aplicado com sucesso!"); carregarLojas(); carregarTabelasPrecos(); } 
+    try { await Promise.all(ids.map(id => setDoc(doc(db, "usuarios", id), { tabelasPreco: { [tipo]: tab } }, { merge: true }))); alert("Vínculo aplicado com sucesso!"); window.carregarLojas(); window.carregarTabelasPrecos(); } 
     finally { btn.innerText = "💾 Aplicar Tabela Selecionada"; document.getElementById('selectTabelaAssociar').value = ""; }
 };
+
 window.filtrarLojasChecklist = () => { const t = document.getElementById('buscaFilialVinculo').value.toUpperCase(); document.querySelectorAll('.loja-check-item').forEach(i => { i.style.display = i.querySelector('input').getAttribute('data-search').includes(t) ? 'flex' : 'none'; }); };
 window.marcarTodosLojas = (v) => document.querySelectorAll('.chk-loja').forEach(c => { if(c.parentElement.style.display !== 'none') c.checked = v; });
 
-async function carregarLojas() {
+window.carregarLojas = async () => {
     const snap = await getDocs(collection(db, "usuarios"));
     let html = ""; listaLojasAdmin = [];
     snap.forEach(d => {
@@ -341,13 +342,14 @@ async function carregarLojas() {
         html += `<tr><td>${d.id}</td><td>${u.nomeLoja || '-'}</td><td>${u.cnpj || '-'}</td><td><div style="font-size:11px; color:var(--text-muted); line-height: 1.4;">Venda: <b style="color:var(--primary)">${vVenda.toUpperCase()}</b> | Transf: <b>${vTransf.toUpperCase()}</b><br>Promo: <b>${vPromo.toUpperCase()}</b> | Balde: <b>${vBalde.toUpperCase()}</b></div></td><td style="text-align: center;"><button class="btn-small" style="background:#3b82f6; color:white;" onclick="window.abrirEdicaoLoja('${u.id}')">✏️</button></td></tr>`;
     });
     document.getElementById('corpoTabelaLojas').innerHTML = html;
-}
+};
+
 window.abrirNovaLoja = () => { document.getElementById('lojaEditId').disabled = false; document.getElementById('lojaEditIsNew').value = 'sim'; document.querySelectorAll('#modalLoja input[type="text"], #modalLoja input[type="password"]').forEach(i => i.value = ''); document.getElementById('permVenda').checked = true; document.getElementById('permTransf').checked = true; document.getElementById('permPromo').checked = true; document.getElementById('permBalde').checked = true; document.querySelectorAll('.sel-tabelas-loja').forEach(sel => sel.value = ''); document.getElementById('modalLoja').style.display = 'flex'; };
 window.abrirEdicaoLoja = (id) => { const u = listaLojasAdmin.find(x => x.id === id); if(!u) return; document.getElementById('lojaEditId').value = u.id; document.getElementById('lojaEditId').disabled = true; document.getElementById('lojaEditIsNew').value = 'nao'; document.getElementById('lojaEditNome').value = u.nomeLoja || ''; document.getElementById('lojaEditCnpj').value = u.cnpj || ''; document.getElementById('lojaEditSenha').value = ''; const p = u.planilhas || {}; document.getElementById('permVenda').checked = p.venda !== false; document.getElementById('permTransf').checked = p.transferencia !== false; document.getElementById('permPromo').checked = p.promocao !== false; document.getElementById('permBalde').checked = p.balde !== false; const tp = u.tabelasPreco || {}; document.getElementById('lojaEditTabVenda').value = tp.venda || u.tabelaPreco || ''; document.getElementById('lojaEditTabTransf').value = tp.transferencia || ''; document.getElementById('lojaEditTabPromo').value = tp.promocao || ''; document.getElementById('lojaEditTabBalde').value = tp.balde || ''; document.getElementById('modalLoja').style.display = 'flex'; };
-window.salvarLoja = async () => { const id = document.getElementById('lojaEditId').value.trim(); if(!id) return alert("Preencha o Login!"); const d = { nomeLoja: document.getElementById('lojaEditNome').value, cnpj: document.getElementById('lojaEditCnpj').value, planilhas: { venda: document.getElementById('permVenda').checked, transferencia: document.getElementById('permTransf').checked, promocao: document.getElementById('permPromo').checked, balde: document.getElementById('permBalde').checked }, tabelasPreco: { venda: document.getElementById('lojaEditTabVenda').value, transferencia: document.getElementById('lojaEditTabTransf').value, promocao: document.getElementById('lojaEditTabPromo').value, balde: document.getElementById('lojaEditTabBalde').value } }; const s = document.getElementById('lojaEditSenha').value.trim(); if(s) d.senha = s; await setDoc(doc(db, "usuarios", id), d, { merge: true }); alert("Loja Salva com Sucesso!"); window.fecharModal('modalLoja'); carregarLojas(); carregarTabelasPrecos(); };
+window.salvarLoja = async () => { const id = document.getElementById('lojaEditId').value.trim(); if(!id) return alert("Preencha o Login!"); const d = { nomeLoja: document.getElementById('lojaEditNome').value, cnpj: document.getElementById('lojaEditCnpj').value, planilhas: { venda: document.getElementById('permVenda').checked, transferencia: document.getElementById('permTransf').checked, promocao: document.getElementById('permPromo').checked, balde: document.getElementById('permBalde').checked }, tabelasPreco: { venda: document.getElementById('lojaEditTabVenda').value, transferencia: document.getElementById('lojaEditTabTransf').value, promocao: document.getElementById('lojaEditTabPromo').value, balde: document.getElementById('lojaEditTabBalde').value } }; const s = document.getElementById('lojaEditSenha').value.trim(); if(s) d.senha = s; await setDoc(doc(db, "usuarios", id), d, { merge: true }); alert("Loja Salva com Sucesso!"); window.fecharModal('modalLoja'); window.carregarLojas(); window.carregarTabelasPrecos(); };
 window.resetarSenhaPadrao = () => { document.getElementById('lojaEditSenha').value = '123456'; alert("Senha definida para '123456'. Clique em 'Salvar Loja' para aplicar."); };
 
 window.gerarBackupCompleto = async () => { const btn = document.getElementById('btnGerarBackup'); btn.innerText = "⏳ Compactando..."; try { const zip = new JSZip(); const cols = ["usuarios", "produtos", "precos", "clientes", "historico"]; for(let c of cols) { const s = await getDocs(collection(db, c)); let d = []; s.forEach(doc => d.push({id: doc.id, ...doc.data()})); zip.file(`${c}.json`, JSON.stringify(d)); } const blob = await zip.generateAsync({type:"blob"}); saveAs(blob, `BACKUP_ESKIMO_${new Date().toLocaleDateString().replace(/\//g, '-')}.zip`); } catch(e) { alert(e.message); } finally { btn.innerText = "⬇️ Baixar Backup (.zip)"; } };
 window.restaurarBackupCompleto = async () => { const f = document.getElementById('fileRestoreZip').files[0]; if(!f || !confirm("Isso apagará/sobrescreverá os dados atuais. Continuar?")) return; const btn = document.getElementById('btnRestaurarBackup'); btn.innerText = "⏳ Restaurando..."; try { const zip = await JSZip.loadAsync(f); for(let n in zip.files) { const c = n.replace('.json', ''); const cont = await zip.files[n].async("string"); const l = JSON.parse(cont); for(let i of l) { const id = i.id; delete i.id; await setDoc(doc(db, c, id), i, {merge: true}); } } alert("Restaurado com sucesso!"); location.reload(); } catch(e) { alert(e.message); btn.innerText = "⚡ Restaurar Dados"; } };
 window.regerar = async (id) => { await regenerarPlanilhaExcel(historicoGlobal[id]); };
-document.addEventListener('DOMContentLoaded', () => carregarDashboard());
+document.addEventListener('DOMContentLoaded', () => window.carregarDashboard());
