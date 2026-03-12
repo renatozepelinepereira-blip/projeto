@@ -67,13 +67,27 @@
         <div id="sec-produtos" class="secao">
             <h2 class="section-title">Catálogo e Preços</h2>
             <div class="card-panel">
-                <div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
+                
+                <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px;">
+                    <label style="font-weight: bold; color: var(--primary);">⚙️ Códigos Exclusivos de Açaí</label>
+                    <p style="font-size: 12px; color: #64748b; margin-bottom: 10px;">Os códigos definidos aqui (separados por vírgula) serão movidos automaticamente para a aba AÇAÍ em todo o sistema.</p>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="inputCodigosAcai" placeholder="Ex: 1020, 1021, AC01" style="margin: 0; flex-grow: 1;">
+                        <button onclick="window.salvarCodigosAcai()" class="btn-sucesso" style="white-space: nowrap;">💾 Salvar Códigos</button>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border); flex-wrap: wrap;">
                     <button onclick="window.abrirNovoProduto()" class="btn-primario">+ Novo Produto</button>
-                    <div style="flex-grow: 1;"></div>
-                    <label style="margin: 0; font-size: 15px; font-weight: 700;">✏️ Editar preços da Tabela:</label>
-                    <select id="selectFiltroTabelaCat" onchange="window.carregarProdutos()" style="width: 250px; margin: 0; padding: 12px; border-radius: 8px; border: 2px solid var(--primary); font-weight: bold; background: white; color: var(--primary);">
-                        <option value="">📋 Apenas Catálogo (Sem Preço)</option>
-                    </select>
+                    
+                    <input type="text" id="buscaCatalogoAdmin" placeholder="🔍 Buscar código ou descrição..." oninput="window.filtrarCatalogo()" style="margin: 0; flex-grow: 1; min-width: 200px;">
+                    
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label style="margin: 0; font-size: 14px; font-weight: 700; white-space: nowrap;">✏️ Editar Preços:</label>
+                        <select id="selectFiltroTabelaCat" onchange="window.carregarProdutos()" style="width: 200px; margin: 0; padding: 10px; border-radius: 8px; border: 2px solid var(--primary); font-weight: bold; background: white; color: var(--primary);">
+                            <option value="">📋 Catálogo Base</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div style="display: flex; gap: 8px; margin-bottom: 15px; background: #e2e8f0; padding: 6px; border-radius: 12px; display: inline-flex; overflow-x: auto;">
@@ -187,7 +201,7 @@
             <h2 style="margin-bottom: 20px; color: var(--primary);" id="titModalProduto">Produto</h2>
             <div class="grid-2" style="gap: 15px;">
                 <div><label>Código</label><input type="text" id="prodEditCodigo"></div>
-                <div><label>Engradado (Qtd)</label><input type="number" id="prodEditEngradado"></div>
+                <div><label>Engradado (Qtd)</label><input type="number" id="prodEditEngradado" step="0.01"></div>
             </div>
             <div class="grid-2" style="gap: 15px;">
                 <div><label>Descrição</label><input type="text" id="prodEditDescricao"></div>
