@@ -1,120 +1,214 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nova Venda - Eskimó</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍨</text></svg>">
-    <link rel="stylesheet" href="./css/loja.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js" defer></script>
-</head>
-<body>
-    <div class="top-header">
-        <div class="top-header-left">
-            <button class="menu-btn" onclick="window.toggleMenu()">☰</button>
-            <div class="logo-container">🍨 Eskimó</div>
-        </div>
-        <div class="store-badge" id="txtLoja">Carregando...</div>
-    </div>
+import { db } from "./api/firebase.js";
+import { processarExcelVenda } from "./utils/excel.js";
+import { iniciarInterfaceGlobais } from "./utils/interface.js";
+import { doc, getDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
-    <div class="sidebar">
-        <div class="sidebar-head">
-            <h2>🍨 Eskimó</h2>
-            <button class="close-btn" onclick="window.toggleMenu()">×</button>
-        </div>
-        <div class="sidebar-links">
-            <button class="active"><i>🛒</i> Nova Venda</button>
-            <button onclick="window.location.href='transferencia.html'"><i>🔄</i> Transferência</button>
-            <button onclick="window.location.href='historico.html'"><i>📜</i> Histórico</button>
-            <button onclick="localStorage.clear(); window.location.href='index.html'" style="margin-top:auto; color:#ef4444;"><i>🚪</i> Sair</button>
-        </div>
-    </div>
-    <div class="overlay" onclick="window.toggleMenu()"></div>
+const userId = localStorage.getItem('user'); 
+const nomeLoja = localStorage.getItem('nome') || userId;
+if(!userId) window.location.href = 'index.html'; 
 
-    <div class="container">
-        <h2 class="section-title">Portal de Vendas</h2>
+let produtosGlobais = []; 
+let clientesSalvos = [];
+window.descontosMaxGlobais = { sorvete: 0, acai: 0, seco: 0, balde: 0, promo: 0 };
+window.resumoGlobal = { totalV: 0, qtdTotal: 0, descontos: {} };
 
-        <div class="card-panel client-box">
-            <div><label>Razão Social do Cliente</label><input type="text" id="cliRazao" list="listaNomesClientes" placeholder="Ex: Supermercado XYZ"></div>
-            <div><label>CNPJ</label><input type="text" id="cliCnpj" placeholder="00.000.000/0000-00"></div>
-            <div><label>Pagamento</label><select id="cliFormaPagamento"><option>A vista</option><option>Boleto</option><option>Cartão</option></select></div>
-            <div><label>Prazo</label><input type="text" id="cliPrazo" placeholder="Ex: 7 dias" disabled style="background:#e2e8f0; cursor:not-allowed;"></div>
-        </div>
+iniciarInterfaceGlobais();
+document.getElementById('txtLoja').innerText = nomeLoja;
 
-        <div class="tabs">
-            <button class="tab-btn active" id="btnTabSorvete" onclick="window.mudarAba('sorvete')">Sorvetes</button>
-            <button class="tab-btn" id="btnTabAcai" onclick="window.mudarAba('acai')">Açaí</button>
-            <button class="tab-btn" id="btnTabSeco" onclick="window.mudarAba('seco')">Secos</button>
-            <button class="tab-btn" id="btnTabBalde" onclick="window.mudarAba('balde')">Baldes</button>
-            <button class="tab-btn" id="btnTabPromo" onclick="window.mudarAba('promo')">Promoções</button>
-        </div>
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type === 'number') {
+        e.preventDefault();
+        const inputs = Array.from(document.querySelectorAll('.tab-content.active input[type="number"]:not([disabled])'));
+        const index = inputs.indexOf(e.target);
+        if (index > -1 && index < inputs.length - 1) { inputs[index + 1].focus(); inputs[index + 1].select(); }
+    }
+});
 
-        <div class="table-container">
-            <div id="content_sorvete" class="tab-content active">
-                <div style="display: flex; justify-content: flex-end; align-items: center; padding: 10px; background: #f8fafc; border-bottom: 1px solid var(--border);">
-                    <label style="margin: 0; font-weight: bold; color: var(--text-main); margin-right: 10px;">Desconto Aplicado (%):</label>
-                    <input type="number" id="desc_sorvete" value="0" min="0" style="width: 80px; margin: 0; text-align: center;" oninput="window.calcularTudo()">
-                    <span id="max_desc_sorvete" style="margin-left: 10px; font-size: 12px; color: #ef4444; font-weight: bold;">Máx: 0%</span>
-                </div>
-                <table id="tbl_sorvete"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço un.</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
-            </div>
-            
-            <div id="content_acai" class="tab-content">
-                <div style="display: flex; justify-content: flex-end; align-items: center; padding: 10px; background: #f8fafc; border-bottom: 1px solid var(--border);">
-                    <label style="margin: 0; font-weight: bold; color: var(--text-main); margin-right: 10px;">Desconto Aplicado (%):</label>
-                    <input type="number" id="desc_acai" value="0" min="0" style="width: 80px; margin: 0; text-align: center;" oninput="window.calcularTudo()">
-                    <span id="max_desc_acai" style="margin-left: 10px; font-size: 12px; color: #ef4444; font-weight: bold;">Máx: 0%</span>
-                </div>
-                <table id="tbl_acai"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço un.</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
-            </div>
-            
-            <div id="content_seco" class="tab-content">
-                <div style="display: flex; justify-content: flex-end; align-items: center; padding: 10px; background: #f8fafc; border-bottom: 1px solid var(--border);">
-                    <label style="margin: 0; font-weight: bold; color: var(--text-main); margin-right: 10px;">Desconto Aplicado (%):</label>
-                    <input type="number" id="desc_seco" value="0" min="0" style="width: 80px; margin: 0; text-align: center;" oninput="window.calcularTudo()">
-                    <span id="max_desc_seco" style="margin-left: 10px; font-size: 12px; color: #ef4444; font-weight: bold;">Máx: 0%</span>
-                </div>
-                <table id="tbl_seco"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço un.</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
-            </div>
-            
-            <div id="content_balde" class="tab-content">
-                <div style="display: flex; justify-content: flex-end; align-items: center; padding: 10px; background: #f8fafc; border-bottom: 1px solid var(--border);">
-                    <label style="margin: 0; font-weight: bold; color: var(--text-main); margin-right: 10px;">Desconto Aplicado (%):</label>
-                    <input type="number" id="desc_balde" value="0" min="0" style="width: 80px; margin: 0; text-align: center;" oninput="window.calcularTudo()">
-                    <span id="max_desc_balde" style="margin-left: 10px; font-size: 12px; color: #ef4444; font-weight: bold;">Máx: 0%</span>
-                </div>
-                <table id="tbl_balde"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço un.</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
-            </div>
-            
-            <div id="content_promo" class="tab-content">
-                <div style="display: flex; justify-content: flex-end; align-items: center; padding: 10px; background: #f8fafc; border-bottom: 1px solid var(--border);">
-                    <label style="margin: 0; font-weight: bold; color: var(--text-main); margin-right: 10px;">Desconto Aplicado (%):</label>
-                    <input type="number" id="desc_promo" value="0" min="0" style="width: 80px; margin: 0; text-align: center;" oninput="window.calcularTudo()">
-                    <span id="max_desc_promo" style="margin-left: 10px; font-size: 12px; color: #ef4444; font-weight: bold;">Máx: 0%</span>
-                </div>
-                <table id="tbl_promo"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço un.</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
-            </div>
-        </div>
+window.mudarAba = (cat) => { 
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); 
+    document.getElementById('btnTab' + cat.charAt(0).toUpperCase() + cat.slice(1)).classList.add('active'); 
+    document.getElementById('content_' + cat).classList.add('active'); 
+};
 
-        <div class="resumo-box">
-            <div class="resumo-grid">
-                <div class="resumo-info">
-                    <b>Qtd (Unid)</b>
-                    <span id="qtdTotal" style="color: #475569;">0</span>
-                </div>
-                <div class="resumo-info">
-                    <b>Total Líquido</b>
-                    <span id="valComDesc">R$ 0,00</span>
-                </div>
-                <button onclick="window.gerarExcelPedido()" class="btn-sucesso">
-                    <span style="font-size: 16px;">⬇️</span> Gerar Pedido
-                </button>
-            </div>
-        </div>
-    </div>
+document.getElementById('cliFormaPagamento').addEventListener('change', (e) => {
+    const prazo = document.getElementById('cliPrazo');
+    if(e.target.value === 'A vista') { prazo.value = ''; prazo.disabled = true; prazo.style.background = '#e2e8f0'; prazo.style.cursor = 'not-allowed'; } 
+    else { prazo.disabled = false; prazo.style.background = '#f8fafc'; prazo.style.cursor = 'text'; }
+});
 
-    <datalist id="listaNomesClientes"></datalist>
-    <script type="module" src="./js/loja.js"></script>
-</body>
-</html>
+async function iniciar() {
+    const userSnap = await getDoc(doc(db, "usuarios", userId)); 
+    const dadosUsuario = userSnap.data() || {};
+    
+    if (dadosUsuario.planilhas?.venda === false && userId !== 'admin') { 
+        window.location.replace('transferencia.html'); return; 
+    }
+
+    // Carrega e preenche limites de desconto
+    const dmax = dadosUsuario.descontosMax || {};
+    window.descontosMaxGlobais = {
+        sorvete: parseFloat(dmax.sorvete) || 0,
+        acai: parseFloat(dmax.acai) || 0,
+        seco: parseFloat(dmax.seco) || 0,
+        balde: parseFloat(dmax.balde) || 0,
+        promo: parseFloat(dmax.promo) || 0
+    };
+    
+    Object.keys(window.descontosMaxGlobais).forEach(k => {
+        let el = document.getElementById('max_desc_' + k);
+        if(el) el.innerText = `Máx: ${window.descontosMaxGlobais[k]}%`;
+    });
+
+    const tabelas = dadosUsuario.tabelasPreco || {};
+    let tabVenda = (tabelas.venda || dadosUsuario.tabelaPreco || 'padrao').toLowerCase();
+    let tabPromo = (tabelas.promocao || tabVenda).toLowerCase(); 
+    let tabBalde = (tabelas.balde || tabVenda).toLowerCase();   
+    
+    const cliSnap = await getDocs(collection(db, "clientes"));
+    const listaNomes = document.getElementById('listaNomesClientes');
+    cliSnap.forEach(c => { clientesSalvos.push(c.data()); listaNomes.innerHTML += `<option value="${c.data().razao}">`; });
+
+    document.getElementById('cliRazao').addEventListener('change', (e) => {
+        const cliente = clientesSalvos.find(c => c.razao === e.target.value);
+        if(cliente) document.getElementById('cliCnpj').value = cliente.cnpj || '';
+    });
+
+    const [snapVenda, snapPromo, snapBalde, prodSnap] = await Promise.all([ 
+        getDoc(doc(db, "precos", tabVenda)), 
+        getDoc(doc(db, "precos", tabPromo)), 
+        getDoc(doc(db, "precos", tabBalde)), 
+        getDocs(collection(db, "produtos")) 
+    ]);
+    
+    const precosVenda = snapVenda.exists() ? snapVenda.data() : {};
+    const precosPromo = snapPromo.exists() ? snapPromo.data() : {};
+    const precosBalde = snapBalde.exists() ? snapBalde.data() : {};
+
+    let htmlBuffers = { sorvete: "", acai: "", seco: "", balde: "", promo: "" };
+
+    prodSnap.forEach(d => {
+        const item = d.data(); 
+        let rawCat = (item.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        let cat = 'sorvete'; 
+        if (rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai';
+        else if (rawCat.includes('seco')) cat = 'seco'; 
+        else if (rawCat.includes('balde')) cat = 'balde'; 
+        else if (rawCat.includes('promo')) cat = 'promo';
+        
+        let precoCru;
+        if (cat === 'promo') precoCru = precosPromo[item.codigo];
+        else if (cat === 'balde') precoCru = precosBalde[item.codigo];
+        else precoCru = precosVenda[item.codigo]; 
+        
+        let precoSeguro = parseFloat(precoCru);
+        if (isNaN(precoSeguro)) precoSeguro = 0;
+        
+        const idx = produtosGlobais.length;
+        produtosGlobais.push({ ...item, precoFinal: precoSeguro, catReal: cat });
+        
+        let imgHtml = item.imagem ? `<img src="${item.imagem}" class="img-produto" loading="lazy">` : `<div class="img-produto" style="display:flex;align-items:center;justify-content:center;background:#f1f5f9;font-size:20px;">📦</div>`;
+        let corPreco = precoSeguro > 0 ? '#10b981' : '#ef4444';
+
+        htmlBuffers[cat] += `<tr id="tr_${idx}">
+            <td style="text-align:center;">${imgHtml}</td>
+            <td><b>${item.codigo}</b></td>
+            <td>${item.descricao}</td>
+            <td>${item.engradado}</td>
+            <td style="color:${corPreco}; font-weight:600;">R$ ${precoSeguro.toFixed(2)}</td>
+            <td><input type="number" id="eng_${idx}" placeholder="0" min="0" step="0.5" oninput="window.calcularTudo()"></td>
+            <td><input type="number" id="uni_${idx}" placeholder="0" min="0" step="1" oninput="window.calcularTudo()"></td>
+            <td id="sub_${idx}" style="font-weight:700; color:var(--text-muted);">R$ 0,00</td>
+        </tr>`;
+    });
+    
+    Object.keys(htmlBuffers).forEach(k => {
+        const tbody = document.querySelector(`#tbl_${k} tbody`);
+        if(tbody) tbody.innerHTML = htmlBuffers[k] || `<tr><td colspan="8" style="text-align:center; padding:20px;">Nenhum produto cadastrado nesta categoria.</td></tr>`;
+    });
+}
+
+window.calcularTudo = () => {
+    let totaisCat = { sorvete: 0, acai: 0, seco: 0, balde: 0, promo: 0 };
+    let qtdTotalGeral = 0;
+    
+    produtosGlobais.forEach((p, i) => {
+        let inputEng = document.getElementById(`eng_${i}`); let inputUni = document.getElementById(`uni_${i}`); 
+        if(!inputEng || !inputUni) return;
+        
+        let cxStr = inputEng.value; let cx = parseFloat(cxStr) || 0; let un = parseFloat(inputUni.value) || 0;
+        if (cxStr !== "" && (cx * 10) % 5 !== 0) { alert(`Apenas múltiplos de 0.5 nas caixas.`); inputEng.value = ""; cx = 0; }
+        if (inputUni.value !== "" && un % 1 !== 0) { alert(`Apenas unidades inteiras.`); inputUni.value = ""; un = 0; }
+
+        let cap = parseFloat(p.engradado) || 1; 
+        let qtd = (cx * cap) + un; 
+        let sub = qtd * p.precoFinal;
+        
+        document.getElementById(`sub_${i}`).innerText = `R$ ${sub.toFixed(2)}`;
+        p.calcTotalUnidades = qtd; 
+        p.calcSubtotal = sub;
+        
+        totaisCat[p.catReal] += sub; 
+        qtdTotalGeral += qtd;
+        
+        let tr = document.getElementById(`tr_${i}`); 
+        if (tr) { if (qtd > 0) tr.classList.add('linha-destaque'); else tr.classList.remove('linha-destaque'); }
+    });
+
+    // Puxa e valida os descontos
+    let desc = {
+        sorvete: parseFloat(document.getElementById('desc_sorvete').value) || 0,
+        acai: parseFloat(document.getElementById('desc_acai').value) || 0,
+        seco: parseFloat(document.getElementById('desc_seco').value) || 0,
+        balde: parseFloat(document.getElementById('desc_balde').value) || 0,
+        promo: parseFloat(document.getElementById('desc_promo').value) || 0
+    };
+
+    Object.keys(desc).forEach(k => {
+        let max = window.descontosMaxGlobais[k];
+        if (desc[k] > max) {
+            alert(`ATENÇÃO: O desconto máximo permitido para ${k.toUpperCase()} é ${max}%`);
+            desc[k] = max;
+            document.getElementById('desc_' + k).value = max;
+        }
+    });
+    
+    let totalGeralDescontado = 0;
+    Object.keys(totaisCat).forEach(k => {
+        totalGeralDescontado += totaisCat[k] * (1 - desc[k] / 100);
+    });
+
+    document.getElementById('valComDesc').innerText = "R$ " + totalGeralDescontado.toFixed(2); 
+    document.getElementById('qtdTotal').innerText = qtdTotalGeral;
+    window.resumoGlobal = { totalV: totalGeralDescontado, qtdTotal: qtdTotalGeral, descontos: desc };
+};
+
+window.gerarExcelPedido = async () => {
+    const razao = document.getElementById('cliRazao').value.trim();
+    const cnpj = document.getElementById('cliCnpj').value.trim();
+    const formaPagamento = document.getElementById('cliFormaPagamento').value;
+    const prazo = document.getElementById('cliPrazo').value.trim();
+    
+    if(!razao) return alert("Preencha a Razão Social do Cliente!");
+    
+    let itens = produtosGlobais.filter(p => p.calcTotalUnidades > 0);
+    if (itens.length === 0) return alert("Preencha alguma quantidade!");
+
+    if(!confirm("Deseja confirmar a geração, baixar a planilha e salvar este pedido no histórico?")) return;
+
+    const btn = document.querySelector('.btn-sucesso'); 
+    btn.innerHTML = "⏳ GERANDO..."; btn.disabled = true;
+    
+    try { 
+        await processarExcelVenda({ 
+            userId, nomeLoja, razao, cnpj, formaPagamento, prazo, 
+            totalV: window.resumoGlobal.totalV, 
+            itens, isTransferencia: false, 
+            descontos: window.resumoGlobal.descontos // Envia os descontos para o Excel
+        }); 
+        alert("✅ Pedido gerado com sucesso! O Excel foi baixado.");
+        window.location.reload();
+    } catch (e) { alert("Falha: " + e.message); } finally { btn.innerHTML = "<span style='font-size: 16px;'>⬇️</span> Gerar Pedido"; btn.disabled = false; }
+};
+
+iniciar();
