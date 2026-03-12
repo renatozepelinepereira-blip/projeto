@@ -2,7 +2,6 @@ import { db, storage } from "./api/firebase.js";
 import { iniciarInterfaceGlobais } from "./utils/interface.js";
 import { regenerarPlanilhaExcel } from "./utils/excel.js";
 import { doc, getDoc, setDoc, getDocs, deleteDoc, collection, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
-import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
 
 if(localStorage.getItem('tipo') !== 'admin') window.location.href = 'index.html';
 iniciarInterfaceGlobais();
@@ -44,50 +43,63 @@ window.carregarDashboard = async () => {
         sH.forEach(d => {
             const data = d.data(); const ts = data.dataHora?.toDate ? data.dataHora.toDate() : new Date(data.dataHora?.seconds * 1000);
             let ok = true; if(ts && !isNaN(ts)) { const s = ts.toISOString().split('T')[0]; if(dI && s < dI) ok = false; if(dF && s > dF) ok = false; }
-            if(ok) { cont++; historicoGlobal[d.id] = data; html += `<tr class="linha-hist-admin"><td>${ts.toLocaleString('pt-BR')}</td><td><b>${data.nomeLoja || data.lojaId}</b></td><td style="color:${data.acao.includes('Venda')?'#10b981':'#3b82f6'}; font-weight:600;">${data.acao}</td><td>${data.destino || '-'}</td><td style="display: flex; gap: 8px; justify-content: center;"><button class="btn-small" style="background:#f1f5f9; border: 1px solid #cbd5e1;" onclick="window.visualizarLog('${d.id}')">👁️</button><button class="btn-small" style="background:#10b981; color:white;" onclick="window.regerar('${d.id}')">⬇️</button></td></tr>`; }
+            if(ok) { 
+                cont++; historicoGlobal[d.id] = data; 
+                html += `<tr class="linha-hist-admin">
+                    <td>${ts.toLocaleString('pt-BR')}</td>
+                    <td><b>${data.nomeLoja || data.lojaId}</b></td>
+                    <td style="color:${data.acao.includes('Venda')?'#10b981':'#3b82f6'}; font-weight:600;">${data.acao}</td>
+                    <td>${data.destino || '-'}</td>
+                    <td style="display: flex; gap: 8px; justify-content: center;">
+                        <button class="btn-small" style="background:#f1f5f9; border: 1px solid #cbd5e1;" onclick="window.visualizarLog('${d.id}')" title="Visualizar">👁️</button>
+                        <button class="btn-small" style="background:#10b981; color:white;" onclick="window.regerar('${d.id}')" title="Baixar Excel">⬇️</button>
+                        <button class="btn-small" style="background:#ef4444; color:white;" onclick="window.excluirHistorico('${d.id}')" title="Excluir Histórico">🗑️</button>
+                    </td>
+                </tr>`; 
+            }
         });
         document.getElementById('corpoTabelaHistorico').innerHTML = html; document.getElementById('dashPlanilhas').innerText = cont;
     } finally { carregandoDash = false; }
 };
 
+window.excluirHistorico = async (id) => {
+    if(confirm("🚨 ATENÇÃO: Tem certeza que deseja apagar este registro do histórico? Ele não poderá ser recuperado.")) {
+        try { await deleteDoc(doc(db, "historico", id)); window.carregarDashboard(); } catch (e) { alert("Erro ao excluir o histórico: " + e.message); }
+    }
+};
+
 window.visualizarLog = (id) => {
-    const log = historicoGlobal[id];
-    if(!log) return;
+    const log = historicoGlobal[id]; if(!log) return;
     let html = `<div style="margin-bottom: 15px;"><b>Data:</b> ${log.dataHora?.toDate ? log.dataHora.toDate().toLocaleString('pt-BR') : 'N/A'}<br><b>Loja:</b> ${log.nomeLoja || log.lojaId}<br><b>Ação:</b> ${log.acao}<br><b>Destino:</b> ${log.destino || log.dadosPlanilha?.razao || '-'}</div>`;
     if(log.dadosPlanilha && log.dadosPlanilha.itens && log.dadosPlanilha.itens.length > 0) {
         html += `<table style="width:100%; border-collapse:collapse;"><thead style="background:#e2e8f0;"><tr><th style="padding:8px; text-align:left;">Cód</th><th style="padding:8px; text-align:left;">Desc</th><th style="padding:8px; text-align:center;">Qtd</th><th style="padding:8px; text-align:right;">Subtotal</th></tr></thead><tbody>`;
         log.dadosPlanilha.itens.forEach(i => { html += `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:8px;">${i.codigo}</td><td style="padding:8px;">${i.descricao}</td><td style="padding:8px; text-align:center;">${i.calcTotalUnidades}</td><td style="padding:8px; text-align:right; color:var(--primary); font-weight:600;">R$ ${(i.calcSubtotal||0).toFixed(2)}</td></tr>`; });
         html += `</tbody></table>`;
-        if(log.dadosPlanilha.totalV) html += `<div style="text-align:right; margin-top:15px; font-size:18px;">Total: <b style="color:var(--primary);">R$ ${log.dadosPlanilha.totalV.toFixed(2)}</b></div>`;
+        if(log.dadosPlanilha.totalV) html += `<div style="text-align:right; margin-top:15px; font-size:18px;">Total Líquido: <b style="color:var(--primary);">R$ ${log.dadosPlanilha.totalV.toFixed(2)}</b></div>`;
     } else { html += `<div style="padding:15px; background:#f1f5f9; text-align:center;">Sem itens detalhados.</div>`; }
     document.getElementById('conteudoDetalhesLog').innerHTML = html; document.getElementById('btnRegerarPlanilhaModal').onclick = () => window.regerar(id); document.getElementById('modalDetalhesLog').style.display = 'flex';
 };
 
-// --- NAVEGAÇÃO DAS ABAS DO CATÁLOGO ---
 window.mudarAbaAdminCat = (cat) => {
     document.querySelectorAll('.admin-cat-tab').forEach(b => { b.style.background = 'transparent'; b.style.color = '#64748b'; b.style.boxShadow = 'none'; });
     document.querySelectorAll('.admin-cat-content').forEach(c => c.style.display = 'none');
-    
     const btn = document.getElementById('btnAdminTab' + cat.charAt(0).toUpperCase() + cat.slice(1));
     if(btn) { btn.style.background = 'white'; btn.style.color = 'var(--primary)'; btn.style.boxShadow = 'var(--shadow-sm)'; }
-    
     const content = document.getElementById('content_admin_' + cat);
     if(content) content.style.display = 'block';
 };
 
-window.previewImagemLocal = (event) => { const file = event.target.files[0]; const pv = document.getElementById('previewFoto'); if(file) { pv.src = URL.createObjectURL(file); pv.style.display = 'block'; } };
+window.previewImagemURL = () => {
+    const url = document.getElementById('prodEditImagemUrl').value.trim();
+    const pv = document.getElementById('previewFoto');
+    if (url) { pv.src = url; pv.style.display = 'block'; } else { pv.style.display = 'none'; }
+};
 
-// === A FUNÇÃO GLOBAL QUE ATUALIZA A TABELA QUANDO VOCÊ SELECIONA NO MENU ===
 window.carregarProdutos = async () => {
     const tabelaSelecionada = document.getElementById('selectFiltroTabelaCat').value;
-    
     document.querySelectorAll('.thPrecoCat').forEach(th => {
-        if (tabelaSelecionada) {
-            th.innerText = `Preço (${tabelaSelecionada.toUpperCase()})`;
-            th.style.display = 'table-cell';
-        } else {
-            th.style.display = 'none';
-        }
+        if (tabelaSelecionada) { th.innerText = `Preço (${tabelaSelecionada.toUpperCase()})`; th.style.display = 'table-cell'; } 
+        else { th.style.display = 'none'; }
     });
 
     let precosTabela = {};
@@ -97,7 +109,7 @@ window.carregarProdutos = async () => {
     }
 
     const snap = await getDocs(collection(db, "produtos"));
-    let htmlBuffers = { sorvete: "", seco: "", balde: "", promo: "" };
+    let htmlBuffers = { sorvete: "", acai: "", seco: "", balde: "", promo: "" };
     window.listaProdutosAdmin = [];
     
     snap.forEach(d => {
@@ -107,7 +119,10 @@ window.carregarProdutos = async () => {
         
         let rawCat = (p.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         let cat = 'sorvete'; 
-        if (rawCat.includes('seco')) cat = 'seco'; else if (rawCat.includes('balde')) cat = 'balde'; else if (rawCat.includes('promo')) cat = 'promo';
+        if (rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai';
+        else if (rawCat.includes('seco')) cat = 'seco'; 
+        else if (rawCat.includes('balde')) cat = 'balde'; 
+        else if (rawCat.includes('promo')) cat = 'promo';
 
         let htmlPreco = '';
         if (tabelaSelecionada) {
@@ -128,8 +143,8 @@ window.carregarProdutos = async () => {
         </tr>`;
     });
 
-    // Atualiza as abas separadamente
     if (document.getElementById('corpoAdminSorvete')) document.getElementById('corpoAdminSorvete').innerHTML = htmlBuffers.sorvete || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
+    if (document.getElementById('corpoAdminAcai')) document.getElementById('corpoAdminAcai').innerHTML = htmlBuffers.acai || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
     if (document.getElementById('corpoAdminSeco')) document.getElementById('corpoAdminSeco').innerHTML = htmlBuffers.seco || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
     if (document.getElementById('corpoAdminBalde')) document.getElementById('corpoAdminBalde').innerHTML = htmlBuffers.balde || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
     if (document.getElementById('corpoAdminPromo')) document.getElementById('corpoAdminPromo').innerHTML = htmlBuffers.promo || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
@@ -150,94 +165,37 @@ window.abrirNovoProduto = () => {
     const tabelaSelecionada = document.getElementById('selectFiltroTabelaCat').value;
     const divPreco = document.getElementById('divPrecoEdit');
     if (tabelaSelecionada) { document.getElementById('lblNomeTabelaEdit').innerText = tabelaSelecionada.toUpperCase(); divPreco.style.display = 'block'; } else { divPreco.style.display = 'none'; }
-    document.getElementById('previewFoto').style.display = 'none'; document.getElementById('modalProduto').style.display = 'flex'; 
+    document.getElementById('previewFoto').style.display = 'none'; document.getElementById('prodEditImagemUrl').value = ''; document.getElementById('modalProduto').style.display = 'flex'; 
 };
 
 window.salvarProduto = async () => {
-    const cod = document.getElementById('prodEditCodigo').value.trim();
-    if(!cod) return alert("Código obrigatório!");
-    
-    const btn = document.getElementById('btnSalvarProd');
-    const file = document.getElementById('prodEditImagemFile').files[0];
-    
-    btn.disabled = true; 
-    btn.innerText = "⏳ Enviando e Salvando...";
-    
+    const cod = document.getElementById('prodEditCodigo').value.trim(); if(!cod) return alert("Código obrigatório!");
+    const btn = document.getElementById('btnSalvarProd'); btn.disabled = true; btn.innerText = "⏳ Salvando...";
     try {
-        let url = document.getElementById('prodEditImagemUrl').value;
-        
-        // 1. Upload da Imagem no Storage
-        if(file) { 
-            console.log("Iniciando upload para o Storage...");
-            const sRef = ref(storage, `produtos/${cod}`); 
-            await uploadBytes(sRef, file); 
-            url = await getDownloadURL(sRef); 
-            console.log("Upload concluído! URL: ", url);
-        }
-        
-        // 2. Salva os dados no banco de produtos
-        await setDoc(doc(db, "produtos", cod), { 
-            codigo: cod, 
-            descricao: document.getElementById('prodEditDescricao').value, 
-            categoria: document.getElementById('prodEditCategoria').value, 
-            engradado: document.getElementById('prodEditEngradado').value, 
-            imagem: url 
-        }, { merge: true });
-        
-        // 3. Salva o preço (se houver tabela selecionada no fundo)
+        let url = document.getElementById('prodEditImagemUrl').value.trim();
+        await setDoc(doc(db, "produtos", cod), { codigo: cod, descricao: document.getElementById('prodEditDescricao').value, categoria: document.getElementById('prodEditCategoria').value, engradado: document.getElementById('prodEditEngradado').value, imagem: url }, { merge: true });
         const tabelaSelecionada = document.getElementById('selectFiltroTabelaCat').value;
-        if (tabelaSelecionada) {
-            const precoVal = document.getElementById('prodEditPreco').value;
-            if (precoVal !== "") {
-                await setDoc(doc(db, "precos", tabelaSelecionada), { [cod]: parseFloat(precoVal) }, { merge: true });
-            }
-        }
-        
-        // 4. Sucesso! Fecha o modal com segurança e recarrega a lista
-        document.getElementById('modalProduto').style.display = 'none'; 
-        window.carregarProdutos();
-        
-    } catch (e) { 
-        console.error("Erro completo:", e);
-        alert(`❌ ERRO NO UPLOAD!\n\nMotivo: ${e.message}\n\nSe o erro for 'unauthorized', vá no Firebase > Storage > Rules e libere as permissões.`); 
-    } finally { 
-        btn.disabled = false; 
-        btn.innerText = "Salvar Produto"; 
-    }
+        if (tabelaSelecionada) { const precoVal = document.getElementById('prodEditPreco').value; if (precoVal !== "") await setDoc(doc(db, "precos", tabelaSelecionada), { [cod]: parseFloat(precoVal) }, { merge: true }); }
+        window.fecharModal('modalProduto'); window.carregarProdutos();
+    } catch (e) { alert("Erro ao salvar: " + e.message); } finally { btn.disabled = false; btn.innerText = "Salvar Produto"; }
 };
 
 window.excluirProduto = async (cod) => { if(confirm(`ATENÇÃO: Excluir permanentemente o produto ${cod}?`)) { try { await deleteDoc(doc(db, "produtos", cod)); window.carregarProdutos(); } catch(e) { alert("Erro ao excluir."); } } };
 
 window.importarTabelaPrecos = async () => { 
-    const nome = document.getElementById('nomeTabelaPreco').value.trim().toLowerCase(); 
-    const file = document.getElementById('fileCsvPrecos').files[0]; 
+    const nome = document.getElementById('nomeTabelaPreco').value.trim().toLowerCase(); const file = document.getElementById('fileCsvPrecos').files[0]; 
     if(!nome || !file) return alert("Preencha o nome e selecione o arquivo!"); 
-    
-    const btn = document.querySelector('#sec-precos .btn-primario');
-    btn.innerText = "⏳ Importando Catálogo...";
-    
+    const btn = document.querySelector('#sec-precos .btn-primario'); btn.innerText = "⏳ Importando Catálogo...";
     const reader = new FileReader(); 
     reader.onload = async (e) => { 
         try {
-            const data = new Uint8Array(e.target.result); 
-            const wb = XLSX.read(data, {type: 'array'}); 
-            const sheet = wb.Sheets[wb.SheetNames[0]]; 
-            const json = XLSX.utils.sheet_to_json(sheet, {header: 1}); 
-            
-            let precos = {}; 
-            let importados = 0;
-            const promessasProdutos = [];
-            
+            const data = new Uint8Array(e.target.result); const wb = XLSX.read(data, {type: 'array'}); const sheet = wb.Sheets[wb.SheetNames[0]]; const json = XLSX.utils.sheet_to_json(sheet, {header: 1}); 
+            let precos = {}; let importados = 0; const promessasProdutos = [];
             for(let i = 1; i < json.length; i++) { 
                 if(!json[i] || json[i].length === 0) continue;
-                
-                let rawCod = json[i][0];   let rawDesc = json[i][1];  let rawEng = json[i][2];   let rawPreco = json[i][3]; let rawCat = json[i][4];   
+                let rawCod = json[i][0]; let rawDesc = json[i][1]; let rawEng = json[i][2]; let rawPreco = json[i][3]; let rawCat = json[i][4];   
                 if(rawCod === undefined || rawPreco === undefined) continue;
-                
-                let cod = String(rawCod).trim(); 
-                let precoStr = String(rawPreco).replace(/[R$\s]/g, '').replace(',', '.');
-                let precoVal = parseFloat(precoStr);
-                
+                let cod = String(rawCod).trim(); let precoStr = String(rawPreco).replace(/[R$\s]/g, '').replace(',', '.'); let precoVal = parseFloat(precoStr);
                 if(cod && !isNaN(precoVal)) {
                     precos[cod] = precoVal;
                     let dadosProduto = { codigo: cod };
@@ -248,17 +206,11 @@ window.importarTabelaPrecos = async () => {
                     importados++;
                 }
             } 
-            
             if(importados === 0) { alert("Nenhum item válido. Cheque se as colunas são: A=Cód, B=Desc, C=Engrad, D=Preço, E=Cat."); return; }
-            
-            await setDoc(doc(db, "precos", nome), precos, { merge: true }); 
-            await Promise.all(promessasProdutos);
+            await setDoc(doc(db, "precos", nome), precos, { merge: true }); await Promise.all(promessasProdutos);
             alert(`🚀 INCRÍVEL! ${importados} produtos processados.\nTabela ${nome.toUpperCase()} salva e Catálogo Atualizado!`); 
-            
-            await window.carregarTabelasPrecos(); 
-            const selCat = document.getElementById('selectFiltroTabelaCat');
+            await window.carregarTabelasPrecos(); const selCat = document.getElementById('selectFiltroTabelaCat');
             if (selCat) { selCat.value = nome; window.carregarProdutos(); }
-            
         } catch(err) { alert("Erro ao ler o Excel."); } finally { btn.innerText = "⚡ Importar Tabela"; document.getElementById('nomeTabelaPreco').value = ""; document.getElementById('fileCsvPrecos').value = ""; }
     }; 
     reader.readAsArrayBuffer(file); 
@@ -269,53 +221,19 @@ window.carregarTabelasPrecos = async () => {
     const selVincular = document.getElementById('selectTabelaAssociar');
     const selExcluir = document.getElementById('selectTabelaExcluir');
     const selCat = document.getElementById('selectFiltroTabelaCat');
-    
     const valAtualCat = selCat ? selCat.value : "";
-
     if(selVincular) selVincular.innerHTML = '<option value="">Selecione a Tabela...</option>';
     if(selExcluir) selExcluir.innerHTML = '<option value="">Selecione a Tabela para EXCLUIR...</option>';
     if(selCat) selCat.innerHTML = '<option value="">📋 Apenas Catálogo (Sem Preço)</option>';
     let optionsHtml = '<option value="">(Nenhuma)</option>';
-
-    sT.forEach(d => { 
-        const opt = `<option value="${d.id}">${d.id.toUpperCase()}</option>`;
-        if(selVincular) selVincular.innerHTML += opt; 
-        if(selExcluir) selExcluir.innerHTML += opt;
-        if(selCat) selCat.innerHTML += opt;
-        optionsHtml += opt; 
-    });
-
-    if(selCat) selCat.value = valAtualCat; 
-    document.querySelectorAll('.sel-tabelas-loja').forEach(sel => sel.innerHTML = optionsHtml);
-
-    const sL = await getDocs(collection(db, "usuarios"));
-    const cont = document.getElementById('listaLojasChecklist');
-    if(!cont) return;
-    
-    cont.innerHTML = '';
-    let divsLojas = [];
+    sT.forEach(d => { const opt = `<option value="${d.id}">${d.id.toUpperCase()}</option>`; if(selVincular) selVincular.innerHTML += opt; if(selExcluir) selExcluir.innerHTML += opt; if(selCat) selCat.innerHTML += opt; optionsHtml += opt; });
+    if(selCat) selCat.value = valAtualCat; document.querySelectorAll('.sel-tabelas-loja').forEach(sel => sel.innerHTML = optionsHtml);
+    const sL = await getDocs(collection(db, "usuarios")); const cont = document.getElementById('listaLojasChecklist'); if(!cont) return;
+    cont.innerHTML = ''; let divsLojas = [];
     sL.forEach(u => {
-        if(u.id === 'admin') return;
-        const d = u.data(); const fil = extrairFilial(d.cnpj);
-        const txt = `[FILIAL ${fil}] ${d.nomeLoja || u.id} - ${d.cnpj || ""}`.toUpperCase();
-        const tp = d.tabelasPreco || {};
-        const vVenda = (tp.venda || d.tabelaPreco || '').toLowerCase();
-        const vTransf = (tp.transferencia || 'tf').toLowerCase();
-        const vPromo = (tp.promocao || '').toLowerCase();
-        const vBalde = (tp.balde || '').toLowerCase();
-        
-        const div = document.createElement('div');
-        div.className = 'loja-check-item';
-        div.style.cssText = 'display:flex; gap:10px; padding:10px; border-bottom:1px solid #f1f5f9; align-items: center;';
-        div.innerHTML = `
-            <input type="checkbox" class="chk-loja" value="${u.id}" data-search="${txt}" data-tab-venda="${vVenda}" data-tab-transferencia="${vTransf}" data-tab-promocao="${vPromo}" data-tab-balde="${vBalde}" style="width:18px; height:18px; margin:0; cursor:pointer;">
-            <label style="font-size:13px; margin:0; cursor:pointer; flex-grow:1; display:flex; flex-direction:column;">
-                <span><b>${fil?`Filial ${fil}`:''}</b> ${d.nomeLoja || u.id}</span>
-                <span style="color:var(--text-muted); font-size:11px; margin-top:4px;">
-                    Venda: <b style="color:var(--primary)">${(vVenda||'N/A').toUpperCase()}</b> | Transf: <b>${(vTransf||'N/A').toUpperCase()}</b> | Promo: <b>${(vPromo||'N/A').toUpperCase()}</b> | Balde: <b>${(vBalde||'N/A').toUpperCase()}</b>
-                </span>
-            </label>
-        `;
+        if(u.id === 'admin') return; const d = u.data(); const fil = extrairFilial(d.cnpj); const txt = `[FILIAL ${fil}] ${d.nomeLoja || u.id} - ${d.cnpj || ""}`.toUpperCase(); const tp = d.tabelasPreco || {}; const vVenda = (tp.venda || d.tabelaPreco || '').toLowerCase(); const vTransf = (tp.transferencia || 'tf').toLowerCase(); const vPromo = (tp.promocao || '').toLowerCase(); const vBalde = (tp.balde || '').toLowerCase();
+        const div = document.createElement('div'); div.className = 'loja-check-item'; div.style.cssText = 'display:flex; gap:10px; padding:10px; border-bottom:1px solid #f1f5f9; align-items: center;';
+        div.innerHTML = `<input type="checkbox" class="chk-loja" value="${u.id}" data-search="${txt}" data-tab-venda="${vVenda}" data-tab-transferencia="${vTransf}" data-tab-promocao="${vPromo}" data-tab-balde="${vBalde}" style="width:18px; height:18px; margin:0; cursor:pointer;"><label style="font-size:13px; margin:0; cursor:pointer; flex-grow:1; display:flex; flex-direction:column;"><span><b>${fil?`Filial ${fil}`:''}</b> ${d.nomeLoja || u.id}</span><span style="color:var(--text-muted); font-size:11px; margin-top:4px;">Venda: <b style="color:var(--primary)">${(vVenda||'N/A').toUpperCase()}</b> | Transf: <b>${(vTransf||'N/A').toUpperCase()}</b> | Promo: <b>${(vPromo||'N/A').toUpperCase()}</b> | Balde: <b>${(vBalde||'N/A').toUpperCase()}</b></span></label>`;
         divsLojas.push(div);
     });
     divsLojas.sort((a, b) => a.querySelector('input').getAttribute('data-search').localeCompare(b.querySelector('input').getAttribute('data-search')));
@@ -323,64 +241,63 @@ window.carregarTabelasPrecos = async () => {
 };
 
 window.excluirTabelaPreco = async () => {
-    const tab = document.getElementById('selectTabelaExcluir').value;
-    if(!tab) return alert("Selecione uma tabela para excluir!");
-    if(confirm(`🚨 ATENÇÃO: Deseja excluir a tabela ${tab.toUpperCase()}?\n\nIsso apagará todos os preços nela contidos.`)) {
-        try {
-            await deleteDoc(doc(db, "precos", tab));
-            alert("Tabela excluída com sucesso!");
-            const selCat = document.getElementById('selectFiltroTabelaCat');
-            if(selCat && selCat.value === tab) selCat.value = ""; 
-            await window.carregarTabelasPrecos();
-            window.carregarProdutos();
-        } catch(e) { alert("Erro ao excluir: " + e.message); }
-    }
+    const tab = document.getElementById('selectTabelaExcluir').value; if(!tab) return alert("Selecione uma tabela para excluir!");
+    if(confirm(`🚨 ATENÇÃO: Deseja excluir a tabela ${tab.toUpperCase()}?\n\nIsso apagará todos os preços nela contidos.`)) { try { await deleteDoc(doc(db, "precos", tab)); alert("Tabela excluída com sucesso!"); const selCat = document.getElementById('selectFiltroTabelaCat'); if(selCat && selCat.value === tab) selCat.value = ""; await window.carregarTabelasPrecos(); window.carregarProdutos(); } catch(e) { alert("Erro ao excluir: " + e.message); } }
 };
 
-window.aoSelecionarTabela = () => {
-    const tab = document.getElementById('selectTabelaAssociar').value.toLowerCase();
-    const tipo = document.getElementById('tipoVinculoTabela').value; 
-    const container = document.getElementById('listaLojasChecklist');
-    const itens = Array.from(container.querySelectorAll('.loja-check-item'));
-    itens.forEach(item => { const chk = item.querySelector('.chk-loja'); chk.checked = (chk.getAttribute(`data-tab-${tipo}`) === tab && tab !== ""); });
-    itens.sort((a, b) => {
-        const chkA = a.querySelector('.chk-loja'); const chkB = b.querySelector('.chk-loja');
-        const aVinc = (chkA.getAttribute(`data-tab-${tipo}`) === tab && tab !== "");
-        const bVinc = (chkB.getAttribute(`data-tab-${tipo}`) === tab && tab !== "");
-        if (aVinc && !bVinc) return -1; if (!aVinc && bVinc) return 1;
-        return chkA.getAttribute('data-search').localeCompare(chkB.getAttribute('data-search'));
-    });
-    itens.forEach(item => container.appendChild(item));
-};
+window.aoSelecionarTabela = () => { const tab = document.getElementById('selectTabelaAssociar').value.toLowerCase(); const tipo = document.getElementById('tipoVinculoTabela').value; const container = document.getElementById('listaLojasChecklist'); const itens = Array.from(container.querySelectorAll('.loja-check-item')); itens.forEach(item => { const chk = item.querySelector('.chk-loja'); chk.checked = (chk.getAttribute(`data-tab-${tipo}`) === tab && tab !== ""); }); itens.sort((a, b) => { const chkA = a.querySelector('.chk-loja'); const chkB = b.querySelector('.chk-loja'); const aVinc = (chkA.getAttribute(`data-tab-${tipo}`) === tab && tab !== ""); const bVinc = (chkB.getAttribute(`data-tab-${tipo}`) === tab && tab !== ""); if (aVinc && !bVinc) return -1; if (!aVinc && bVinc) return 1; return chkA.getAttribute('data-search').localeCompare(chkB.getAttribute('data-search')); }); itens.forEach(item => container.appendChild(item)); };
 
-window.vincularTabelaEmMassa = async () => {
-    const tab = document.getElementById('selectTabelaAssociar').value.toLowerCase();
-    const tipo = document.getElementById('tipoVinculoTabela').value;
-    const ids = Array.from(document.querySelectorAll('.chk-loja:checked')).map(c => c.value);
-    if(!tab || !ids.length) return alert("Selecione a tabela e marque as lojas na lista!");
-    const btn = document.querySelector('#sec-precos .btn-sucesso'); btn.innerText = "⏳ Aplicando...";
-    try { await Promise.all(ids.map(id => setDoc(doc(db, "usuarios", id), { tabelasPreco: { [tipo]: tab } }, { merge: true }))); alert("Vínculo aplicado com sucesso!"); window.carregarLojas(); window.carregarTabelasPrecos(); } 
-    finally { btn.innerText = "💾 Aplicar Tabela Selecionada"; document.getElementById('selectTabelaAssociar').value = ""; }
-};
-
+window.vincularTabelaEmMassa = async () => { const tab = document.getElementById('selectTabelaAssociar').value.toLowerCase(); const tipo = document.getElementById('tipoVinculoTabela').value; const ids = Array.from(document.querySelectorAll('.chk-loja:checked')).map(c => c.value); if(!tab || !ids.length) return alert("Selecione a tabela e marque as lojas na lista!"); const btn = document.querySelector('#sec-precos .btn-sucesso'); btn.innerText = "⏳ Aplicando..."; try { await Promise.all(ids.map(id => setDoc(doc(db, "usuarios", id), { tabelasPreco: { [tipo]: tab } }, { merge: true }))); alert("Vínculo aplicado com sucesso!"); window.carregarLojas(); window.carregarTabelasPrecos(); } finally { btn.innerText = "💾 Aplicar Tabela Selecionada"; document.getElementById('selectTabelaAssociar').value = ""; } };
 window.filtrarLojasChecklist = () => { const t = document.getElementById('buscaFilialVinculo').value.toUpperCase(); document.querySelectorAll('.loja-check-item').forEach(i => { i.style.display = i.querySelector('input').getAttribute('data-search').includes(t) ? 'flex' : 'none'; }); };
 window.marcarTodosLojas = (v) => document.querySelectorAll('.chk-loja').forEach(c => { if(c.parentElement.style.display !== 'none') c.checked = v; });
 
+window.filtrarGestaoLojas = () => { const t = document.getElementById('buscaGestaoLojas').value.toLowerCase(); document.querySelectorAll('.linha-gestao-loja').forEach(i => { i.style.display = i.getAttribute('data-search').includes(t) ? '' : 'none'; }); };
+
 window.carregarLojas = async () => {
-    const snap = await getDocs(collection(db, "usuarios"));
-    let html = ""; listaLojasAdmin = [];
+    const snap = await getDocs(collection(db, "usuarios")); let html = ""; listaLojasAdmin = [];
     snap.forEach(d => {
-        if(d.id === 'admin') return;
-        const u = { id: d.id, ...d.data() }; listaLojasAdmin.push(u);
-        const tp = u.tabelasPreco || {}; const vVenda = tp.venda || u.tabelaPreco || '-'; const vTransf = tp.transferencia || 'tf'; const vPromo = tp.promocao || '-'; const vBalde = tp.balde || '-';
-        html += `<tr><td>${d.id}</td><td>${u.nomeLoja || '-'}</td><td>${u.cnpj || '-'}</td><td><div style="font-size:11px; color:var(--text-muted); line-height: 1.4;">Venda: <b style="color:var(--primary)">${vVenda.toUpperCase()}</b> | Transf: <b>${vTransf.toUpperCase()}</b><br>Promo: <b>${vPromo.toUpperCase()}</b> | Balde: <b>${vBalde.toUpperCase()}</b></div></td><td style="text-align: center;"><button class="btn-small" style="background:#3b82f6; color:white;" onclick="window.abrirEdicaoLoja('${u.id}')">✏️</button></td></tr>`;
+        if(d.id === 'admin') return; const u = { id: d.id, ...d.data() }; listaLojasAdmin.push(u); const tp = u.tabelasPreco || {}; const vVenda = tp.venda || u.tabelaPreco || '-'; const vTransf = tp.transferencia || 'tf'; const vPromo = tp.promocao || '-'; const vBalde = tp.balde || '-'; const fil = extrairFilial(u.cnpj);
+        html += `<tr class="linha-gestao-loja" data-search="${d.id.toLowerCase()} filial ${fil} ${(u.nomeLoja||'').toLowerCase()} ${(u.cnpj||'').toLowerCase()}"><td>${d.id}</td><td>${u.nomeLoja || '-'}</td><td>${u.cnpj || '-'}</td><td><div style="font-size:11px; color:var(--text-muted); line-height: 1.4;">Venda: <b style="color:var(--primary)">${vVenda.toUpperCase()}</b> | Transf: <b>${vTransf.toUpperCase()}</b><br>Promo: <b>${vPromo.toUpperCase()}</b> | Balde: <b>${vBalde.toUpperCase()}</b></div></td><td style="text-align: center;"><button class="btn-small" style="background:#3b82f6; color:white;" onclick="window.abrirEdicaoLoja('${u.id}')">✏️</button></td></tr>`;
     });
     document.getElementById('corpoTabelaLojas').innerHTML = html;
 };
 
-window.abrirNovaLoja = () => { document.getElementById('lojaEditId').disabled = false; document.getElementById('lojaEditIsNew').value = 'sim'; document.querySelectorAll('#modalLoja input[type="text"], #modalLoja input[type="password"]').forEach(i => i.value = ''); document.getElementById('permVenda').checked = true; document.getElementById('permTransf').checked = true; document.getElementById('permPromo').checked = true; document.getElementById('permBalde').checked = true; document.querySelectorAll('.sel-tabelas-loja').forEach(sel => sel.value = ''); document.getElementById('modalLoja').style.display = 'flex'; };
-window.abrirEdicaoLoja = (id) => { const u = listaLojasAdmin.find(x => x.id === id); if(!u) return; document.getElementById('lojaEditId').value = u.id; document.getElementById('lojaEditId').disabled = true; document.getElementById('lojaEditIsNew').value = 'nao'; document.getElementById('lojaEditNome').value = u.nomeLoja || ''; document.getElementById('lojaEditCnpj').value = u.cnpj || ''; document.getElementById('lojaEditSenha').value = ''; const p = u.planilhas || {}; document.getElementById('permVenda').checked = p.venda !== false; document.getElementById('permTransf').checked = p.transferencia !== false; document.getElementById('permPromo').checked = p.promocao !== false; document.getElementById('permBalde').checked = p.balde !== false; const tp = u.tabelasPreco || {}; document.getElementById('lojaEditTabVenda').value = tp.venda || u.tabelaPreco || ''; document.getElementById('lojaEditTabTransf').value = tp.transferencia || ''; document.getElementById('lojaEditTabPromo').value = tp.promocao || ''; document.getElementById('lojaEditTabBalde').value = tp.balde || ''; document.getElementById('modalLoja').style.display = 'flex'; };
-window.salvarLoja = async () => { const id = document.getElementById('lojaEditId').value.trim(); if(!id) return alert("Preencha o Login!"); const d = { nomeLoja: document.getElementById('lojaEditNome').value, cnpj: document.getElementById('lojaEditCnpj').value, planilhas: { venda: document.getElementById('permVenda').checked, transferencia: document.getElementById('permTransf').checked, promocao: document.getElementById('permPromo').checked, balde: document.getElementById('permBalde').checked }, tabelasPreco: { venda: document.getElementById('lojaEditTabVenda').value, transferencia: document.getElementById('lojaEditTabTransf').value, promocao: document.getElementById('lojaEditTabPromo').value, balde: document.getElementById('lojaEditTabBalde').value } }; const s = document.getElementById('lojaEditSenha').value.trim(); if(s) d.senha = s; await setDoc(doc(db, "usuarios", id), d, { merge: true }); alert("Loja Salva com Sucesso!"); window.fecharModal('modalLoja'); window.carregarLojas(); window.carregarTabelasPrecos(); };
+window.abrirNovaLoja = () => { 
+    document.getElementById('lojaEditId').disabled = false; document.getElementById('lojaEditIsNew').value = 'sim'; document.querySelectorAll('#modalLoja input[type="text"], #modalLoja input[type="password"], #modalLoja input[type="number"]').forEach(i => i.value = ''); 
+    document.getElementById('permVenda').checked = true; document.getElementById('permTransf').checked = true; document.getElementById('permPromo').checked = true; document.getElementById('permBalde').checked = true; document.querySelectorAll('.sel-tabelas-loja').forEach(sel => sel.value = ''); document.getElementById('modalLoja').style.display = 'flex'; 
+};
+window.abrirEdicaoLoja = (id) => { 
+    const u = listaLojasAdmin.find(x => x.id === id); if(!u) return; 
+    document.getElementById('lojaEditId').value = u.id; document.getElementById('lojaEditId').disabled = true; document.getElementById('lojaEditIsNew').value = 'nao'; document.getElementById('lojaEditNome').value = u.nomeLoja || ''; document.getElementById('lojaEditCnpj').value = u.cnpj || ''; document.getElementById('lojaEditSenha').value = ''; 
+    const p = u.planilhas || {}; document.getElementById('permVenda').checked = p.venda !== false; document.getElementById('permTransf').checked = p.transferencia !== false; document.getElementById('permPromo').checked = p.promocao !== false; document.getElementById('permBalde').checked = p.balde !== false; 
+    const tp = u.tabelasPreco || {}; document.getElementById('lojaEditTabVenda').value = tp.venda || u.tabelaPreco || ''; document.getElementById('lojaEditTabTransf').value = tp.transferencia || ''; document.getElementById('lojaEditTabPromo').value = tp.promocao || ''; document.getElementById('lojaEditTabBalde').value = tp.balde || ''; 
+    
+    // NOVO: Carrega descontos maximos
+    const dmax = u.descontosMax || {};
+    document.getElementById('descMaxSorvete').value = dmax.sorvete || '';
+    document.getElementById('descMaxAcai').value = dmax.acai || '';
+    document.getElementById('descMaxSeco').value = dmax.seco || '';
+    document.getElementById('descMaxBalde').value = dmax.balde || '';
+    document.getElementById('descMaxPromo').value = dmax.promo || '';
+
+    document.getElementById('modalLoja').style.display = 'flex'; 
+};
+window.salvarLoja = async () => { 
+    const id = document.getElementById('lojaEditId').value.trim(); if(!id) return alert("Preencha o Login!"); 
+    const d = { 
+        nomeLoja: document.getElementById('lojaEditNome').value, cnpj: document.getElementById('lojaEditCnpj').value, 
+        planilhas: { venda: document.getElementById('permVenda').checked, transferencia: document.getElementById('permTransf').checked, promocao: document.getElementById('permPromo').checked, balde: document.getElementById('permBalde').checked }, 
+        tabelasPreco: { venda: document.getElementById('lojaEditTabVenda').value, transferencia: document.getElementById('lojaEditTabTransf').value, promocao: document.getElementById('lojaEditTabPromo').value, balde: document.getElementById('lojaEditTabBalde').value },
+        descontosMax: { 
+            sorvete: parseFloat(document.getElementById('descMaxSorvete').value) || 0,
+            acai: parseFloat(document.getElementById('descMaxAcai').value) || 0,
+            seco: parseFloat(document.getElementById('descMaxSeco').value) || 0,
+            balde: parseFloat(document.getElementById('descMaxBalde').value) || 0,
+            promo: parseFloat(document.getElementById('descMaxPromo').value) || 0
+        }
+    }; 
+    const s = document.getElementById('lojaEditSenha').value.trim(); if(s) d.senha = s; await setDoc(doc(db, "usuarios", id), d, { merge: true }); alert("Loja Salva com Sucesso!"); window.fecharModal('modalLoja'); window.carregarLojas(); window.carregarTabelasPrecos(); 
+};
 window.resetarSenhaPadrao = () => { document.getElementById('lojaEditSenha').value = '123456'; alert("Senha definida para '123456'. Clique em 'Salvar Loja' para aplicar."); };
 
 window.gerarBackupCompleto = async () => { const btn = document.getElementById('btnGerarBackup'); btn.innerText = "⏳ Compactando..."; try { const zip = new JSZip(); const cols = ["usuarios", "produtos", "precos", "clientes", "historico"]; for(let c of cols) { const s = await getDocs(collection(db, c)); let d = []; s.forEach(doc => d.push({id: doc.id, ...doc.data()})); zip.file(`${c}.json`, JSON.stringify(d)); } const blob = await zip.generateAsync({type:"blob"}); saveAs(blob, `BACKUP_ESKIMO_${new Date().toLocaleDateString().replace(/\//g, '-')}.zip`); } catch(e) { alert(e.message); } finally { btn.innerText = "⬇️ Baixar Backup (.zip)"; } };
