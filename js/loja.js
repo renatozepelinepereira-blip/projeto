@@ -11,7 +11,6 @@ let produtosGlobais = [];
 let clientesSalvos = [];
 window.descontosMaxGlobais = { sorvete: 0, acai: 0, seco: 0, balde: 0, promo: 0 };
 window.resumoGlobal = { totalV: 0, qtdTotal: 0, descontos: {} };
-window.codigosAcaiGlobais = [];
 
 iniciarInterfaceGlobais();
 document.getElementById('txtLoja').innerText = nomeLoja;
@@ -47,7 +46,6 @@ async function iniciar() {
         window.location.replace('transferencia.html'); return; 
     }
 
-    // REGRA DE DESCONTOS (O lojista obedece ao limite, o Admin é 100% Livre)
     const dmax = dadosUsuario.descontosMax || {};
     window.descontosMaxGlobais = { 
         sorvete: isAdmin ? 100 : (dmax.sorvete !== undefined ? parseFloat(dmax.sorvete) : 0), 
@@ -76,25 +74,23 @@ async function iniciar() {
         if(cliente) document.getElementById('cliCnpj').value = cliente.cnpj || '';
     });
 
-    const [snapVenda, snapPromo, snapBalde, prodSnap, configSnap] = await Promise.all([ 
+    const [snapVenda, snapPromo, snapBalde, prodSnap] = await Promise.all([ 
         getDoc(doc(db, "precos", tabVenda)), getDoc(doc(db, "precos", tabPromo)), getDoc(doc(db, "precos", tabBalde)), 
-        getDocs(collection(db, "produtos")), getDoc(doc(db, "configuracoes", "geral")) 
+        getDocs(collection(db, "produtos"))
     ]);
     
     const precosVenda = snapVenda.exists() ? snapVenda.data() : {};
     const precosPromo = snapPromo.exists() ? snapPromo.data() : {};
     const precosBalde = snapBalde.exists() ? snapBalde.data() : {};
-    window.codigosAcaiGlobais = configSnap.exists() && configSnap.data().codigosAcai ? configSnap.data().codigosAcai : [];
 
     let htmlBuffers = { sorvete: "", acai: "", seco: "", balde: "", promo: "" };
 
     prodSnap.forEach(d => {
         const item = d.data(); 
         let rawCat = (item.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        let isAcaiDefinido = window.codigosAcaiGlobais.includes(String(item.codigo).trim().toUpperCase());
         
         let cat = 'sorvete'; 
-        if (isAcaiDefinido || rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai';
+        if (rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai'; // Separação pela categoria
         else if (rawCat.includes('seco')) cat = 'seco'; 
         else if (rawCat.includes('balde')) cat = 'balde'; 
         else if (rawCat.includes('promo')) cat = 'promo';
@@ -154,7 +150,6 @@ window.calcularTudo = () => {
         if (tr) { if (qtd > 0) tr.classList.add('linha-destaque'); else tr.classList.remove('linha-destaque'); }
     });
 
-    // LEITURA DOS DESCONTOS DE CADA ABA
     let desc = {
         sorvete: parseFloat(document.getElementById('desc_sorvete').value) || 0,
         acai: parseFloat(document.getElementById('desc_acai').value) || 0,
@@ -163,7 +158,6 @@ window.calcularTudo = () => {
         promo: parseFloat(document.getElementById('desc_promo').value) || 0
     };
 
-    // VALIDAÇÃO DOS DESCONTOS
     Object.keys(desc).forEach(k => {
         let max = window.descontosMaxGlobais[k];
         if (desc[k] > max) { 
@@ -178,8 +172,6 @@ window.calcularTudo = () => {
 
     document.getElementById('valComDesc').innerText = "R$ " + totalGeralDescontado.toFixed(2); 
     document.getElementById('qtdTotal').innerText = qtdTotalGeral;
-    
-    // Salva os descontos separadinhos para injetar no Excel
     window.resumoGlobal = { totalV: totalGeralDescontado, qtdTotal: qtdTotalGeral, descontos: desc };
 };
 
