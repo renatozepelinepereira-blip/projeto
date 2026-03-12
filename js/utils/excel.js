@@ -115,13 +115,13 @@ export async function processarExcelVenda(dados) {
                 sheet.getCell('E6').value = dados.razao;
                 
                 // CNPJ/CPF = I6
-                sheet.getCell('I6').value = dados.cnpj || '';
+                sheet.getCell('J6').value = dados.cnpj || '';
                 
                 // Quantidade total = F7
                 sheet.getCell('F7').value = sheetQtdTotal;
                 
                 // Valor total = K7
-                sheet.getCell('K7').value = sheetValorTotal;
+                sheet.getCell('L7').value = sheetValorTotal;
                 
                 // Prazo e condição = F8
                 sheet.getCell('F8').value = `${dados.formaPagamento} ${dados.prazo && dados.prazo !== '-' ? '- ' + dados.prazo : ''}`;
