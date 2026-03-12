@@ -2,41 +2,21 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Eskimó</title>
+    <title>Login - Eskimó Sorvetes</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍨</text></svg>">
     <link rel="stylesheet" href="./css/login.css">
 </head>
 <body>
-
-    <div class="bg-shape1"></div>
-    <div class="bg-shape2"></div>
-
-    <div class="login-wrapper">
+    <div class="login-container">
         <div class="login-box">
-            <div class="logo-icon">🍨</div>
-            <h1>Eskimó Sorvetes</h1>
-            <p>Sistema de Pedidos e Logística</p>
-            
-            <form id="loginForm">
-                <div class="input-group">
-                    <input type="text" id="usuario" placeholder="Usuário / Login" required autocomplete="off">
-                    <span class="input-icon">👤</span>
-                </div>
-                
-                <div class="input-group">
-                    <input type="password" id="senha" placeholder="Senha" required>
-                    <span class="input-icon">🔒</span>
-                </div>
-                
-                <button type="submit" class="btn-entrar" id="btnEntrar">Acessar Sistema</button>
-            </form>
-            
-            <div id="msgErro">Usuário ou senha incorretos!</div>
-            
-            <div class="footer-text">&copy; 2026 Eskimó Faturamento Central</div>
+            <h1>🍨 Eskimó</h1>
+            <p>Acesse o portal de pedidos</p>
+            <input type="text" id="user" placeholder="Usuário">
+            <input type="password" id="pass" placeholder="Senha">
+            <button id="btnLogin">Entrar</button>
+            <div id="errorMsg" style="color:red; margin-top:10px; display:none;">Login inválido</div>
         </div>
     </div>
-
     <script type="module" src="./js/index.js"></script>
 </body>
 </html>
