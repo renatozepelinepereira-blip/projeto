@@ -1,4 +1,4 @@
-import { db, storage } from "./api/firebase.js";
+import { db } from "./api/firebase.js";
 import { iniciarInterfaceGlobais } from "./utils/interface.js";
 import { regenerarPlanilhaExcel } from "./utils/excel.js";
 import { doc, getDoc, setDoc, getDocs, deleteDoc, collection, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
@@ -130,7 +130,7 @@ window.carregarProdutos = async () => {
         let rawCat = (p.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         
         let cat = 'sorvete'; 
-        if (rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai'; // Separação pela categoria
+        if (rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai';
         else if (rawCat.includes('seco')) cat = 'seco'; 
         else if (rawCat.includes('balde')) cat = 'balde'; 
         else if (rawCat.includes('promo')) cat = 'promo';
@@ -138,18 +138,20 @@ window.carregarProdutos = async () => {
         let htmlPreco = '';
         if (tabelaSelecionada) {
             const val = p.precoAtual !== null ? `R$ ${parseFloat(p.precoAtual).toFixed(2)}` : '<span style="color:#ef4444;font-size:12px;">Sem Preço</span>';
-            htmlPreco = `<td style="font-weight:900; color:var(--primary); font-size:15px;">${val}</td>`;
+            htmlPreco = `<td style="font-weight:900; color:var(--primary); font-size:15px; text-align: center;">${val}</td>`;
         }
         
         htmlBuffers[cat] += `<tr class="linha-produto-admin" data-search="${String(p.codigo).toLowerCase()} ${String(p.descricao).toLowerCase()}">
-            <td><img src="${p.imagem || ''}" class="img-produto" onerror="this.src='https://placehold.co/40?text=📦'"></td>
+            <td style="text-align: center;"><img src="${p.imagem || ''}" class="img-produto" onerror="this.src='https://placehold.co/40?text=📦'"></td>
             <td><b>${p.codigo}</b></td>
             <td>${p.descricao}</td>
-            <td>${p.engradado}</td>
+            <td style="text-align: center;">${p.engradado}</td>
             ${htmlPreco}
-            <td style="display: flex; gap: 8px; justify-content: center;">
-                <button class="btn-small" style="background:#3b82f6; color:white;" onclick="window.abrirEdicaoProduto('${p.codigo}')">✏️</button>
-                <button class="btn-small" style="background:#ef4444; color:white;" onclick="window.excluirProduto('${p.codigo}')">🗑️</button>
+            <td>
+                <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
+                    <button class="btn-small" style="background:#3b82f6; color:white; margin:0;" onclick="window.abrirEdicaoProduto('${p.codigo}')">✏️</button>
+                    <button class="btn-small" style="background:#ef4444; color:white; margin:0;" onclick="window.excluirProduto('${p.codigo}')">🗑️</button>
+                </div>
             </td>
         </tr>`;
     });
