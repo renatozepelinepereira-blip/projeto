@@ -130,7 +130,7 @@ window.carregarProdutos = async () => {
         let rawCat = (p.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         
         let cat = 'sorvete'; 
-        if (rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai';
+        if (rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai'; // Separação pela categoria
         else if (rawCat.includes('seco')) cat = 'seco'; 
         else if (rawCat.includes('balde')) cat = 'balde'; 
         else if (rawCat.includes('promo')) cat = 'promo';
