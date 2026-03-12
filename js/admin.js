@@ -1,7 +1,7 @@
 import { db, storage } from "./api/firebase.js";
 import { iniciarInterfaceGlobais } from "./utils/interface.js";
 import { regenerarPlanilhaExcel } from "./utils/excel.js";
-import { doc, setDoc, getDocs, deleteDoc, collection, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import { doc, getDoc, setDoc, getDocs, deleteDoc, collection, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
 
 if(localStorage.getItem('tipo') !== 'admin') window.location.href = 'index.html';
@@ -60,7 +60,7 @@ window.visualizarLog = (id) => {
     document.getElementById('conteudoDetalhesLog').innerHTML = html; document.getElementById('btnRegerarPlanilhaModal').onclick = () => window.regerar(id); document.getElementById('modalDetalhesLog').style.display = 'flex';
 };
 
-// --- PRODUTOS & UPLOAD ---
+// --- PRODUTOS, CATÁLOGO E PREÇOS ---
 window.previewImagemLocal = (event) => {
     const file = event.target.files[0];
     const pv = document.getElementById('previewFoto');
@@ -68,14 +68,107 @@ window.previewImagemLocal = (event) => {
 };
 
 async function carregarProdutos() {
+    // 1. Popula o Select de Tabelas no topo da tela, se estiver vazio
+    const selCat = document.getElementById('selectFiltroTabelaCat');
+    if (selCat.options.length === 0) {
+        const sT = await getDocs(collection(db, "precos"));
+        selCat.innerHTML = '<option value="">📋 Apenas Catálogo (Sem Preço)</option>';
+        sT.forEach(d => selCat.innerHTML += `<option value="${d.id}">💲 Tabela: ${d.id.toUpperCase()}</option>`);
+    }
+
+    const tabelaSelecionada = selCat.value;
+    const thPreco = document.getElementById('thPrecoCat');
+    
+    // 2. Busca os preços da tabela selecionada (se houver)
+    let precosTabela = {};
+    if (tabelaSelecionada) {
+        const snapPrecos = await getDoc(doc(db, "precos", tabelaSelecionada));
+        if (snapPrecos.exists()) precosTabela = snapPrecos.data();
+        thPreco.innerText = `Preço (${tabelaSelecionada.toUpperCase()})`;
+        thPreco.style.display = 'table-cell';
+    } else {
+        thPreco.style.display = 'none';
+    }
+
+    // 3. Busca o catálogo e monta a tabela mesclando as informações
     const snap = await getDocs(collection(db, "produtos"));
     let html = ""; listaProdutosAdmin = [];
+    
     snap.forEach(d => {
-        const p = { id: d.id, ...d.data() }; listaProdutosAdmin.push(p);
-        html += `<tr><td><img src="${p.imagem || ''}" class="img-produto" onerror="this.src='https://placehold.co/40?text=📦'"></td><td><b>${p.codigo}</b></td><td>${p.descricao}</td><td>${p.engradado}</td><td>${p.categoria}</td><td style="display: flex; gap: 8px; justify-content: center;"><button class="btn-small" style="background:#3b82f6; color:white;" onclick="window.abrirEdicaoProduto('${p.codigo}')">✏️</button><button class="btn-small" style="background:#ef4444; color:white;" onclick="window.excluirProduto('${p.codigo}')">🗑️</button></td></tr>`;
+        const p = { id: d.id, ...d.data() }; 
+        if (tabelaSelecionada) {
+            p.precoAtual = precosTabela[p.codigo] !== undefined ? precosTabela[p.codigo] : null;
+        }
+        listaProdutosAdmin.push(p);
+        
+        let htmlPreco = '';
+        if (tabelaSelecionada) {
+            const val = p.precoAtual !== null ? `R$ ${parseFloat(p.precoAtual).toFixed(2)}` : '<span style="color:#ef4444;font-size:12px;">Sem Preço</span>';
+            htmlPreco = `<td style="font-weight:900; color:var(--primary); font-size:15px;">${val}</td>`;
+        }
+
+        html += `<tr>
+            <td><img src="${p.imagem || ''}" class="img-produto" onerror="this.src='https://placehold.co/40?text=📦'"></td>
+            <td><b>${p.codigo}</b></td>
+            <td>${p.descricao}</td>
+            <td>${p.engradado}</td>
+            <td><span style="background:#e2e8f0; padding:4px 8px; border-radius:6px; font-size:12px;">${p.categoria || 'sorvete'}</span></td>
+            ${htmlPreco}
+            <td style="display: flex; gap: 8px; justify-content: center;">
+                <button class="btn-small" style="background:#3b82f6; color:white;" onclick="window.abrirEdicaoProduto('${p.codigo}')">✏️</button>
+                <button class="btn-small" style="background:#ef4444; color:white;" onclick="window.excluirProduto('${p.codigo}')">🗑️</button>
+            </td>
+        </tr>`;
     });
     document.getElementById('corpoTabelaProdutos').innerHTML = html;
 }
+
+window.abrirEdicaoProduto = (cod) => { 
+    const p = listaProdutosAdmin.find(x => x.codigo === cod); 
+    if(!p) return; 
+    
+    document.getElementById('prodEditCodigo').value = p.codigo; 
+    document.getElementById('prodEditCodigo').disabled = true; 
+    document.getElementById('prodEditDescricao').value = p.descricao || ''; 
+    document.getElementById('prodEditCategoria').value = p.categoria || ''; 
+    document.getElementById('prodEditEngradado').value = p.engradado || ''; 
+    document.getElementById('prodEditImagemUrl').value = p.imagem || ''; 
+    
+    // Ativa campo de preço SE estiver editando focado em uma tabela
+    const tabelaSelecionada = document.getElementById('selectFiltroTabelaCat').value;
+    const divPreco = document.getElementById('divPrecoEdit');
+    if (tabelaSelecionada) {
+        document.getElementById('lblNomeTabelaEdit').innerText = tabelaSelecionada.toUpperCase();
+        document.getElementById('prodEditPreco').value = p.precoAtual !== null ? p.precoAtual : '';
+        divPreco.style.display = 'block';
+    } else {
+        divPreco.style.display = 'none';
+        document.getElementById('prodEditPreco').value = '';
+    }
+
+    const pv = document.getElementById('previewFoto'); 
+    if(p.imagem) { pv.src = p.imagem; pv.style.display = 'block'; } else { pv.style.display = 'none'; } 
+    
+    document.getElementById('modalProduto').style.display = 'flex'; 
+};
+
+window.abrirNovoProduto = () => { 
+    document.getElementById('prodEditCodigo').disabled = false; 
+    document.querySelectorAll('#modalProduto input[type="text"], #modalProduto input[type="number"]').forEach(i => i.value = ''); 
+    
+    // Ativa campo de preço no "Novo" também se estiver na visão de tabela
+    const tabelaSelecionada = document.getElementById('selectFiltroTabelaCat').value;
+    const divPreco = document.getElementById('divPrecoEdit');
+    if (tabelaSelecionada) {
+        document.getElementById('lblNomeTabelaEdit').innerText = tabelaSelecionada.toUpperCase();
+        divPreco.style.display = 'block';
+    } else {
+        divPreco.style.display = 'none';
+    }
+
+    document.getElementById('previewFoto').style.display = 'none'; 
+    document.getElementById('modalProduto').style.display = 'flex'; 
+};
 
 window.salvarProduto = async () => {
     const cod = document.getElementById('prodEditCodigo').value.trim();
@@ -83,6 +176,7 @@ window.salvarProduto = async () => {
     const btn = document.getElementById('btnSalvarProd');
     const file = document.getElementById('prodEditImagemFile').files[0];
     btn.disabled = true; btn.innerText = "⏳ Salvando...";
+    
     try {
         let url = document.getElementById('prodEditImagemUrl').value;
         if(file) { 
@@ -90,8 +184,30 @@ window.salvarProduto = async () => {
             await uploadBytes(sRef, file); 
             url = await getDownloadURL(sRef); 
         }
-        await setDoc(doc(db, "produtos", cod), { codigo: cod, descricao: document.getElementById('prodEditDescricao').value, categoria: document.getElementById('prodEditCategoria').value, engradado: document.getElementById('prodEditEngradado').value, imagem: url }, { merge: true });
-        window.fecharModal('modalProduto'); carregarProdutos();
+        
+        // 1. Salva os dados básicos do Produto
+        await setDoc(doc(db, "produtos", cod), { 
+            codigo: cod, 
+            descricao: document.getElementById('prodEditDescricao').value, 
+            categoria: document.getElementById('prodEditCategoria').value, 
+            engradado: document.getElementById('prodEditEngradado').value, 
+            imagem: url 
+        }, { merge: true });
+        
+        // 2. Salva o Preço (Se houver tabela selecionada)
+        const tabelaSelecionada = document.getElementById('selectFiltroTabelaCat').value;
+        if (tabelaSelecionada) {
+            const precoVal = document.getElementById('prodEditPreco').value;
+            if (precoVal !== "") {
+                // merge: true garante que ele só mude o preço daquele código, preservando os demais
+                await setDoc(doc(db, "precos", tabelaSelecionada), {
+                    [cod]: parseFloat(precoVal)
+                }, { merge: true });
+            }
+        }
+
+        window.fecharModal('modalProduto'); 
+        carregarProdutos();
     } catch (e) {
         console.error("Erro no upload:", e);
         alert("Erro ao salvar o produto ou enviar a imagem.");
@@ -99,10 +215,8 @@ window.salvarProduto = async () => {
 };
 
 window.excluirProduto = async (cod) => { if(confirm(`ATENÇÃO: Excluir permanentemente o produto ${cod}?`)) { try { await deleteDoc(doc(db, "produtos", cod)); carregarProdutos(); } catch(e) { alert("Erro ao excluir."); } } };
-window.abrirNovoProduto = () => { document.getElementById('prodEditCodigo').disabled = false; document.querySelectorAll('#modalProduto input[type="text"], #modalProduto input[type="number"]').forEach(i => i.value = ''); document.getElementById('previewFoto').style.display = 'none'; document.getElementById('modalProduto').style.display = 'flex'; };
-window.abrirEdicaoProduto = (cod) => { const p = listaProdutosAdmin.find(x => x.codigo === cod); if(!p) return; document.getElementById('prodEditCodigo').value = p.codigo; document.getElementById('prodEditCodigo').disabled = true; document.getElementById('prodEditDescricao').value = p.descricao || ''; document.getElementById('prodEditCategoria').value = p.categoria || ''; document.getElementById('prodEditEngradado').value = p.engradado || ''; document.getElementById('prodEditImagemUrl').value = p.imagem || ''; const pv = document.getElementById('previewFoto'); if(p.imagem) { pv.src = p.imagem; pv.style.display = 'block'; } else { pv.style.display = 'none'; } document.getElementById('modalProduto').style.display = 'flex'; };
 
-// --- PREÇOS E VÍNCULOS ---
+// --- PREÇOS E VÍNCULOS (GESTOR DE MASSAS) ---
 async function carregarTabelasPrecos() {
     const sT = await getDocs(collection(db, "precos"));
     const selT = document.getElementById('selectTabelaAssociar');
@@ -114,7 +228,6 @@ async function carregarTabelasPrecos() {
     cont.innerHTML = '';
     
     let divsLojas = [];
-    
     sL.forEach(u => {
         if(u.id === 'admin') return;
         const d = u.data(); const fil = extrairFilial(d.cnpj);
@@ -139,7 +252,6 @@ async function carregarTabelasPrecos() {
         const textB = b.querySelector('input').getAttribute('data-search');
         return textA.localeCompare(textB);
     });
-    
     divsLojas.forEach(div => cont.appendChild(div));
 }
 
@@ -162,7 +274,6 @@ window.aoSelecionarTabela = () => {
         if (!aVinculada && bVinculada) return 1;
         return chkA.getAttribute('data-search').localeCompare(chkB.getAttribute('data-search'));
     });
-
     itens.forEach(item => container.appendChild(item));
 };
 
@@ -173,17 +284,15 @@ window.vincularTabelaEmMassa = async () => {
     const btn = document.querySelector('#sec-precos .btn-sucesso'); btn.innerText = "⏳ Aplicando...";
     try {
         await Promise.all(ids.map(id => setDoc(doc(db, "usuarios", id), { tabelaPreco: tab }, { merge: true })));
-        alert("Vínculo aplicado com sucesso!"); 
-        carregarLojas();
-        carregarTabelasPrecos(); 
+        alert("Vínculo aplicado com sucesso!"); carregarLojas(); carregarTabelasPrecos(); 
     } finally { btn.innerText = "💾 Aplicar Tabela Selecionada"; document.getElementById('selectTabelaAssociar').value = ""; }
 };
 
 window.filtrarLojasChecklist = () => { const t = document.getElementById('buscaFilialVinculo').value.toUpperCase(); document.querySelectorAll('.loja-check-item').forEach(i => { i.style.display = i.querySelector('input').getAttribute('data-search').includes(t) ? 'flex' : 'none'; }); };
 window.marcarTodosLojas = (v) => document.querySelectorAll('.chk-loja').forEach(c => { if(c.parentElement.style.display !== 'none') c.checked = v; });
-window.importarTabelaPrecos = async () => { const nome = document.getElementById('nomeTabelaPreco').value.trim().toLowerCase(); const file = document.getElementById('fileCsvPrecos').files[0]; if(!nome || !file) return alert("Preencha o nome e selecione o arquivo!"); const reader = new FileReader(); reader.onload = async (e) => { const data = new Uint8Array(e.target.result); const wb = XLSX.read(data, {type: 'array'}); const sheet = wb.Sheets[wb.SheetNames[0]]; const json = XLSX.utils.sheet_to_json(sheet, {header: 1}); let precos = {}; for(let i = 1; i < json.length; i++) { if(json[i][0] && json[i][1]) precos[String(json[i][0]).trim()] = parseFloat(String(json[i][1]).replace(',', '.')); } await setDoc(doc(db, "precos", nome), precos, { merge: true }); alert("Tabela Importada!"); carregarTabelasPrecos(); }; reader.readAsArrayBuffer(file); };
+window.importarTabelaPrecos = async () => { const nome = document.getElementById('nomeTabelaPreco').value.trim().toLowerCase(); const file = document.getElementById('fileCsvPrecos').files[0]; if(!nome || !file) return alert("Preencha o nome e selecione o arquivo!"); const reader = new FileReader(); reader.onload = async (e) => { const data = new Uint8Array(e.target.result); const wb = XLSX.read(data, {type: 'array'}); const sheet = wb.Sheets[wb.SheetNames[0]]; const json = XLSX.utils.sheet_to_json(sheet, {header: 1}); let precos = {}; for(let i = 1; i < json.length; i++) { if(json[i][0] && json[i][1]) precos[String(json[i][0]).trim()] = parseFloat(String(json[i][1]).replace(',', '.')); } await setDoc(doc(db, "precos", nome), precos, { merge: true }); alert("Tabela Importada!"); carregarTabelasPrecos(); carregarProdutos(); }; reader.readAsArrayBuffer(file); };
 
-// --- GESTÃO DE LOJAS (ATUALIZADA) ---
+// --- GESTÃO DE LOJAS E PERMISSÕES ---
 async function carregarLojas() {
     const snap = await getDocs(collection(db, "usuarios"));
     let html = ""; listaLojasAdmin = [];
@@ -196,73 +305,27 @@ async function carregarLojas() {
 }
 
 window.abrirNovaLoja = () => { 
-    document.getElementById('lojaEditId').disabled = false; 
-    document.getElementById('lojaEditIsNew').value = 'sim'; 
-    document.querySelectorAll('#modalLoja input[type="text"], #modalLoja input[type="password"]').forEach(i => i.value = ''); 
-    
-    // Por padrão, uma nova loja ganha todas as permissões
-    document.getElementById('permVenda').checked = true;
-    document.getElementById('permTransf').checked = true;
-    document.getElementById('permPromo').checked = true;
-    document.getElementById('permBalde').checked = true;
-
+    document.getElementById('lojaEditId').disabled = false; document.getElementById('lojaEditIsNew').value = 'sim'; document.querySelectorAll('#modalLoja input[type="text"], #modalLoja input[type="password"]').forEach(i => i.value = ''); 
+    document.getElementById('permVenda').checked = true; document.getElementById('permTransf').checked = true; document.getElementById('permPromo').checked = true; document.getElementById('permBalde').checked = true;
     document.getElementById('modalLoja').style.display = 'flex'; 
 };
-
 window.abrirEdicaoLoja = (id) => { 
-    const u = listaLojasAdmin.find(x => x.id === id); 
-    if(!u) return; 
-    document.getElementById('lojaEditId').value = u.id; 
-    document.getElementById('lojaEditId').disabled = true; 
-    document.getElementById('lojaEditIsNew').value = 'nao'; 
-    document.getElementById('lojaEditNome').value = u.nomeLoja || ''; 
-    document.getElementById('lojaEditCnpj').value = u.cnpj || ''; 
-    document.getElementById('lojaEditSenha').value = ''; 
-    
-    // Carrega as permissões (Se não existir 'planilhas', assume que tem acesso total)
+    const u = listaLojasAdmin.find(x => x.id === id); if(!u) return; 
+    document.getElementById('lojaEditId').value = u.id; document.getElementById('lojaEditId').disabled = true; document.getElementById('lojaEditIsNew').value = 'nao'; document.getElementById('lojaEditNome').value = u.nomeLoja || ''; document.getElementById('lojaEditCnpj').value = u.cnpj || ''; document.getElementById('lojaEditSenha').value = ''; 
     const p = u.planilhas || {};
-    document.getElementById('permVenda').checked = p.venda !== false;
-    document.getElementById('permTransf').checked = p.transferencia !== false;
-    document.getElementById('permPromo').checked = p.promocao !== false;
-    document.getElementById('permBalde').checked = p.balde !== false;
-
+    document.getElementById('permVenda').checked = p.venda !== false; document.getElementById('permTransf').checked = p.transferencia !== false; document.getElementById('permPromo').checked = p.promocao !== false; document.getElementById('permBalde').checked = p.balde !== false;
     document.getElementById('modalLoja').style.display = 'flex'; 
 };
-
 window.salvarLoja = async () => { 
-    const id = document.getElementById('lojaEditId').value.trim(); 
-    if(!id) return alert("Preencha o Login!");
-    
-    const d = { 
-        nomeLoja: document.getElementById('lojaEditNome').value, 
-        cnpj: document.getElementById('lojaEditCnpj').value,
-        planilhas: {
-            venda: document.getElementById('permVenda').checked,
-            transferencia: document.getElementById('permTransf').checked,
-            promocao: document.getElementById('permPromo').checked,
-            balde: document.getElementById('permBalde').checked
-        }
-    }; 
-    
-    const s = document.getElementById('lojaEditSenha').value.trim(); 
-    if(s) d.senha = s; 
-    
-    await setDoc(doc(db, "usuarios", id), d, { merge: true }); 
-    alert("Loja Salva com Sucesso!"); 
-    window.fecharModal('modalLoja'); 
-    carregarLojas(); 
-    carregarTabelasPrecos(); 
+    const id = document.getElementById('lojaEditId').value.trim(); if(!id) return alert("Preencha o Login!");
+    const d = { nomeLoja: document.getElementById('lojaEditNome').value, cnpj: document.getElementById('lojaEditCnpj').value, planilhas: { venda: document.getElementById('permVenda').checked, transferencia: document.getElementById('permTransf').checked, promocao: document.getElementById('permPromo').checked, balde: document.getElementById('permBalde').checked } }; 
+    const s = document.getElementById('lojaEditSenha').value.trim(); if(s) d.senha = s; 
+    await setDoc(doc(db, "usuarios", id), d, { merge: true }); alert("Loja Salva com Sucesso!"); window.fecharModal('modalLoja'); carregarLojas(); carregarTabelasPrecos(); 
 };
-
-// --- REINICIAR SENHA PADRÃO ---
-window.resetarSenhaPadrao = () => {
-    document.getElementById('lojaEditSenha').value = '123456';
-    alert("Senha definida para '123456'. Clique em 'Salvar Loja' para aplicar.");
-};
+window.resetarSenhaPadrao = () => { document.getElementById('lojaEditSenha').value = '123456'; alert("Senha definida para '123456'. Clique em 'Salvar Loja' para aplicar."); };
 
 // --- BACKUP E INICIALIZAÇÃO ---
 window.gerarBackupCompleto = async () => { const btn = document.getElementById('btnGerarBackup'); btn.innerText = "⏳ Compactando..."; try { const zip = new JSZip(); const cols = ["usuarios", "produtos", "precos", "clientes", "historico"]; for(let c of cols) { const s = await getDocs(collection(db, c)); let d = []; s.forEach(doc => d.push({id: doc.id, ...doc.data()})); zip.file(`${c}.json`, JSON.stringify(d)); } const blob = await zip.generateAsync({type:"blob"}); saveAs(blob, `BACKUP_ESKIMO_${new Date().toLocaleDateString().replace(/\//g, '-')}.zip`); } catch(e) { alert(e.message); } finally { btn.innerText = "⬇️ Baixar Backup (.zip)"; } };
 window.restaurarBackupCompleto = async () => { const f = document.getElementById('fileRestoreZip').files[0]; if(!f || !confirm("Isso apagará/sobrescreverá os dados atuais. Continuar?")) return; const btn = document.getElementById('btnRestaurarBackup'); btn.innerText = "⏳ Restaurando..."; try { const zip = await JSZip.loadAsync(f); for(let n in zip.files) { const c = n.replace('.json', ''); const cont = await zip.files[n].async("string"); const l = JSON.parse(cont); for(let i of l) { const id = i.id; delete i.id; await setDoc(doc(db, c, id), i, {merge: true}); } } alert("Restaurado com sucesso!"); location.reload(); } catch(e) { alert(e.message); btn.innerText = "⚡ Restaurar Dados"; } };
-
 window.regerar = async (id) => { await regenerarPlanilhaExcel(historicoGlobal[id]); };
 document.addEventListener('DOMContentLoaded', () => carregarDashboard());
