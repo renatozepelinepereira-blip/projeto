@@ -2,7 +2,8 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Histórico - Eskimó Sorvetes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico - Eskimó</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍨</text></svg>">
     <link rel="stylesheet" href="./css/loja.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js" defer></script>
@@ -12,21 +13,27 @@
     <div class="sidebar-admin">
         <div class="sidebar-header"><span class="sidebar-logo-icon">🍨</span><h2 class="sidebar-title">Eskimó</h2></div>
         <div class="nav-links">
-            <button onclick="window.location.href='loja.html'"><i>🛒</i> <span>Vendas</span></button>
+            <button onclick="window.location.href='loja.html'"><i>🛒</i> <span>Nova Venda</span></button>
             <button onclick="window.location.href='transferencia.html'"><i>🔄</i> <span>Transferência</span></button>
             <button class="active"><i>📜</i> <span>Histórico</span></button>
-            <button onclick="localStorage.clear(); window.location.href='index.html'" style="margin-top:auto; color:#ff7675;"><i>🚪</i> <span>Sair</span></button>
+            <button onclick="localStorage.clear(); window.location.href='index.html'" style="margin-top:auto; color:#ef4444;"><i>🚪</i> <span>Sair</span></button>
         </div>
     </div>
 
     <div class="main-content">
         <h2 class="section-title">Seu Histórico de Pedidos</h2>
         <div class="card-panel">
-            <input type="text" id="filtroHist" placeholder="🔍 Pesquisar por ação ou data..." oninput="window.filtrar()">
-            <table style="margin-top:15px;">
-                <thead><tr><th>Data</th><th>Ação</th><th>Destino</th><th>Baixar</th></tr></thead>
-                <tbody id="corpoHist"></tbody>
-            </table>
+            <input type="text" id="filtroHist" placeholder="🔍 Pesquisar por data, ação ou filial destino..." oninput="window.filtrar()" style="margin-bottom: 20px; padding: 14px; border-radius: 10px; border: 1px solid #e2e8f0; width: 100%; background: #f8fafc; font-size: 15px;">
+            
+            <div class="table-container">
+                <table>
+                    <thead style="background: #f1f5f9;">
+                        <tr><th>Data do Pedido</th><th>Ação Realizada</th><th>Cliente / Destino</th><th>Planilha</th></tr>
+                    </thead>
+                    <tbody id="corpoHist">
+                        </tbody>
+                </table>
+            </div>
         </div>
     </div>
     <script type="module" src="./js/historico.js"></script>
