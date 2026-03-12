@@ -71,19 +71,31 @@
                     <button onclick="window.abrirNovoProduto()" class="btn-primario">+ Novo Produto</button>
                     <div style="flex-grow: 1;"></div>
                     <label style="margin: 0; font-size: 15px; font-weight: 700;">✏️ Editar preços da Tabela:</label>
-                    <select id="selectFiltroTabelaCat" onchange="window.carregarProdutos()" style="width: 250px; margin: 0; padding: 12px; border-radius: 8px; border: 2px solid var(--primary); font-weight: bold; background: white; color: var(--primary);"></select>
+                    <select id="selectFiltroTabelaCat" onchange="window.carregarProdutos()" style="width: 250px; margin: 0; padding: 12px; border-radius: 8px; border: 2px solid var(--primary); font-weight: bold; background: white; color: var(--primary);">
+                        <option value="">📋 Apenas Catálogo (Sem Preço)</option>
+                    </select>
                 </div>
-                <div style="max-height: 550px; overflow-y: auto;">
-                    <table>
-                        <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;">
-                            <tr>
-                                <th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Cat.</th>
-                                <th id="thPrecoCat" style="display: none; color: var(--primary);">Preço</th>
-                                <th style="text-align: center;">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="corpoTabelaProdutos"></tbody>
-                    </table>
+
+                <div style="display: flex; gap: 8px; margin-bottom: 15px; background: #e2e8f0; padding: 6px; border-radius: 12px; display: inline-flex;">
+                    <button class="admin-cat-tab active" id="btnAdminTabSorvete" onclick="window.mudarAbaAdminCat('sorvete')" style="padding: 10px 20px; border: none; background: white; border-radius: 8px; cursor: pointer; font-weight: bold; color: var(--primary); box-shadow: var(--shadow-sm);">Sorvetes</button>
+                    <button class="admin-cat-tab" id="btnAdminTabSeco" onclick="window.mudarAbaAdminCat('seco')" style="padding: 10px 20px; border: none; background: transparent; border-radius: 8px; cursor: pointer; font-weight: bold; color: #64748b;">Secos</button>
+                    <button class="admin-cat-tab" id="btnAdminTabBalde" onclick="window.mudarAbaAdminCat('balde')" style="padding: 10px 20px; border: none; background: transparent; border-radius: 8px; cursor: pointer; font-weight: bold; color: #64748b;">Baldes</button>
+                    <button class="admin-cat-tab" id="btnAdminTabPromo" onclick="window.mudarAbaAdminCat('promo')" style="padding: 10px 20px; border: none; background: transparent; border-radius: 8px; cursor: pointer; font-weight: bold; color: #64748b;">Promoções</button>
+                </div>
+
+                <div style="max-height: 500px; overflow-y: auto;">
+                    <div id="content_admin_sorvete" class="admin-cat-content" style="display: block;">
+                        <table><thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary);">Preço</th><th style="text-align: center;">Ações</th></tr></thead><tbody id="corpoAdminSorvete"></tbody></table>
+                    </div>
+                    <div id="content_admin_seco" class="admin-cat-content" style="display: none;">
+                        <table><thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary);">Preço</th><th style="text-align: center;">Ações</th></tr></thead><tbody id="corpoAdminSeco"></tbody></table>
+                    </div>
+                    <div id="content_admin_balde" class="admin-cat-content" style="display: none;">
+                        <table><thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary);">Preço</th><th style="text-align: center;">Ações</th></tr></thead><tbody id="corpoAdminBalde"></tbody></table>
+                    </div>
+                    <div id="content_admin_promo" class="admin-cat-content" style="display: none;">
+                        <table><thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary);">Preço</th><th style="text-align: center;">Ações</th></tr></thead><tbody id="corpoAdminPromo"></tbody></table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -92,13 +104,21 @@
             <h2 class="section-title">Vínculo e Preços</h2>
             <div class="grid-2">
                 <div class="card-panel">
-                    <h3 style="margin-bottom: 15px;">1. Importar Excel</h3>
+                    <h3 style="margin-bottom: 15px;">1. Importar Excel em Massa</h3>
                     <label>Nome da Tabela (Ex: PRODUTO_A1, PROMO_X)</label>
                     <input type="text" id="nomeTabelaPreco" placeholder="Ex: PRODUTO_A1">
                     <label>Arquivo CSV ou Excel</label>
                     <input type="file" id="fileCsvPrecos" accept=".xlsx, .csv">
                     <button onclick="window.importarTabelaPrecos()" class="btn-primario" style="width:100%;">⚡ Importar Tabela</button>
+                    
+                    <div style="margin-top: 30px; border-top: 2px dashed #f1f5f9; padding-top: 20px;">
+                        <h3 style="margin-bottom: 15px; color: #ef4444; font-size: 16px;">🗑️ Excluir Tabela de Preço</h3>
+                        <label>Selecione a tabela que deseja apagar</label>
+                        <select id="selectTabelaExcluir" style="border: 2px solid #ef4444; width: 100%; margin-top: 6px;"></select>
+                        <button onclick="window.excluirTabelaPreco()" class="btn-primario" style="background: #ef4444; width: 100%; margin-top: 10px;">🗑️ Excluir Tabela Definitivamente</button>
+                    </div>
                 </div>
+                
                 <div class="card-panel">
                     <h3 style="margin-bottom: 15px;">2. Vínculo em Massa</h3>
                     <div class="grid-2" style="gap: 15px; margin-bottom: 15px;">
@@ -163,7 +183,7 @@
             </div>
             <div class="grid-2" style="gap: 15px;">
                 <div><label>Descrição</label><input type="text" id="prodEditDescricao"></div>
-                <div><label>Categoria</label><input type="text" id="prodEditCategoria" placeholder="Ex: sorvete, seco..."></div>
+                <div><label>Categoria</label><input type="text" id="prodEditCategoria" placeholder="Ex: sorvete, seco, balde, promo"></div>
             </div>
             <div id="divPrecoEdit" style="display: none; margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
                 <label style="color: var(--text-main);">Preço na Tabela <span id="lblNomeTabelaEdit" style="color:var(--primary); font-weight:900; background: #fef2f2; padding: 4px 8px; border-radius: 4px;"></span> (R$)</label>
@@ -192,10 +212,10 @@
 
             <label style="margin-top: 20px; display: block; border-bottom: 2px solid var(--border); padding-bottom: 8px; font-size: 14px;">Tabelas de Preço Vinculadas</label>
             <div class="grid-2" style="gap: 10px; margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
-                <div><label>Venda (Sorv/Seco)</label><select id="lojaEditTabVenda" class="sel-tabelas-loja" style="margin-top:4px;"><option value="">(Padrão)</option></select></div>
-                <div><label>Transferência</label><select id="lojaEditTabTransf" class="sel-tabelas-loja" style="margin-top:4px;"><option value="">(Padrão)</option></select></div>
-                <div><label>Promoções</label><select id="lojaEditTabPromo" class="sel-tabelas-loja" style="margin-top:4px;"><option value="">(Padrão)</option></select></div>
-                <div><label>Baldes</label><select id="lojaEditTabBalde" class="sel-tabelas-loja" style="margin-top:4px;"><option value="">(Padrão)</option></select></div>
+                <div><label>Venda (Sorv/Seco)</label><select id="lojaEditTabVenda" class="sel-tabelas-loja" style="margin-top:4px;"></select></div>
+                <div><label>Transferência</label><select id="lojaEditTabTransf" class="sel-tabelas-loja" style="margin-top:4px;"></select></div>
+                <div><label>Promoções</label><select id="lojaEditTabPromo" class="sel-tabelas-loja" style="margin-top:4px;"></select></div>
+                <div><label>Baldes</label><select id="lojaEditTabBalde" class="sel-tabelas-loja" style="margin-top:4px;"></select></div>
             </div>
 
             <label style="margin-top: 20px; display: block; border-bottom: 2px solid var(--border); padding-bottom: 8px; font-size: 14px;">Controle de Acessos</label>
@@ -205,7 +225,6 @@
                 <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="permPromo" style="width:18px;height:18px;margin:0;"> Aba Promoções</label>
                 <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="permBalde" style="width:18px;height:18px;margin:0;"> Aba Baldes</label>
             </div>
-            
             <div class="grid-2" style="gap: 15px; margin-top: 25px;"><button onclick="window.fecharModal('modalLoja')" class="btn-secundario" style="width:100%;">Cancelar</button><button onclick="window.salvarLoja()" class="btn-primario" style="width:100%;">💾 Salvar Loja</button></div>
         </div>
     </div>
