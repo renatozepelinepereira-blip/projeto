@@ -1,29 +1,22 @@
-
-// js/utils/interface.js - Controles Visuais Globais
-
 export function iniciarInterfaceGlobais() {
-    // Menu Sanduíche
-    window.toggleMenu = () => { 
-        document.getElementById('sidebar').classList.toggle('open'); 
-        document.getElementById('overlay').classList.toggle('show'); 
+    // Menu Sanduíche (Mobile/Loja)
+    window.toggleMenu = () => {
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.querySelector('.overlay');
+        if (sidebar) sidebar.classList.toggle('open');
+        if (overlay) overlay.classList.toggle('show');
     };
 
-    // Fechar qualquer janela Modal
-    window.fecharModal = (id) => { 
-        document.getElementById(id).style.display = 'none'; 
+    // Fechar Modais
+    window.fecharModal = (id) => {
+        const modal = document.getElementById(id);
+        if (modal) modal.style.display = 'none';
     };
 
-    // O Atalho do "Enter" Fluido
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type === 'number') {
-            e.preventDefault();
-            // Pega apenas os inputs visíveis na tela
-            const inputs = Array.from(document.querySelectorAll('input[type="number"]')).filter(el => el.offsetParent !== null);
-            const index = inputs.indexOf(e.target);
-            if (index > -1 && index < inputs.length - 1) { 
-                inputs[index + 1].focus(); 
-                inputs[index + 1].select(); 
-            }
+    // Fechar ao clicar fora do modal
+    window.onclick = (event) => {
+        if (event.target.classList.contains('modal-overlay')) {
+            event.target.style.display = 'none';
         }
-    });
+    };
 }
