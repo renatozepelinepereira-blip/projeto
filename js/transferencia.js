@@ -10,6 +10,7 @@ if(!userId) window.location.href = 'index.html';
 let produtosGlobais = []; 
 let filiaisSalvas = [];
 window.filialDestinoNomeReal = ""; 
+window.resumoGlobal = { totalV: 0, qtdTotal: 0 };
 
 iniciarInterfaceGlobais();
 document.getElementById('txtLoja').innerText = nomeLoja;
@@ -61,7 +62,6 @@ async function iniciar() {
         if(filial) { document.getElementById('cliCnpj').value = filial.cnpj || ''; window.filialDestinoNomeReal = filial.nomeLoja || filial.id; }
     });
 
-    // Puxa a tabela específica de Transferência
     const tabelas = dadosUsuario.tabelasPreco || {};
     const tabTransf = (tabelas.transferencia || 'tf').toLowerCase();
 
@@ -75,14 +75,15 @@ async function iniciar() {
 
     prodSnap.forEach(d => {
         const item = d.data(); 
-        const precoCru = precosTF[item.codigo];
-        const preco = parseFloat(precoCru) || 0;
+        let precoCru = precosTF[item.codigo];
+        let precoSeguro = parseFloat(precoCru);
+        if (isNaN(precoSeguro)) precoSeguro = 0;
         
         let rawCat = (item.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         let cat = rawCat.includes('seco') ? 'seco' : 'sorvete'; 
         
         const idx = produtosGlobais.length;
-        produtosGlobais.push({ ...item, catReal: cat, precoFinal: preco });
+        produtosGlobais.push({ ...item, catReal: cat, precoFinal: precoSeguro });
         
         let imgHtml = item.imagem ? `<img src="${item.imagem}" class="img-produto" loading="lazy">` : `<div class="img-produto" style="display:flex;align-items:center;justify-content:center;background:#f1f5f9;font-size:20px;">📦</div>`;
         
@@ -114,8 +115,7 @@ window.calcularTudo = () => {
         
         let cap = parseFloat(p.engradado) || 1; 
         let qtd = (cx * cap) + un; 
-        let precoSeguro = parseFloat(p.precoFinal) || 0;
-        let sub = qtd * precoSeguro; 
+        let sub = qtd * p.precoFinal; 
         
         p.calcTotalUnidades = qtd; p.calcSubtotal = sub;
         totalGeral += sub; qtdTotalGeral += qtd;
@@ -126,6 +126,7 @@ window.calcularTudo = () => {
 
     document.getElementById('valComDesc').innerText = "R$ " + totalGeral.toFixed(2);
     document.getElementById('qtdTotal').innerText = qtdTotalGeral;
+    window.resumoGlobal = { totalV: totalGeral, qtdTotal: qtdTotalGeral };
 };
 
 window.gerarExcelTransferencia = async () => {
@@ -142,12 +143,12 @@ window.gerarExcelTransferencia = async () => {
         await processarExcelVenda({ 
             userId, nomeLoja, razao, cnpj: document.getElementById('cliCnpj').value, 
             formaPagamento: 'Transferência', prazo: '-', 
-            totalV: parseFloat(document.getElementById('valComDesc').innerText.replace('R$ ', '').replace('.', '').replace(',', '.')) || 0, 
+            totalV: window.resumoGlobal.totalV, 
             itens, isTransferencia: true 
         }); 
         alert("✅ Transferência gerada com sucesso!");
         window.location.reload(); 
-    } catch (e) { alert("Falha: " + e.message); } finally { btn.innerHTML = "<span style='font-size: 18px; margin-right: 5px;'>⬇️</span> Gerar"; btn.disabled = false; }
+    } catch (e) { alert("Falha: " + e.message); } finally { btn.innerHTML = "<span style='font-size: 16px;'>⬇️</span> Gerar Transferência"; btn.disabled = false; }
 };
 
 iniciar();
