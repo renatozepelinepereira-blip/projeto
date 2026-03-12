@@ -15,6 +15,20 @@ window.resumoGlobal = { totalV: 0, qtdTotal: 0 };
 iniciarInterfaceGlobais();
 document.getElementById('txtLoja').innerText = nomeLoja;
 
+// ==========================================
+// MOTOR DE ZOOM CENTRALIZADO NO MEIO DA TELA
+// ==========================================
+if (!document.getElementById('zoomOverlay')) {
+    const overlay = document.createElement('div');
+    overlay.id = 'zoomOverlay';
+    overlay.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:999999; pointer-events:none; background:rgba(255,255,255,0.8); align-items:center; justify-content:center;';
+    overlay.innerHTML = '<img id="zoomImg" src="" style="width: 350px; max-width: 90vw; height: 350px; max-height: 90vh; object-fit: contain; background: white; padding: 15px; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">';
+    document.body.appendChild(overlay);
+}
+window.mostrarZoom = (imgSrc) => { if(!imgSrc) return; document.getElementById('zoomImg').src = imgSrc; document.getElementById('zoomOverlay').style.display = 'flex'; };
+window.esconderZoom = () => { document.getElementById('zoomOverlay').style.display = 'none'; };
+// ==========================================
+
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type === 'number') {
         e.preventDefault();
@@ -89,7 +103,11 @@ async function iniciar() {
         const idx = produtosGlobais.length;
         produtosGlobais.push({ ...item, catReal: cat, precoFinal: precoSeguro });
         
-        let imgHtml = item.imagem ? `<img src="${item.imagem}" class="img-produto" loading="lazy">` : `<div class="img-produto" style="display:flex;align-items:center;justify-content:center;background:#f1f5f9;font-size:20px;">📦</div>`;
+        let hasImg = item.imagem ? true : false;
+        let evZoom = hasImg ? `onmouseenter="window.mostrarZoom('${item.imagem}')" onmouseleave="window.esconderZoom()"` : '';
+        let styleCur = hasImg ? 'cursor: zoom-in;' : '';
+        
+        let imgHtml = hasImg ? `<img src="${item.imagem}" class="img-produto" style="${styleCur}" loading="lazy" ${evZoom}>` : `<div class="img-produto" style="display:flex;align-items:center;justify-content:center;background:#f1f5f9;font-size:20px;">📦</div>`;
         
         htmlBuffers[cat] += `<tr id="tr_${idx}">
             <td style="text-align:center;">${imgHtml}</td>
