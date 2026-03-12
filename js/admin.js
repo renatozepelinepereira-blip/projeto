@@ -156,20 +156,54 @@ window.abrirNovoProduto = () => {
 window.salvarProduto = async () => {
     const cod = document.getElementById('prodEditCodigo').value.trim();
     if(!cod) return alert("Código obrigatório!");
+    
     const btn = document.getElementById('btnSalvarProd');
     const file = document.getElementById('prodEditImagemFile').files[0];
-    btn.disabled = true; btn.innerText = "⏳ Salvando...";
+    
+    btn.disabled = true; 
+    btn.innerText = "⏳ Enviando e Salvando...";
+    
     try {
         let url = document.getElementById('prodEditImagemUrl').value;
-        if(file) { const sRef = ref(storage, `produtos/${cod}`); await uploadBytes(sRef, file); url = await getDownloadURL(sRef); }
-        await setDoc(doc(db, "produtos", cod), { codigo: cod, descricao: document.getElementById('prodEditDescricao').value, categoria: document.getElementById('prodEditCategoria').value, engradado: document.getElementById('prodEditEngradado').value, imagem: url }, { merge: true });
+        
+        // 1. Upload da Imagem no Storage
+        if(file) { 
+            console.log("Iniciando upload para o Storage...");
+            const sRef = ref(storage, `produtos/${cod}`); 
+            await uploadBytes(sRef, file); 
+            url = await getDownloadURL(sRef); 
+            console.log("Upload concluído! URL: ", url);
+        }
+        
+        // 2. Salva os dados no banco de produtos
+        await setDoc(doc(db, "produtos", cod), { 
+            codigo: cod, 
+            descricao: document.getElementById('prodEditDescricao').value, 
+            categoria: document.getElementById('prodEditCategoria').value, 
+            engradado: document.getElementById('prodEditEngradado').value, 
+            imagem: url 
+        }, { merge: true });
+        
+        // 3. Salva o preço (se houver tabela selecionada no fundo)
         const tabelaSelecionada = document.getElementById('selectFiltroTabelaCat').value;
         if (tabelaSelecionada) {
             const precoVal = document.getElementById('prodEditPreco').value;
-            if (precoVal !== "") await setDoc(doc(db, "precos", tabelaSelecionada), { [cod]: parseFloat(precoVal) }, { merge: true });
+            if (precoVal !== "") {
+                await setDoc(doc(db, "precos", tabelaSelecionada), { [cod]: parseFloat(precoVal) }, { merge: true });
+            }
         }
-        window.fecharModal('modalProduto'); window.carregarProdutos();
-    } catch (e) { alert("Erro ao salvar."); } finally { btn.disabled = false; btn.innerText = "Salvar Produto"; }
+        
+        // 4. Sucesso! Fecha o modal com segurança e recarrega a lista
+        document.getElementById('modalProduto').style.display = 'none'; 
+        window.carregarProdutos();
+        
+    } catch (e) { 
+        console.error("Erro completo:", e);
+        alert(`❌ ERRO NO UPLOAD!\n\nMotivo: ${e.message}\n\nSe o erro for 'unauthorized', vá no Firebase > Storage > Rules e libere as permissões.`); 
+    } finally { 
+        btn.disabled = false; 
+        btn.innerText = "Salvar Produto"; 
+    }
 };
 
 window.excluirProduto = async (cod) => { if(confirm(`ATENÇÃO: Excluir permanentemente o produto ${cod}?`)) { try { await deleteDoc(doc(db, "produtos", cod)); window.carregarProdutos(); } catch(e) { alert("Erro ao excluir."); } } };
