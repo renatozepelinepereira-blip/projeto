@@ -10,22 +10,32 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js" defer></script>
 </head>
 <body>
-    <div class="sidebar-admin">
-        <div class="sidebar-header"><span class="sidebar-logo-icon">🍨</span><h2 class="sidebar-title">Eskimó</h2></div>
-        <div class="nav-links">
-            <button onclick="window.location.href='loja.html'"><i>🛒</i> <span>Nova Venda</span></button>
-            <button class="active"><i>🔄</i> <span>Transferência</span></button>
-            <button onclick="window.location.href='historico.html'"><i>📜</i> <span>Histórico</span></button>
-            <button onclick="localStorage.clear(); window.location.href='index.html'" style="margin-top:auto; color:#ef4444;"><i>🚪</i> <span>Sair</span></button>
+
+    <div class="top-header">
+        <div class="top-header-left">
+            <button class="menu-btn" onclick="window.toggleMenu()">☰</button>
+            <div class="logo-container">🍨 Eskimó</div>
         </div>
+        <div class="store-badge" id="txtLoja">Carregando...</div>
     </div>
 
-    <div class="main-content">
-        <div class="section-title">
-            <span>Transferência de Estoque</span>
-            <span class="store-badge" id="txtLoja" style="background: #dbeafe; color: #1e3a8a;">Matriz / Central</span>
+    <div class="sidebar">
+        <div class="sidebar-head">
+            <h2>🍨 Eskimó</h2>
+            <button class="close-btn" onclick="window.toggleMenu()">×</button>
         </div>
-        
+        <div class="sidebar-links">
+            <button onclick="window.location.href='loja.html'"><i>🛒</i> Nova Venda</button>
+            <button class="active"><i>🔄</i> Transferência</button>
+            <button onclick="window.location.href='historico.html'"><i>📜</i> Histórico</button>
+            <button onclick="localStorage.clear(); window.location.href='index.html'" style="margin-top:auto; color:#ef4444;"><i>🚪</i> Sair</button>
+        </div>
+    </div>
+    <div class="overlay" onclick="window.toggleMenu()"></div>
+
+    <div class="container">
+        <h2 class="section-title">Transferência de Estoque</h2>
+
         <div class="card-panel client-box" style="grid-template-columns: 2fr 1fr; border-left-color: #3b82f6;">
             <div><label>Filial de Destino</label><input type="text" id="cliRazao" list="listaFiliais" placeholder="Ex: Filial 03 - Canoas"></div>
             <div><label>CNPJ Destino</label><input type="text" id="cliCnpj" readonly style="background:#e2e8f0; cursor:not-allowed;"></div>
@@ -39,19 +49,19 @@
         <div class="table-container">
             <div id="content_sorvete" class="tab-content active">
                 <table id="tbl_sorvete">
-                    <thead style="position: sticky; top: 0; z-index: 1;"><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Caixas</th><th>Unid.</th></tr></thead>
+                    <thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Caixas</th><th>Unid.</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
             <div id="content_seco" class="tab-content">
-                <table id="tbl_seco"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Caixas</th><th>Unid.</th></tr></thead><tbody></tbody></table>
+                <table id="tbl_seco"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Caixas</th><th>Unid.</th></tr></thead><tbody></tbody></table>
             </div>
         </div>
 
         <div class="resumo-box" style="border-color: #3b82f6;">
             <div class="resumo-grid" style="grid-template-columns: 1fr;">
                 <button onclick="window.gerarExcelTransferencia()" class="btn-primario" style="background: #3b82f6; width: 100%; justify-content: center;">
-                    <span style="font-size: 20px; margin-right: 10px;">⬇️</span> GERAR TRANSFERÊNCIA EXCEL
+                    <span style="font-size: 22px; margin-right: 10px;">⬇️</span> Gerar Transferência Excel
                 </button>
             </div>
         </div>
