@@ -43,6 +43,7 @@
 
         <div class="tabs">
             <button class="tab-btn active" id="btnTabSorvete" onclick="window.mudarAba('sorvete')">Sorvetes</button>
+            <button class="tab-btn" id="btnTabAcai" onclick="window.mudarAba('acai')">Açaí</button>
             <button class="tab-btn" id="btnTabSeco" onclick="window.mudarAba('seco')">Secos</button>
         </div>
 
@@ -53,26 +54,30 @@
                     <tbody></tbody>
                 </table>
             </div>
+            <div id="content_acai" class="tab-content">
+                <table id="tbl_acai"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Caixas</th><th>Unid.</th></tr></thead><tbody></tbody></table>
+            </div>
             <div id="content_seco" class="tab-content">
                 <table id="tbl_seco"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Caixas</th><th>Unid.</th></tr></thead><tbody></tbody></table>
             </div>
         </div>
 
-        <div class="resumo-box" style="border-top-color: #3b82f6;">
+        <div class="resumo-box" style="border-color: #3b82f6;">
             <div class="resumo-grid">
                 <div class="resumo-info">
-                    <b>Qtd (Un)</b>
+                    <b>Qtd (Unid)</b>
                     <span id="qtdTotal" style="color: #475569;">0</span>
                 </div>
                 <div class="resumo-info">
-                    <b>Valor (TF)</b>
+                    <b>Valor Líquido (TF)</b>
                     <span id="valComDesc" style="color: #3b82f6;">R$ 0,00</span>
                 </div>
                 <button onclick="window.gerarExcelTransferencia()" class="btn-primario">
-                    <span style="font-size: 14px;">⬇️</span> Transferir
+                    <span style="font-size: 16px;">⬇️</span> Gerar Transferência
                 </button>
             </div>
         </div>
+    </div>
 
     <datalist id="listaFiliais"></datalist>
     <script type="module" src="./js/transferencia.js"></script>
