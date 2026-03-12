@@ -102,7 +102,7 @@ window.excluirProduto = async (cod) => { if(confirm(`ATENÇÃO: Excluir permanen
 window.abrirNovoProduto = () => { document.getElementById('prodEditCodigo').disabled = false; document.querySelectorAll('#modalProduto input:not([type=hidden])').forEach(i => i.value = ''); document.getElementById('previewFoto').style.display = 'none'; document.getElementById('modalProduto').style.display = 'flex'; };
 window.abrirEdicaoProduto = (cod) => { const p = listaProdutosAdmin.find(x => x.codigo === cod); if(!p) return; document.getElementById('prodEditCodigo').value = p.codigo; document.getElementById('prodEditCodigo').disabled = true; document.getElementById('prodEditDescricao').value = p.descricao || ''; document.getElementById('prodEditCategoria').value = p.categoria || ''; document.getElementById('prodEditEngradado').value = p.engradado || ''; document.getElementById('prodEditImagemUrl').value = p.imagem || ''; const pv = document.getElementById('previewFoto'); if(p.imagem) { pv.src = p.imagem; pv.style.display = 'block'; } else { pv.style.display = 'none'; } document.getElementById('modalProduto').style.display = 'flex'; };
 
-// --- PREÇOS E VÍNCULOS (AUTO-CHECK) ---
+// --- PREÇOS E VÍNCULOS ---
 async function carregarTabelasPrecos() {
     const sT = await getDocs(collection(db, "precos"));
     const selT = document.getElementById('selectTabelaAssociar');
@@ -112,29 +112,71 @@ async function carregarTabelasPrecos() {
     const sL = await getDocs(collection(db, "usuarios"));
     const cont = document.getElementById('listaLojasChecklist');
     cont.innerHTML = '';
+    
+    // Arrays temporários para separar vinculadas e não vinculadas na primeira carga
+    let divsLojas = [];
+    
     sL.forEach(u => {
         if(u.id === 'admin') return;
         const d = u.data(); const fil = extrairFilial(d.cnpj);
         const txt = `[FILIAL ${fil}] ${d.nomeLoja || u.id} - ${d.cnpj || ""}`.toUpperCase();
         const tabAtual = d.tabelaPreco || '';
         
-        cont.innerHTML += `<div class="loja-check-item" style="display:flex; gap:10px; padding:10px; border-bottom:1px solid #f1f5f9; align-items: center;">
+        // Criamos o elemento HTML em memória
+        const div = document.createElement('div');
+        div.className = 'loja-check-item';
+        div.style.cssText = 'display:flex; gap:10px; padding:10px; border-bottom:1px solid #f1f5f9; align-items: center;';
+        div.innerHTML = `
             <input type="checkbox" class="chk-loja" value="${u.id}" data-search="${txt}" data-tabela="${tabAtual}" style="width:18px; height:18px; margin:0; cursor:pointer;">
             <label style="font-size:13px; margin:0; cursor:pointer; flex-grow:1;">
                 <b>${fil?`Filial ${fil}`:''}</b> ${d.nomeLoja || u.id} 
                 <span style="color:var(--primary); font-size:11px; float:right; background:#fef2f2; padding:2px 6px; border-radius:4px;">${tabAtual ? tabAtual.toUpperCase() : 'Sem tabela'}</span>
             </label>
-        </div>`;
+        `;
+        divsLojas.push(div);
     });
+    
+    // Ordem alfabética inicial
+    divsLojas.sort((a, b) => {
+        const textA = a.querySelector('input').getAttribute('data-search');
+        const textB = b.querySelector('input').getAttribute('data-search');
+        return textA.localeCompare(textB);
+    });
+    
+    divsLojas.forEach(div => cont.appendChild(div));
 }
 
-// Essa função marca automaticamente os checkboxes quando você escolhe uma tabela
+// === LÓGICA DE REORDENAÇÃO MÁGICA ===
 window.aoSelecionarTabela = () => {
     const tabelaSelecionada = document.getElementById('selectTabelaAssociar').value;
-    const checks = document.querySelectorAll('.chk-loja');
-    checks.forEach(c => {
-        c.checked = (c.getAttribute('data-tabela') === tabelaSelecionada && tabelaSelecionada !== "");
+    const container = document.getElementById('listaLojasChecklist');
+    const itens = Array.from(container.querySelectorAll('.loja-check-item'));
+
+    // 1. Marca/Desmarca
+    itens.forEach(item => {
+        const checkbox = item.querySelector('.chk-loja');
+        checkbox.checked = (checkbox.getAttribute('data-tabela') === tabelaSelecionada && tabelaSelecionada !== "");
     });
+
+    // 2. Reordena: Joga as lojas vinculadas para o topo, o resto fica em ordem alfabética
+    itens.sort((a, b) => {
+        const chkA = a.querySelector('.chk-loja');
+        const chkB = b.querySelector('.chk-loja');
+        
+        const aVinculada = (chkA.getAttribute('data-tabela') === tabelaSelecionada && tabelaSelecionada !== "");
+        const bVinculada = (chkB.getAttribute('data-tabela') === tabelaSelecionada && tabelaSelecionada !== "");
+        
+        // Se A é vinculada e B não é, A sobe
+        if (aVinculada && !bVinculada) return -1;
+        // Se B é vinculada e A não é, B sobe
+        if (!aVinculada && bVinculada) return 1;
+        
+        // Se ambas são iguais (ambas vinculadas ou ambas não vinculadas), desempata por ordem alfabética
+        return chkA.getAttribute('data-search').localeCompare(chkB.getAttribute('data-search'));
+    });
+
+    // 3. Re-insere os itens na nova ordem
+    itens.forEach(item => container.appendChild(item));
 };
 
 window.vincularTabelaEmMassa = async () => {
@@ -146,7 +188,7 @@ window.vincularTabelaEmMassa = async () => {
         await Promise.all(ids.map(id => setDoc(doc(db, "usuarios", id), { tabelaPreco: tab }, { merge: true })));
         alert("Vínculo aplicado com sucesso!"); 
         carregarLojas();
-        carregarTabelasPrecos(); // Atualiza a lista para o Auto-Check funcionar certo depois
+        carregarTabelasPrecos(); // Atualiza a lista e as tags de "Tabela Atual"
     } finally { btn.innerText = "💾 Aplicar Tabela Selecionada"; document.getElementById('selectTabelaAssociar').value = ""; }
 };
 
