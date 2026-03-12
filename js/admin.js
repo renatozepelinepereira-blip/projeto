@@ -10,6 +10,7 @@ let historicoGlobal = {};
 window.listaProdutosAdmin = []; 
 let listaLojasAdmin = []; 
 let carregandoDash = false;
+window.codigosAcaiGlobais = [];
 
 function extrairFilial(cnpj) {
     if (!cnpj) return "";
@@ -87,12 +88,39 @@ window.mudarAbaAdminCat = (cat) => {
     if(btn) { btn.style.background = 'white'; btn.style.color = 'var(--primary)'; btn.style.boxShadow = 'var(--shadow-sm)'; }
     const content = document.getElementById('content_admin_' + cat);
     if(content) content.style.display = 'block';
+    
+    // Reseta a busca ao trocar de aba para evitar confusão
+    document.getElementById('buscaCatalogoAdmin').value = "";
+    window.filtrarCatalogo();
 };
 
 window.previewImagemURL = () => {
     const url = document.getElementById('prodEditImagemUrl').value.trim();
     const pv = document.getElementById('previewFoto');
     if (url) { pv.src = url; pv.style.display = 'block'; } else { pv.style.display = 'none'; }
+};
+
+// NOVO: SALVAR REGRA DE CÓDIGOS AÇAÍ
+window.salvarCodigosAcai = async () => {
+    const raw = document.getElementById('inputCodigosAcai').value;
+    const array = raw.split(',').map(c => c.trim().toUpperCase()).filter(c => c !== "");
+    try {
+        const btn = document.querySelector('button[onclick="window.salvarCodigosAcai()"]');
+        btn.innerText = "⏳...";
+        await setDoc(doc(db, "configuracoes", "geral"), { codigosAcai: array }, { merge: true });
+        alert("Códigos vinculados ao Açaí com sucesso!");
+        btn.innerText = "💾 Salvar Códigos";
+        window.carregarProdutos();
+    } catch (e) { alert("Erro ao salvar códigos: " + e.message); }
+};
+
+// NOVO: FILTRAR CATÁLOGO (PESQUISA)
+window.filtrarCatalogo = () => {
+    const termo = document.getElementById('buscaCatalogoAdmin').value.toLowerCase();
+    document.querySelectorAll('.linha-produto-admin').forEach(tr => {
+        const busca = tr.getAttribute('data-search') || '';
+        if(busca.includes(termo)) { tr.style.display = ''; } else { tr.style.display = 'none'; }
+    });
 };
 
 window.carregarProdutos = async () => {
@@ -102,24 +130,31 @@ window.carregarProdutos = async () => {
         else { th.style.display = 'none'; }
     });
 
-    let precosTabela = {};
-    if (tabelaSelecionada) {
-        const snapPrecos = await getDoc(doc(db, "precos", tabelaSelecionada));
-        if (snapPrecos.exists()) precosTabela = snapPrecos.data();
-    }
+    const [snapPrecos, snapProd, snapConfig] = await Promise.all([
+        tabelaSelecionada ? getDoc(doc(db, "precos", tabelaSelecionada)) : Promise.resolve({exists:()=>false}),
+        getDocs(collection(db, "produtos")),
+        getDoc(doc(db, "configuracoes", "geral"))
+    ]);
 
-    const snap = await getDocs(collection(db, "produtos"));
+    let precosTabela = snapPrecos.exists() ? snapPrecos.data() : {};
+    
+    // Puxa a lista de Açaís salvos
+    window.codigosAcaiGlobais = snapConfig.exists() && snapConfig.data().codigosAcai ? snapConfig.data().codigosAcai : [];
+    if(document.getElementById('inputCodigosAcai')) { document.getElementById('inputCodigosAcai').value = window.codigosAcaiGlobais.join(', '); }
+
     let htmlBuffers = { sorvete: "", acai: "", seco: "", balde: "", promo: "" };
     window.listaProdutosAdmin = [];
     
-    snap.forEach(d => {
+    snapProd.forEach(d => {
         const p = { id: d.id, ...d.data() }; 
         if (tabelaSelecionada) p.precoAtual = precosTabela[p.codigo] !== undefined ? precosTabela[p.codigo] : null;
         window.listaProdutosAdmin.push(p);
         
         let rawCat = (p.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        let isAcaiDefinido = window.codigosAcaiGlobais.includes(String(p.codigo).trim().toUpperCase());
+        
         let cat = 'sorvete'; 
-        if (rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai';
+        if (isAcaiDefinido || rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai';
         else if (rawCat.includes('seco')) cat = 'seco'; 
         else if (rawCat.includes('balde')) cat = 'balde'; 
         else if (rawCat.includes('promo')) cat = 'promo';
@@ -130,7 +165,8 @@ window.carregarProdutos = async () => {
             htmlPreco = `<td style="font-weight:900; color:var(--primary); font-size:15px;">${val}</td>`;
         }
         
-        htmlBuffers[cat] += `<tr>
+        // Atributo data-search adicionado para o filtro funcionar
+        htmlBuffers[cat] += `<tr class="linha-produto-admin" data-search="${String(p.codigo).toLowerCase()} ${String(p.descricao).toLowerCase()}">
             <td><img src="${p.imagem || ''}" class="img-produto" onerror="this.src='https://placehold.co/40?text=📦'"></td>
             <td><b>${p.codigo}</b></td>
             <td>${p.descricao}</td>
@@ -148,6 +184,9 @@ window.carregarProdutos = async () => {
     if (document.getElementById('corpoAdminSeco')) document.getElementById('corpoAdminSeco').innerHTML = htmlBuffers.seco || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
     if (document.getElementById('corpoAdminBalde')) document.getElementById('corpoAdminBalde').innerHTML = htmlBuffers.balde || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
     if (document.getElementById('corpoAdminPromo')) document.getElementById('corpoAdminPromo').innerHTML = htmlBuffers.promo || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
+    
+    // Reaplica o filtro caso haja algo digitado
+    window.filtrarCatalogo();
 };
 
 window.abrirEdicaoProduto = (cod) => { 
@@ -271,15 +310,7 @@ window.abrirEdicaoLoja = (id) => {
     document.getElementById('lojaEditId').value = u.id; document.getElementById('lojaEditId').disabled = true; document.getElementById('lojaEditIsNew').value = 'nao'; document.getElementById('lojaEditNome').value = u.nomeLoja || ''; document.getElementById('lojaEditCnpj').value = u.cnpj || ''; document.getElementById('lojaEditSenha').value = ''; 
     const p = u.planilhas || {}; document.getElementById('permVenda').checked = p.venda !== false; document.getElementById('permTransf').checked = p.transferencia !== false; document.getElementById('permPromo').checked = p.promocao !== false; document.getElementById('permBalde').checked = p.balde !== false; 
     const tp = u.tabelasPreco || {}; document.getElementById('lojaEditTabVenda').value = tp.venda || u.tabelaPreco || ''; document.getElementById('lojaEditTabTransf').value = tp.transferencia || ''; document.getElementById('lojaEditTabPromo').value = tp.promocao || ''; document.getElementById('lojaEditTabBalde').value = tp.balde || ''; 
-    
-    // NOVO: Carrega descontos maximos
-    const dmax = u.descontosMax || {};
-    document.getElementById('descMaxSorvete').value = dmax.sorvete || '';
-    document.getElementById('descMaxAcai').value = dmax.acai || '';
-    document.getElementById('descMaxSeco').value = dmax.seco || '';
-    document.getElementById('descMaxBalde').value = dmax.balde || '';
-    document.getElementById('descMaxPromo').value = dmax.promo || '';
-
+    const dmax = u.descontosMax || {}; document.getElementById('descMaxSorvete').value = dmax.sorvete || ''; document.getElementById('descMaxAcai').value = dmax.acai || ''; document.getElementById('descMaxSeco').value = dmax.seco || ''; document.getElementById('descMaxBalde').value = dmax.balde || ''; document.getElementById('descMaxPromo').value = dmax.promo || '';
     document.getElementById('modalLoja').style.display = 'flex'; 
 };
 window.salvarLoja = async () => { 
@@ -288,13 +319,7 @@ window.salvarLoja = async () => {
         nomeLoja: document.getElementById('lojaEditNome').value, cnpj: document.getElementById('lojaEditCnpj').value, 
         planilhas: { venda: document.getElementById('permVenda').checked, transferencia: document.getElementById('permTransf').checked, promocao: document.getElementById('permPromo').checked, balde: document.getElementById('permBalde').checked }, 
         tabelasPreco: { venda: document.getElementById('lojaEditTabVenda').value, transferencia: document.getElementById('lojaEditTabTransf').value, promocao: document.getElementById('lojaEditTabPromo').value, balde: document.getElementById('lojaEditTabBalde').value },
-        descontosMax: { 
-            sorvete: parseFloat(document.getElementById('descMaxSorvete').value) || 0,
-            acai: parseFloat(document.getElementById('descMaxAcai').value) || 0,
-            seco: parseFloat(document.getElementById('descMaxSeco').value) || 0,
-            balde: parseFloat(document.getElementById('descMaxBalde').value) || 0,
-            promo: parseFloat(document.getElementById('descMaxPromo').value) || 0
-        }
+        descontosMax: { sorvete: parseFloat(document.getElementById('descMaxSorvete').value) || 0, acai: parseFloat(document.getElementById('descMaxAcai').value) || 0, seco: parseFloat(document.getElementById('descMaxSeco').value) || 0, balde: parseFloat(document.getElementById('descMaxBalde').value) || 0, promo: parseFloat(document.getElementById('descMaxPromo').value) || 0 }
     }; 
     const s = document.getElementById('lojaEditSenha').value.trim(); if(s) d.senha = s; await setDoc(doc(db, "usuarios", id), d, { merge: true }); alert("Loja Salva com Sucesso!"); window.fecharModal('modalLoja'); window.carregarLojas(); window.carregarTabelasPrecos(); 
 };
