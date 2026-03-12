@@ -49,10 +49,7 @@
 
         <div class="table-container">
             <div id="content_sorvete" class="tab-content active">
-                <table id="tbl_sorvete">
-                    <thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Caixas</th><th>Unid.</th></tr></thead>
-                    <tbody></tbody>
-                </table>
+                <table id="tbl_sorvete"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Caixas</th><th>Unid.</th></tr></thead><tbody></tbody></table>
             </div>
             <div id="content_acai" class="tab-content">
                 <table id="tbl_acai"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Caixas</th><th>Unid.</th></tr></thead><tbody></tbody></table>
@@ -62,18 +59,18 @@
             </div>
         </div>
 
-        <div class="resumo-box" style="border-color: #3b82f6;">
+        <div class="resumo-box" style="border-top-color: #3b82f6;">
             <div class="resumo-grid">
                 <div class="resumo-info">
-                    <b>Qtd (Unid)</b>
+                    <b>Qtd (Un)</b>
                     <span id="qtdTotal" style="color: #475569;">0</span>
                 </div>
                 <div class="resumo-info">
-                    <b>Valor Líquido (TF)</b>
+                    <b>Valor (TF)</b>
                     <span id="valComDesc" style="color: #3b82f6;">R$ 0,00</span>
                 </div>
                 <button onclick="window.gerarExcelTransferencia()" class="btn-primario">
-                    <span style="font-size: 16px;">⬇️</span> Gerar Transferência
+                    <span style="font-size: 14px;">⬇️</span> Transferir
                 </button>
             </div>
         </div>
