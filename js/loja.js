@@ -44,11 +44,10 @@ async function iniciar() {
         window.location.replace('transferencia.html'); return; 
     }
 
-    // Leitura inteligente de Múltiplas Tabelas
     const tabelas = dadosUsuario.tabelasPreco || {};
     let tabVenda = (tabelas.venda || dadosUsuario.tabelaPreco || 'padrao').toLowerCase();
-    let tabPromo = (tabelas.promocao || tabVenda).toLowerCase(); // Se não tiver promo, usa a de venda
-    let tabBalde = (tabelas.balde || tabVenda).toLowerCase();   // Se não tiver balde, usa a de venda
+    let tabPromo = (tabelas.promocao || tabVenda).toLowerCase(); 
+    let tabBalde = (tabelas.balde || tabVenda).toLowerCase();   
     
     const cliSnap = await getDocs(collection(db, "clientes"));
     const listaNomes = document.getElementById('listaNomesClientes');
@@ -59,7 +58,6 @@ async function iniciar() {
         if(cliente) document.getElementById('cliCnpj').value = cliente.cnpj || '';
     });
 
-    // Puxa as 3 planilhas + catálogo tudo junto
     const [snapVenda, snapPromo, snapBalde, prodSnap] = await Promise.all([ 
         getDoc(doc(db, "precos", tabVenda)), 
         getDoc(doc(db, "precos", tabPromo)), 
@@ -79,29 +77,30 @@ async function iniciar() {
         let cat = 'sorvete'; 
         if (rawCat.includes('seco')) cat = 'seco'; else if (rawCat.includes('balde')) cat = 'balde'; else if (rawCat.includes('promo')) cat = 'promo';
         
-        // Direciona o preço baseado na aba onde o produto vai aparecer
-        let preco;
-        if (cat === 'promo') preco = precosPromo[item.codigo];
-        else if (cat === 'balde') preco = precosBalde[item.codigo];
-        else preco = precosVenda[item.codigo]; // Sorvete e Seco usam a tabela de Venda
+        let precoCru;
+        if (cat === 'promo') precoCru = precosPromo[item.codigo];
+        else if (cat === 'balde') precoCru = precosBalde[item.codigo];
+        else precoCru = precosVenda[item.codigo]; 
         
-        if (preco !== undefined) {
-            const idx = produtosGlobais.length;
-            produtosGlobais.push({ ...item, precoFinal: preco, catReal: cat });
-            
-            let imgHtml = item.imagem ? `<img src="${item.imagem}" class="img-produto" loading="lazy">` : `<div class="img-produto" style="display:flex;align-items:center;justify-content:center;background:#f1f5f9;font-size:20px;">📦</div>`;
-            
-            htmlBuffers[cat] += `<tr id="tr_${idx}">
-                <td style="text-align:center;">${imgHtml}</td>
-                <td><b>${item.codigo}</b></td>
-                <td>${item.descricao}</td>
-                <td>${item.engradado}</td>
-                <td style="color:#10b981; font-weight:600;">R$ ${parseFloat(preco).toFixed(2)}</td>
-                <td><input type="number" id="eng_${idx}" placeholder="0" min="0" step="0.5" oninput="window.calcularTudo()"></td>
-                <td><input type="number" id="uni_${idx}" placeholder="0" min="0" step="1" oninput="window.calcularTudo()"></td>
-                <td id="sub_${idx}" style="font-weight:700; color:var(--primary);">R$ 0,00</td>
-            </tr>`;
-        }
+        let precoSeguro = parseFloat(precoCru);
+        if (isNaN(precoSeguro)) precoSeguro = 0;
+        
+        const idx = produtosGlobais.length;
+        produtosGlobais.push({ ...item, precoFinal: precoSeguro, catReal: cat });
+        
+        let imgHtml = item.imagem ? `<img src="${item.imagem}" class="img-produto" loading="lazy">` : `<div class="img-produto" style="display:flex;align-items:center;justify-content:center;background:#f1f5f9;font-size:20px;">📦</div>`;
+        let corPreco = precoSeguro > 0 ? '#10b981' : '#ef4444';
+
+        htmlBuffers[cat] += `<tr id="tr_${idx}">
+            <td style="text-align:center;">${imgHtml}</td>
+            <td><b>${item.codigo}</b></td>
+            <td>${item.descricao}</td>
+            <td>${item.engradado}</td>
+            <td style="color:${corPreco}; font-weight:600;">R$ ${precoSeguro.toFixed(2)}</td>
+            <td><input type="number" id="eng_${idx}" placeholder="0" min="0" step="0.5" oninput="window.calcularTudo()"></td>
+            <td><input type="number" id="uni_${idx}" placeholder="0" min="0" step="1" oninput="window.calcularTudo()"></td>
+            <td id="sub_${idx}" style="font-weight:700; color:var(--primary);">R$ 0,00</td>
+        </tr>`;
     });
     
     Object.keys(htmlBuffers).forEach(k => {
@@ -135,7 +134,7 @@ window.calcularTudo = () => {
     
     document.getElementById('valComDesc').innerText = "R$ " + totalGeral.toFixed(2); 
     document.getElementById('qtdTotal').innerText = qtdTotalGeral;
-    window.resumoGlobal.totalV = totalGeral; window.resumoGlobal.qtdTotal = qtdTotalGeral;
+    window.resumoGlobal = { totalV: totalGeral, qtdTotal: qtdTotalGeral };
 };
 
 window.gerarExcelPedido = async () => {
@@ -156,7 +155,7 @@ window.gerarExcelPedido = async () => {
         await processarExcelVenda({ userId, nomeLoja, razao, cnpj, formaPagamento, prazo, totalV: window.resumoGlobal.totalV, itens, isTransferencia: false }); 
         alert("✅ Pedido gerado com sucesso! O Excel foi baixado.");
         window.location.reload();
-    } catch (e) { alert("Falha: " + e.message); } finally { btn.innerHTML = "<span style='font-size: 22px;'>⬇️</span> Gerar Pedido Excel"; btn.disabled = false; }
+    } catch (e) { alert("Falha: " + e.message); } finally { btn.innerHTML = "<span style='font-size: 16px;'>⬇️</span> Gerar Pedido"; btn.disabled = false; }
 };
 
 iniciar();
