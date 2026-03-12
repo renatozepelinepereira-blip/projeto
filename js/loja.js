@@ -79,7 +79,6 @@ async function iniciar() {
                 el.style.display = 'none'; // Sumiu a palavra livre
             } else { 
                 el.style.display = 'inline-block';
-                el.innerText = `Máx: ${maxVal}%`; 
                 el.style.color = '#ef4444'; 
                 el.style.background = '#fee2e2'; 
             }
