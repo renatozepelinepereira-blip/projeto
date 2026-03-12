@@ -51,11 +51,11 @@
                     <button onclick="window.toggleTabelaHistorico()" class="btn-secundario" id="btnToggleHist">👁️ Esconder</button>
                 </div>
                 <div id="wrapperHistorico">
-                    <input type="text" id="pesquisaLogAdmin" placeholder="🔍 Filtrar lista de atividades..." style="margin-bottom:15px;">
+                    <input type="text" id="pesquisaLogAdmin" placeholder="🔍 Filtrar lista de atividades..." style="margin-bottom:15px;" oninput="window.filtrarLogDash()">
                     <div style="max-height: 400px; overflow-y: auto;">
                         <table>
                             <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;">
-                                <tr><th>Data</th><th>Loja</th><th>Ação</th><th>Destino</th><th>Ações</th></tr>
+                                <tr><th>Data</th><th>Loja</th><th>Ação</th><th>Destino</th><th style="text-align: center;">Ações</th></tr>
                             </thead>
                             <tbody id="corpoTabelaHistorico"></tbody>
                         </table>
@@ -71,7 +71,7 @@
                 <div style="max-height: 550px; overflow-y: auto; margin-top:20px;">
                     <table>
                         <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;">
-                            <tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Cat.</th><th>Ação</th></tr>
+                            <tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Cat.</th><th style="text-align: center;">Ações</th></tr>
                         </thead>
                         <tbody id="corpoTabelaProdutos"></tbody>
                     </table>
@@ -114,7 +114,7 @@
                 <button onclick="window.abrirNovaLoja()" class="btn-primario">+ Nova Loja</button>
                 <table style="margin-top:20px;">
                     <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;">
-                        <tr><th>Login</th><th>Nome</th><th>CNPJ</th><th>Tabela Atual</th><th>Ação</th></tr>
+                        <tr><th>Login</th><th>Nome</th><th>CNPJ</th><th>Tabela Atual</th><th style="text-align: center;">Ação</th></tr>
                     </thead>
                     <tbody id="corpoTabelaLojas"></tbody>
                 </table>
@@ -166,6 +166,18 @@
             <label>CNPJ</label><input type="text" id="lojaEditCnpj">
             <button onclick="window.salvarLoja()" class="btn-primario" style="width:100%; margin-top: 10px;">Salvar Loja</button>
             <button onclick="window.fecharModal('modalLoja')" class="btn-secundario" style="width:100%; margin-top:10px;">Cancelar</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalDetalhesLog">
+        <div class="modal-content" style="width: 700px; max-width: 95%;">
+            <h2 style="margin-bottom: 20px; color: var(--primary);">Detalhes do Registro</h2>
+            <div id="conteudoDetalhesLog" style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid var(--border); max-height: 400px; overflow-y: auto; font-size: 14px; margin-bottom: 20px;">
+                </div>
+            <div style="display: flex; gap: 10px;">
+                <button id="btnRegerarPlanilhaModal" class="btn-sucesso" style="flex: 1;">⬇️ Baixar Excel</button>
+                <button onclick="window.fecharModal('modalDetalhesLog')" class="btn-secundario" style="flex: 1;">Fechar</button>
+            </div>
         </div>
     </div>
 
