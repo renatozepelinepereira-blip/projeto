@@ -14,16 +14,12 @@ window.filialDestinoNomeReal = "";
 iniciarInterfaceGlobais();
 document.getElementById('txtLoja').innerText = nomeLoja;
 
-// NAVEGAÇÃO COM ENTER (Global para Inputs de Número)
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type === 'number') {
         e.preventDefault();
         const inputs = Array.from(document.querySelectorAll('.tab-content.active input[type="number"]:not([disabled])'));
         const index = inputs.indexOf(e.target);
-        if (index > -1 && index < inputs.length - 1) {
-            inputs[index + 1].focus();
-            inputs[index + 1].select();
-        }
+        if (index > -1 && index < inputs.length - 1) { inputs[index + 1].focus(); inputs[index + 1].select(); }
     }
 });
 
@@ -62,24 +58,23 @@ async function iniciar() {
 
     document.getElementById('cliRazao').addEventListener('change', (e) => {
         const filial = filiaisSalvas.find(c => c.textoBusca === e.target.value);
-        if(filial) {
-            document.getElementById('cliCnpj').value = filial.cnpj || '';
-            window.filialDestinoNomeReal = filial.nomeLoja || filial.id;
-        }
+        if(filial) { document.getElementById('cliCnpj').value = filial.cnpj || ''; window.filialDestinoNomeReal = filial.nomeLoja || filial.id; }
     });
 
-    const [precoSnap, prodSnap] = await Promise.all([ 
-        getDoc(doc(db, "precos", "tf")), 
+    // Puxa a tabela específica de Transferência
+    const tabelas = dadosUsuario.tabelasPreco || {};
+    const tabTransf = (tabelas.transferencia || 'tf').toLowerCase();
+
+    const [snapTransf, prodSnap] = await Promise.all([ 
+        getDoc(doc(db, "precos", tabTransf)), 
         getDocs(collection(db, "produtos")) 
     ]);
-    const precosTF = precoSnap.exists() ? precoSnap.data() : {};
+    const precosTF = snapTransf.exists() ? snapTransf.data() : {};
 
     let htmlBuffers = { sorvete: "", seco: "" };
 
     prodSnap.forEach(d => {
         const item = d.data(); 
-        
-        // CORREÇÃO DO NaN AQUI: Garante que vira número ou zero
         const precoCru = precosTF[item.codigo];
         const preco = parseFloat(precoCru) || 0;
         
@@ -108,9 +103,7 @@ async function iniciar() {
 }
 
 window.calcularTudo = () => {
-    let totalGeral = 0;
-    let qtdTotalGeral = 0;
-
+    let totalGeral = 0; let qtdTotalGeral = 0;
     produtosGlobais.forEach((p, i) => {
         let inputEng = document.getElementById(`eng_${i}`); let inputUni = document.getElementById(`uni_${i}`); 
         if(!inputEng || !inputUni) return;
@@ -121,16 +114,11 @@ window.calcularTudo = () => {
         
         let cap = parseFloat(p.engradado) || 1; 
         let qtd = (cx * cap) + un; 
-        
-        // CORREÇÃO DO NaN AQUI 2: Cálculo limpo
         let precoSeguro = parseFloat(p.precoFinal) || 0;
         let sub = qtd * precoSeguro; 
         
-        p.calcTotalUnidades = qtd; 
-        p.calcSubtotal = sub;
-        
-        totalGeral += sub;
-        qtdTotalGeral += qtd;
+        p.calcTotalUnidades = qtd; p.calcSubtotal = sub;
+        totalGeral += sub; qtdTotalGeral += qtd;
 
         let tr = document.getElementById(`tr_${i}`); 
         if (tr) { if (qtd > 0) tr.classList.add('linha-destaque'); else tr.classList.remove('linha-destaque'); }
@@ -152,16 +140,14 @@ window.gerarExcelTransferencia = async () => {
     
     try { 
         await processarExcelVenda({ 
-            userId, nomeLoja, razao, 
-            cnpj: document.getElementById('cliCnpj').value, 
+            userId, nomeLoja, razao, cnpj: document.getElementById('cliCnpj').value, 
             formaPagamento: 'Transferência', prazo: '-', 
             totalV: parseFloat(document.getElementById('valComDesc').innerText.replace('R$ ', '').replace('.', '').replace(',', '.')) || 0, 
             itens, isTransferencia: true 
         }); 
         alert("✅ Transferência gerada com sucesso!");
         window.location.reload(); 
-    } catch (e) { alert("Falha: " + e.message); } 
-    finally { btn.innerHTML = "<span style='font-size: 18px; margin-right: 5px;'>⬇️</span> Gerar"; btn.disabled = false; }
+    } catch (e) { alert("Falha: " + e.message); } finally { btn.innerHTML = "<span style='font-size: 18px; margin-right: 5px;'>⬇️</span> Gerar"; btn.disabled = false; }
 };
 
 iniciar();
