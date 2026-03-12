@@ -41,14 +41,26 @@ document.getElementById('cliFormaPagamento').addEventListener('change', (e) => {
 async function iniciar() {
     const userSnap = await getDoc(doc(db, "usuarios", userId)); 
     const dadosUsuario = userSnap.data() || {};
+    const isAdmin = userId === 'admin';
     
-    if (dadosUsuario.planilhas?.venda === false && userId !== 'admin') { 
+    if (dadosUsuario.planilhas?.venda === false && !isAdmin) { 
         window.location.replace('transferencia.html'); return; 
     }
 
+    // REGRA DE DESCONTOS (O lojista obedece ao limite, o Admin é 100% Livre)
     const dmax = dadosUsuario.descontosMax || {};
-    window.descontosMaxGlobais = { sorvete: parseFloat(dmax.sorvete) || 0, acai: parseFloat(dmax.acai) || 0, seco: parseFloat(dmax.seco) || 0, balde: parseFloat(dmax.balde) || 0, promo: parseFloat(dmax.promo) || 0 };
-    Object.keys(window.descontosMaxGlobais).forEach(k => { let el = document.getElementById('max_desc_' + k); if(el) el.innerText = `Máx: ${window.descontosMaxGlobais[k]}%`; });
+    window.descontosMaxGlobais = { 
+        sorvete: isAdmin ? 100 : (dmax.sorvete !== undefined ? parseFloat(dmax.sorvete) : 0), 
+        acai: isAdmin ? 100 : (dmax.acai !== undefined ? parseFloat(dmax.acai) : 0), 
+        seco: isAdmin ? 100 : (dmax.seco !== undefined ? parseFloat(dmax.seco) : 0), 
+        balde: isAdmin ? 100 : (dmax.balde !== undefined ? parseFloat(dmax.balde) : 0), 
+        promo: isAdmin ? 100 : (dmax.promo !== undefined ? parseFloat(dmax.promo) : 0) 
+    };
+    
+    Object.keys(window.descontosMaxGlobais).forEach(k => { 
+        let el = document.getElementById('max_desc_' + k); 
+        if(el) el.innerText = isAdmin ? `Máx: Livre` : `Máx: ${window.descontosMaxGlobais[k]}%`; 
+    });
 
     const tabelas = dadosUsuario.tabelasPreco || {};
     let tabVenda = (tabelas.venda || dadosUsuario.tabelaPreco || 'padrao').toLowerCase();
@@ -129,6 +141,7 @@ window.calcularTudo = () => {
         let cxStr = inputEng.value; let cx = parseFloat(cxStr) || 0; let un = parseFloat(inputUni.value) || 0;
         if (cxStr !== "" && (cx * 10) % 5 !== 0) { alert(`Apenas múltiplos de 0.5 nas caixas.`); inputEng.value = ""; cx = 0; }
         if (inputUni.value !== "" && un % 1 !== 0) { alert(`Apenas unidades inteiras.`); inputUni.value = ""; un = 0; }
+        
         let cap = parseFloat(p.engradado) || 1; 
         let qtd = (cx * cap) + un; 
         let sub = qtd * p.precoFinal;
@@ -141,6 +154,7 @@ window.calcularTudo = () => {
         if (tr) { if (qtd > 0) tr.classList.add('linha-destaque'); else tr.classList.remove('linha-destaque'); }
     });
 
+    // LEITURA DOS DESCONTOS DE CADA ABA
     let desc = {
         sorvete: parseFloat(document.getElementById('desc_sorvete').value) || 0,
         acai: parseFloat(document.getElementById('desc_acai').value) || 0,
@@ -149,9 +163,14 @@ window.calcularTudo = () => {
         promo: parseFloat(document.getElementById('desc_promo').value) || 0
     };
 
+    // VALIDAÇÃO DOS DESCONTOS
     Object.keys(desc).forEach(k => {
         let max = window.descontosMaxGlobais[k];
-        if (desc[k] > max) { alert(`ATENÇÃO: O desconto máximo para ${k.toUpperCase()} é ${max}%`); desc[k] = max; document.getElementById('desc_' + k).value = max; }
+        if (desc[k] > max) { 
+            alert(`ATENÇÃO: O desconto máximo permitido para ${k.toUpperCase()} é ${max}%`); 
+            desc[k] = max; 
+            document.getElementById('desc_' + k).value = max; 
+        }
     });
     
     let totalGeralDescontado = 0;
@@ -159,6 +178,8 @@ window.calcularTudo = () => {
 
     document.getElementById('valComDesc').innerText = "R$ " + totalGeralDescontado.toFixed(2); 
     document.getElementById('qtdTotal').innerText = qtdTotalGeral;
+    
+    // Salva os descontos separadinhos para injetar no Excel
     window.resumoGlobal = { totalV: totalGeralDescontado, qtdTotal: qtdTotalGeral, descontos: desc };
 };
 
