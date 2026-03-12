@@ -76,7 +76,7 @@ async function iniciar() {
 
     const [snapVenda, snapPromo, snapBalde, prodSnap] = await Promise.all([ 
         getDoc(doc(db, "precos", tabVenda)), getDoc(doc(db, "precos", tabPromo)), getDoc(doc(db, "precos", tabBalde)), 
-        getDocs(collection(db, "produtos"))
+        getDocs(collection(db, "produtos")) 
     ]);
     
     const precosVenda = snapVenda.exists() ? snapVenda.data() : {};
@@ -90,7 +90,7 @@ async function iniciar() {
         let rawCat = (item.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         
         let cat = 'sorvete'; 
-        if (rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai'; // Separação pela categoria
+        if (rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai';
         else if (rawCat.includes('seco')) cat = 'seco'; 
         else if (rawCat.includes('balde')) cat = 'balde'; 
         else if (rawCat.includes('promo')) cat = 'promo';
