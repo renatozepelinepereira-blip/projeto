@@ -7,16 +7,17 @@ export async function processarExcelVenda(dados) {
     let isGeneric = false;
     
     try {
-        // Tenta buscar o arquivo da pasta raiz
+        // Tenta buscar o arquivo da pasta raiz (/templates/)
         const response = await fetch(`./templates/${nomeTemplate}`);
-        if (!response.ok) throw new Error("Template não encontrado.");
+        if (!response.ok) throw new Error("Template não encontrado no servidor.");
         const arrayBuffer = await response.arrayBuffer();
         await workbook.xlsx.load(arrayBuffer);
+        console.log(`✅ Template ${nomeTemplate} carregado com sucesso!`);
     } catch (e) {
-        console.warn(`Template ${nomeTemplate} não encontrado. Gerando um Excel genérico...`);
-        alert(`⚠️ O sistema não encontrou a pasta "/templates/${nomeTemplate}". \n\nCriando uma planilha genérica de emergência.`);
+        console.error(`Erro ao carregar o template:`, e);
+        alert(`⚠️ O sistema não encontrou o arquivo "/templates/${nomeTemplate}". \n\nGerando planilha genérica de emergência.`);
         isGeneric = true;
-        workbook = new ExcelJS.Workbook(); 
+        workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet('Planilha 1');
         sheet.columns = [
             { header: 'CÓDIGO', key: 'codigo', width: 10 },
@@ -28,6 +29,7 @@ export async function processarExcelVenda(dados) {
     }
 
     if (isGeneric) {
+        // PREENCHIMENTO DE EMERGÊNCIA (SE FALTAR O TEMPLATE)
         const sheet = workbook.worksheets[0]; 
         let linhaAtual = 2; 
         dados.itens.forEach(item => {
@@ -41,95 +43,115 @@ export async function processarExcelVenda(dados) {
             linhaAtual++;
         });
     } else {
-        // === PREENCHIMENTO INTELIGENTE DE TEMPLATES ===
+        // =========================================================
+        // PREENCHIMENTO EXATO NOS TEMPLATES DA ESKIMÓ
+        // =========================================================
         workbook.worksheets.forEach(sheet => {
-            let headerRowNumber = -1;
-            let colMap = {};
-            
-            // Define quais produtos entram em qual aba (Sheet)
             const sheetName = sheet.name.toUpperCase();
             let allowedCats = [];
-            if (sheetName.includes('SORVETE')) allowedCats = ['sorvete', 'promo'];
-            else if (sheetName.includes('BALDE')) allowedCats = ['balde'];
-            else if (sheetName.includes('SECO')) allowedCats = ['seco'];
-            else if (sheetName.includes('PROD')) allowedCats = ['sorvete', 'promo', 'balde'];
-            else allowedCats = ['sorvete', 'promo', 'balde', 'seco']; // Romaneio geral pega tudo
 
+            // 1. DEFINE QUAIS CATEGORIAS ENTRAM EM CADA ABA
+            if (dados.isTransferencia) {
+                if (sheetName.includes('PROD')) allowedCats = ['sorvete', 'promo', 'balde'];
+                else if (sheetName.includes('SECO')) allowedCats = ['seco'];
+                else return; // Pula outras abas se houver
+            } else {
+                if (sheetName.includes('SORVETE')) allowedCats = ['sorvete', 'promo'];
+                else if (sheetName.includes('BALDE')) allowedCats = ['balde'];
+                else if (sheetName.includes('SECO')) allowedCats = ['seco'];
+                else return; // Pula outras abas se houver
+            }
+
+            // Filtra apenas os itens que pertencem a esta aba
             const sheetItems = dados.itens.filter(i => allowedCats.includes(i.catReal));
             
-            // Calcula os totais específicos desta aba
+            // Calcula totais específicos desta aba
             let sheetQtdTotal = 0;
             let sheetValorTotal = 0;
-            let sheetEngTotal = 0;
-            
             sheetItems.forEach(i => {
                 sheetQtdTotal += i.calcTotalUnidades;
                 sheetValorTotal += i.calcSubtotal;
-                const cap = parseFloat(i.engradado) || 1;
-                sheetEngTotal += Math.floor(i.calcTotalUnidades / cap);
             });
 
-            // Escaneia as primeiras 20 linhas para encontrar os cabeçalhos
-            for (let r = 1; r <= 20; r++) {
-                const row = sheet.getRow(r);
-                if (!row.values) continue;
+            if (dados.isTransferencia) {
+                // ==========================================
+                // REGRAS DA PLANILHA DE TRANSFERÊNCIA
+                // ==========================================
+                // Loja saida = D7 (Nome + CNPJ caso exista no sistema)
+                sheet.getCell('D7').value = `${dados.nomeLoja}`; 
                 
-                let foundHeaderInRow = false;
+                // Filial destino = I7 (COM CNPJ)
+                sheet.getCell('I7').value = `${dados.razao} - CNPJ: ${dados.cnpj || 'Não informado'}`;
                 
-                row.eachCell((cell, colNumber) => {
-                    if (!cell.value) return;
-                    const text = String(cell.value).toUpperCase().trim();
-                    
-                    // Preenche Cabeçalho do Cliente / Filial (Célula ao lado)
-                    if (text === 'CLIENTE') sheet.getCell(r, colNumber + 1).value = dados.razao;
-                    if (text === 'CNPJ') sheet.getCell(r, colNumber + 1).value = dados.cnpj;
-                    if (text === 'SAÍDA' || text === 'SAIDA') sheet.getCell(r, colNumber + 1).value = dados.nomeLoja;
-                    if (text === 'ENTRADA') sheet.getCell(r, colNumber + 1).value = dados.razao;
-                    if (text === 'PRAZO') sheet.getCell(r, colNumber + 1).value = dados.prazo || '-';
-                    if (text === 'QNTD TOTAL' || text === 'QTD TOTAL') sheet.getCell(r, colNumber + 1).value = sheetQtdTotal;
-                    if (text === 'VALOR TOTAL') sheet.getCell(r, colNumber + 1).value = sheetValorTotal;
-                    if (text === 'TOTAL ENG' || text === 'TOTAL ENG.') sheet.getCell(r, colNumber + 1).value = sheetEngTotal;
-                    
-                    // Mapeia onde estão as colunas da tabela de produtos
-                    if (!colMap['codigo'] && (text === 'COD' || text === 'CÓD' || text === 'CÓDIGO')) {
-                        headerRowNumber = r;
-                        colMap['codigo'] = colNumber;
-                        foundHeaderInRow = true;
-                    } else if (!colMap['eng'] && (text === 'ENG' || text === 'ENG.')) {
-                        colMap['eng'] = colNumber;
-                    } else if (!colMap['qtd'] && (text === 'QNTD' || text === 'QTD')) {
-                        colMap['qtd'] = colNumber;
-                    } else if (!colMap['desc'] && (text === 'PRODUTO' || text === 'DESCRIÇÃO')) {
-                        colMap['desc'] = colNumber;
-                    } else if (!colMap['valor'] && (text === 'V. TRANSF' || text === 'VALOR' || text === 'V. TOTAL')) {
-                        colMap['valor'] = colNumber;
-                    }
-                });
+                // Quantidade Total = E8
+                sheet.getCell('E8').value = sheetQtdTotal;
                 
-                if (foundHeaderInRow) break; 
-            }
+                // Valor total = J8
+                sheet.getCell('J8').value = sheetValorTotal;
 
-            // Preenche os produtos abaixo do cabeçalho encontrado
-            if (headerRowNumber !== -1 && sheetItems.length > 0) {
-                let linhaAtual = headerRowNumber + 1;
+                // Produtos a partir da linha 10
+                let linhaAtual = 10;
                 sheetItems.forEach(item => {
                     const row = sheet.getRow(linhaAtual);
-                    if (colMap['codigo']) row.getCell(colMap['codigo']).value = item.codigo;
-                    if (colMap['eng']) {
-                        const cap = parseFloat(item.engradado) || 1;
-                        if (cap > 1) {
-                            const cx = Math.floor(item.calcTotalUnidades / cap);
-                            const un = item.calcTotalUnidades % cap;
-                            let engStr = `${cx} CX`;
-                            if (un > 0) engStr += ` e ${un} UN`;
-                            row.getCell(colMap['eng']).value = engStr;
-                        } else {
-                            row.getCell(colMap['eng']).value = `${item.calcTotalUnidades} UN`;
-                        }
+                    
+                    // Coluna C (3) = Código
+                    row.getCell(3).value = item.codigo;
+                    // Coluna D (4) = Quantidade
+                    row.getCell(4).value = item.calcTotalUnidades;
+                    // Coluna E (5) = Descrição
+                    row.getCell(5).value = item.descricao;
+                    // Coluna F (6) = Valor unitario total (Subtotal)
+                    row.getCell(6).value = item.calcSubtotal;
+                    
+                    row.commit();
+                    linhaAtual++;
+                });
+
+            } else {
+                // ==========================================
+                // REGRAS DA PLANILHA DE VENDA (PEDIDO)
+                // ==========================================
+                // Cliente = E6
+                sheet.getCell('E6').value = dados.razao;
+                
+                // CNPJ/CPF = I6
+                sheet.getCell('I6').value = dados.cnpj || '';
+                
+                // Quantidade total = F7
+                sheet.getCell('F7').value = sheetQtdTotal;
+                
+                // Valor total = K7
+                sheet.getCell('K7').value = sheetValorTotal;
+                
+                // Prazo e condição = F8
+                sheet.getCell('F8').value = `${dados.formaPagamento} ${dados.prazo && dados.prazo !== '-' ? '- ' + dados.prazo : ''}`;
+
+                // Produtos a partir da linha 10
+                let linhaAtual = 10;
+                sheetItems.forEach(item => {
+                    const row = sheet.getRow(linhaAtual);
+                    
+                    // Coluna C (3) = Produto (Código)
+                    row.getCell(3).value = item.codigo;
+                    
+                    // Coluna D (4) = Engradado (Tradução de Unidades para Caixas)
+                    const cap = parseFloat(item.engradado) || 1;
+                    if (cap > 1) {
+                        const cx = Math.floor(item.calcTotalUnidades / cap);
+                        const un = item.calcTotalUnidades % cap;
+                        row.getCell(4).value = `${cx} CX${un > 0 ? ` + ${un} UN` : ''}`;
+                    } else {
+                        row.getCell(4).value = `${item.calcTotalUnidades} UN`;
                     }
-                    if (colMap['qtd']) row.getCell(colMap['qtd']).value = item.calcTotalUnidades;
-                    if (colMap['desc']) row.getCell(colMap['desc']).value = item.descricao;
-                    if (colMap['valor']) row.getCell(colMap['valor']).value = item.calcSubtotal;
+                    
+                    // Coluna E (5) = Quantidade de itens (Unidades Totais)
+                    row.getCell(5).value = item.calcTotalUnidades;
+                    
+                    // Coluna F (6) = Descrição
+                    row.getCell(6).value = item.descricao;
+                    
+                    // Coluna G (7) = Preço unitário
+                    row.getCell(7).value = item.precoFinal;
                     
                     row.commit();
                     linhaAtual++;
@@ -138,6 +160,7 @@ export async function processarExcelVenda(dados) {
         });
     }
 
+    // Grava a ação no Histórico do Firebase (Se for a primeira vez sendo gerada)
     if(!dados.idHistorico) {
         await addDoc(collection(db, "historico"), {
             lojaId: dados.userId,
@@ -149,6 +172,7 @@ export async function processarExcelVenda(dados) {
         });
     }
 
+    // Dispara o Download
     const prefixo = dados.isTransferencia ? 'Transferencia' : 'Pedido';
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer]), `${prefixo}_${dados.razao}_${new Date().getTime()}.xlsx`);
