@@ -286,19 +286,34 @@ window.abrirEdicaoLoja = (id) => {
     document.getElementById('lojaEditId').value = u.id; document.getElementById('lojaEditId').disabled = true; document.getElementById('lojaEditIsNew').value = 'nao'; document.getElementById('lojaEditNome').value = u.nomeLoja || ''; document.getElementById('lojaEditCnpj').value = u.cnpj || ''; document.getElementById('lojaEditSenha').value = ''; 
     const p = u.planilhas || {}; document.getElementById('permVenda').checked = p.venda !== false; document.getElementById('permTransf').checked = p.transferencia !== false; document.getElementById('permPromo').checked = p.promocao !== false; document.getElementById('permBalde').checked = p.balde !== false; 
     const tp = u.tabelasPreco || {}; document.getElementById('lojaEditTabVenda').value = tp.venda || u.tabelaPreco || ''; document.getElementById('lojaEditTabTransf').value = tp.transferencia || ''; document.getElementById('lojaEditTabPromo').value = tp.promocao || ''; document.getElementById('lojaEditTabBalde').value = tp.balde || ''; 
-    const dmax = u.descontosMax || {}; document.getElementById('descMaxSorvete').value = dmax.sorvete || ''; document.getElementById('descMaxAcai').value = dmax.acai || ''; document.getElementById('descMaxSeco').value = dmax.seco || ''; document.getElementById('descMaxBalde').value = dmax.balde || ''; document.getElementById('descMaxPromo').value = dmax.promo || '';
+    const dmax = u.descontosMax || {}; 
+    document.getElementById('descMaxSorvete').value = dmax.sorvete !== undefined ? dmax.sorvete : ''; 
+    document.getElementById('descMaxAcai').value = dmax.acai !== undefined ? dmax.acai : ''; 
+    document.getElementById('descMaxSeco').value = dmax.seco !== undefined ? dmax.seco : ''; 
+    document.getElementById('descMaxBalde').value = dmax.balde !== undefined ? dmax.balde : ''; 
+    document.getElementById('descMaxPromo').value = dmax.promo !== undefined ? dmax.promo : '';
     document.getElementById('modalLoja').style.display = 'flex'; 
 };
+
 window.salvarLoja = async () => { 
     const id = document.getElementById('lojaEditId').value.trim(); if(!id) return alert("Preencha o Login!"); 
+    const getDesc = (idField) => { const val = document.getElementById(idField).value; return val === "" ? "" : parseFloat(val); };
+    
     const d = { 
         nomeLoja: document.getElementById('lojaEditNome').value, cnpj: document.getElementById('lojaEditCnpj').value, 
         planilhas: { venda: document.getElementById('permVenda').checked, transferencia: document.getElementById('permTransf').checked, promocao: document.getElementById('permPromo').checked, balde: document.getElementById('permBalde').checked }, 
         tabelasPreco: { venda: document.getElementById('lojaEditTabVenda').value, transferencia: document.getElementById('lojaEditTabTransf').value, promocao: document.getElementById('lojaEditTabPromo').value, balde: document.getElementById('lojaEditTabBalde').value },
-        descontosMax: { sorvete: parseFloat(document.getElementById('descMaxSorvete').value) || 0, acai: parseFloat(document.getElementById('descMaxAcai').value) || 0, seco: parseFloat(document.getElementById('descMaxSeco').value) || 0, balde: parseFloat(document.getElementById('descMaxBalde').value) || 0, promo: parseFloat(document.getElementById('descMaxPromo').value) || 0 }
+        descontosMax: { 
+            sorvete: getDesc('descMaxSorvete'), 
+            acai: getDesc('descMaxAcai'), 
+            seco: getDesc('descMaxSeco'), 
+            balde: getDesc('descMaxBalde'), 
+            promo: getDesc('descMaxPromo') 
+        }
     }; 
     const s = document.getElementById('lojaEditSenha').value.trim(); if(s) d.senha = s; await setDoc(doc(db, "usuarios", id), d, { merge: true }); alert("Loja Salva com Sucesso!"); window.fecharModal('modalLoja'); window.carregarLojas(); window.carregarTabelasPrecos(); 
 };
+
 window.resetarSenhaPadrao = () => { document.getElementById('lojaEditSenha').value = '123456'; alert("Senha definida para '123456'. Clique em 'Salvar Loja' para aplicar."); };
 
 window.gerarBackupCompleto = async () => { const btn = document.getElementById('btnGerarBackup'); btn.innerText = "⏳ Compactando..."; try { const zip = new JSZip(); const cols = ["usuarios", "produtos", "precos", "clientes", "historico"]; for(let c of cols) { const s = await getDocs(collection(db, c)); let d = []; s.forEach(doc => d.push({id: doc.id, ...doc.data()})); zip.file(`${c}.json`, JSON.stringify(d)); } const blob = await zip.generateAsync({type:"blob"}); saveAs(blob, `BACKUP_ESKIMO_${new Date().toLocaleDateString().replace(/\//g, '-')}.zip`); } catch(e) { alert(e.message); } finally { btn.innerText = "⬇️ Baixar Backup (.zip)"; } };
