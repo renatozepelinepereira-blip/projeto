@@ -11,6 +11,20 @@ window.listaProdutosAdmin = [];
 let listaLojasAdmin = []; 
 let carregandoDash = false;
 
+// ==========================================
+// MOTOR DE ZOOM CENTRALIZADO NO MEIO DA TELA
+// ==========================================
+if (!document.getElementById('zoomOverlay')) {
+    const overlay = document.createElement('div');
+    overlay.id = 'zoomOverlay';
+    overlay.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:999999; pointer-events:none; background:rgba(255,255,255,0.8); align-items:center; justify-content:center;';
+    overlay.innerHTML = '<img id="zoomImg" src="" style="width: 350px; max-width: 90vw; height: 350px; max-height: 90vh; object-fit: contain; background: white; padding: 15px; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">';
+    document.body.appendChild(overlay);
+}
+window.mostrarZoom = (imgSrc) => { if(!imgSrc) return; document.getElementById('zoomImg').src = imgSrc; document.getElementById('zoomOverlay').style.display = 'flex'; };
+window.esconderZoom = () => { document.getElementById('zoomOverlay').style.display = 'none'; };
+// ==========================================
+
 function extrairFilial(cnpj) {
     if (!cnpj) return "";
     const match = cnpj.match(/\/(\d{4})/);
@@ -141,8 +155,12 @@ window.carregarProdutos = async () => {
             htmlPreco = `<td style="font-weight:900; color:var(--primary); font-size:15px; text-align: center;">${val}</td>`;
         }
         
+        let hasImg = p.imagem ? true : false;
+        let evZoom = hasImg ? `onmouseenter="window.mostrarZoom('${p.imagem}')" onmouseleave="window.esconderZoom()"` : '';
+        let styleCur = hasImg ? 'cursor: zoom-in;' : '';
+
         htmlBuffers[cat] += `<tr class="linha-produto-admin" data-search="${String(p.codigo).toLowerCase()} ${String(p.descricao).toLowerCase()}">
-            <td style="text-align: center;"><img src="${p.imagem || ''}" class="img-produto" onerror="this.src='https://placehold.co/40?text=📦'"></td>
+            <td style="text-align: center;"><img src="${p.imagem || ''}" class="img-produto" style="${styleCur}" onerror="this.src='https://placehold.co/40?text=📦'" ${evZoom}></td>
             <td><b>${p.codigo}</b></td>
             <td>${p.descricao}</td>
             <td style="text-align: center;">${p.engradado}</td>
