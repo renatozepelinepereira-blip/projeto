@@ -85,9 +85,9 @@ export async function processarExcelVenda(dados) {
             } else {
                 // REGRA DA VENDA
                 sheet.getCell('E6').value = dados.razao;
-                sheet.getCell('I6').value = dados.cnpj || '';
+                sheet.getCell('J6').value = dados.cnpj || '';
                 sheet.getCell('F7').value = sheetQtdTotal;
-                sheet.getCell('K7').value = sheetValorTotal;
+                sheet.getCell('L7').value = sheetValorTotal;
                 sheet.getCell('F8').value = `${dados.formaPagamento} ${dados.prazo && dados.prazo !== '-' ? '- ' + dados.prazo : ''}`;
                 
                 // INJETA O DESCONTO EXATO DAQUELA ABA NA CÉLULA L8 (Somente se houver desconto inserido)
