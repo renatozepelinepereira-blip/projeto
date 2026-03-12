@@ -29,7 +29,6 @@ window.mudarSecao = (id) => {
 window.toggleTabelaHistorico = () => { const w = document.getElementById('wrapperHistorico'); const b = document.getElementById('btnToggleHist'); const isH = w.style.display === 'none'; w.style.display = isH ? 'block' : 'none'; b.innerText = isH ? '👁️ Esconder' : '👁️ Mostrar'; };
 window.filtrarLogDash = () => { const t = document.getElementById('pesquisaLogAdmin').value.toLowerCase(); document.querySelectorAll('.linha-hist-admin').forEach(i => { i.style.display = i.innerText.toLowerCase().includes(t) ? '' : 'none'; }); };
 
-// --- DASHBOARD E HISTÓRICO ---
 async function carregarDashboard() {
     if(carregandoDash) return; carregandoDash = true;
     try {
@@ -60,7 +59,6 @@ window.visualizarLog = (id) => {
     document.getElementById('conteudoDetalhesLog').innerHTML = html; document.getElementById('btnRegerarPlanilhaModal').onclick = () => window.regerar(id); document.getElementById('modalDetalhesLog').style.display = 'flex';
 };
 
-// --- PRODUTOS E CATÁLOGO ---
 window.previewImagemLocal = (event) => { const file = event.target.files[0]; const pv = document.getElementById('previewFoto'); if(file) { pv.src = URL.createObjectURL(file); pv.style.display = 'block'; } };
 
 async function carregarProdutos() {
@@ -132,21 +130,17 @@ window.salvarProduto = async () => {
             if (precoVal !== "") await setDoc(doc(db, "precos", tabelaSelecionada), { [cod]: parseFloat(precoVal) }, { merge: true });
         }
         window.fecharModal('modalProduto'); carregarProdutos();
-    } catch (e) { alert("Erro ao salvar o produto."); } finally { btn.disabled = false; btn.innerText = "Salvar Produto"; }
+    } catch (e) { alert("Erro ao salvar."); } finally { btn.disabled = false; btn.innerText = "Salvar Produto"; }
 };
 window.excluirProduto = async (cod) => { if(confirm(`ATENÇÃO: Excluir permanentemente o produto ${cod}?`)) { try { await deleteDoc(doc(db, "produtos", cod)); carregarProdutos(); } catch(e) { alert("Erro ao excluir."); } } };
 
-
-// ============================================================================
-// --- LEITOR DE EXCEL MÁGICO (Atualiza PREÇOS + CATÁLOGO automaticamente) ---
-// ============================================================================
 window.importarTabelaPrecos = async () => { 
     const nome = document.getElementById('nomeTabelaPreco').value.trim().toLowerCase(); 
     const file = document.getElementById('fileCsvPrecos').files[0]; 
     if(!nome || !file) return alert("Preencha o nome e selecione o arquivo!"); 
     
     const btn = document.querySelector('#sec-precos .btn-primario');
-    btn.innerText = "⏳ Importando e Atualizando Catálogo...";
+    btn.innerText = "⏳ Importando Catálogo...";
     
     const reader = new FileReader(); 
     reader.onload = async (e) => { 
@@ -160,16 +154,15 @@ window.importarTabelaPrecos = async () => {
             let importados = 0;
             const promessasProdutos = [];
             
-            // O loop começa em 1 para pular o cabeçalho (linha 0)
             for(let i = 1; i < json.length; i++) { 
                 if(!json[i] || json[i].length === 0) continue;
                 
-                // LEITURA ESTRITA DAS COLUNAS SOLICITADAS:
-                let rawCod = json[i][0];   // Coluna A
-                let rawDesc = json[i][1];  // Coluna B
-                let rawEng = json[i][2];   // Coluna C
-                let rawPreco = json[i][3]; // Coluna D
-                let rawCat = json[i][4];   // Coluna E
+                // LEITURA EXATA DAS 5 COLUNAS A, B, C, D, E
+                let rawCod = json[i][0];   // A
+                let rawDesc = json[i][1];  // B
+                let rawEng = json[i][2];   // C
+                let rawPreco = json[i][3]; // D
+                let rawCat = json[i][4];   // E
                 
                 if(rawCod === undefined || rawPreco === undefined) continue;
                 
@@ -178,69 +171,43 @@ window.importarTabelaPrecos = async () => {
                 let precoVal = parseFloat(precoStr);
                 
                 if(cod && !isNaN(precoVal)) {
-                    // 1. Salva o Preço na memória para gravar na tabela
                     precos[cod] = precoVal;
-                    
-                    // 2. Prepara o produto para atualizar o Catálogo (mantém a imagem intacta via merge:true)
                     let dadosProduto = { codigo: cod };
                     if (rawDesc !== undefined) dadosProduto.descricao = String(rawDesc).trim();
                     if (rawEng !== undefined) dadosProduto.engradado = String(rawEng).trim();
                     if (rawCat !== undefined) dadosProduto.categoria = String(rawCat).trim().toLowerCase();
-                    
                     promessasProdutos.push(setDoc(doc(db, "produtos", cod), dadosProduto, { merge: true }));
-                    
                     importados++;
                 }
             } 
             
-            if(importados === 0) {
-                alert("Nenhum item válido encontrado! Verifique se as colunas estão certas (A=Cód, B=Desc, C=Engrad, D=Preço, E=Cat).");
-                return;
-            }
+            if(importados === 0) { alert("Nenhum item válido. Cheque se as colunas são: A=Cód, B=Desc, C=Engrad, D=Preço, E=Cat."); return; }
             
-            // GRAVA TUDO NO FIREBASE AO MESMO TEMPO
             await setDoc(doc(db, "precos", nome), precos, { merge: true }); 
             await Promise.all(promessasProdutos);
-            
-            alert(`🚀 INCRÍVEL! ${importados} produtos processados.\n\nA tabela de preços ${nome.toUpperCase()} foi salva e o Catálogo Geral foi atualizado com as descrições, categorias e engradados!`); 
-            
-            carregarTabelasPrecos(); 
-            carregarProdutos(); 
-        } catch(err) {
-            console.error(err);
-            alert("Erro ao ler o arquivo Excel.");
-        } finally {
-            btn.innerText = "⚡ Importar Tabela";
-        }
+            alert(`🚀 INCRÍVEL! ${importados} produtos processados.\nTabela ${nome.toUpperCase()} salva e Catálogo Atualizado!`); 
+            carregarTabelasPrecos(); carregarProdutos(); 
+        } catch(err) { alert("Erro ao ler o Excel."); } finally { btn.innerText = "⚡ Importar Tabela"; }
     }; 
     reader.readAsArrayBuffer(file); 
 };
 
-
-// --- PREÇOS E VÍNCULOS DE MÓDULOS ---
 async function carregarTabelasPrecos() {
     const sT = await getDocs(collection(db, "precos"));
     const selT = document.getElementById('selectTabelaAssociar');
     selT.innerHTML = '<option value="">Selecione a Tabela...</option>';
-    
     let optionsHtml = '<option value="">(Nenhuma)</option>';
-    sT.forEach(d => {
-        selT.innerHTML += `<option value="${d.id}">${d.id.toUpperCase()}</option>`;
-        optionsHtml += `<option value="${d.id}">${d.id.toUpperCase()}</option>`;
-    });
-
+    sT.forEach(d => { selT.innerHTML += `<option value="${d.id}">${d.id.toUpperCase()}</option>`; optionsHtml += `<option value="${d.id}">${d.id.toUpperCase()}</option>`; });
     document.querySelectorAll('.sel-tabelas-loja').forEach(sel => sel.innerHTML = optionsHtml);
 
     const sL = await getDocs(collection(db, "usuarios"));
     const cont = document.getElementById('listaLojasChecklist');
     cont.innerHTML = '';
-    
     let divsLojas = [];
     sL.forEach(u => {
         if(u.id === 'admin') return;
         const d = u.data(); const fil = extrairFilial(d.cnpj);
         const txt = `[FILIAL ${fil}] ${d.nomeLoja || u.id} - ${d.cnpj || ""}`.toUpperCase();
-        
         const tp = d.tabelasPreco || {};
         const vVenda = (tp.venda || d.tabelaPreco || '').toLowerCase();
         const vTransf = (tp.transferencia || 'tf').toLowerCase();
@@ -251,23 +218,16 @@ async function carregarTabelasPrecos() {
         div.className = 'loja-check-item';
         div.style.cssText = 'display:flex; gap:10px; padding:10px; border-bottom:1px solid #f1f5f9; align-items: center;';
         div.innerHTML = `
-            <input type="checkbox" class="chk-loja" value="${u.id}" data-search="${txt}" 
-                data-tab-venda="${vVenda}" data-tab-transferencia="${vTransf}" 
-                data-tab-promocao="${vPromo}" data-tab-balde="${vBalde}"
-                style="width:18px; height:18px; margin:0; cursor:pointer;">
+            <input type="checkbox" class="chk-loja" value="${u.id}" data-search="${txt}" data-tab-venda="${vVenda}" data-tab-transferencia="${vTransf}" data-tab-promocao="${vPromo}" data-tab-balde="${vBalde}" style="width:18px; height:18px; margin:0; cursor:pointer;">
             <label style="font-size:13px; margin:0; cursor:pointer; flex-grow:1; display:flex; flex-direction:column;">
                 <span><b>${fil?`Filial ${fil}`:''}</b> ${d.nomeLoja || u.id}</span>
                 <span style="color:var(--text-muted); font-size:11px; margin-top:4px;">
-                    Venda: <b style="color:var(--primary)">${(vVenda||'N/A').toUpperCase()}</b> | 
-                    Transf: <b>${(vTransf||'N/A').toUpperCase()}</b> | 
-                    Promo: <b>${(vPromo||'N/A').toUpperCase()}</b> | 
-                    Balde: <b>${(vBalde||'N/A').toUpperCase()}</b>
+                    Venda: <b style="color:var(--primary)">${(vVenda||'N/A').toUpperCase()}</b> | Transf: <b>${(vTransf||'N/A').toUpperCase()}</b> | Promo: <b>${(vPromo||'N/A').toUpperCase()}</b> | Balde: <b>${(vBalde||'N/A').toUpperCase()}</b>
                 </span>
             </label>
         `;
         divsLojas.push(div);
     });
-    
     divsLojas.sort((a, b) => a.querySelector('input').getAttribute('data-search').localeCompare(b.querySelector('input').getAttribute('data-search')));
     divsLojas.forEach(div => cont.appendChild(div));
 }
@@ -277,19 +237,12 @@ window.aoSelecionarTabela = () => {
     const tipo = document.getElementById('tipoVinculoTabela').value; 
     const container = document.getElementById('listaLojasChecklist');
     const itens = Array.from(container.querySelectorAll('.loja-check-item'));
-
-    itens.forEach(item => {
-        const chk = item.querySelector('.chk-loja');
-        chk.checked = (chk.getAttribute(`data-tab-${tipo}`) === tab && tab !== "");
-    });
-
+    itens.forEach(item => { const chk = item.querySelector('.chk-loja'); chk.checked = (chk.getAttribute(`data-tab-${tipo}`) === tab && tab !== ""); });
     itens.sort((a, b) => {
-        const chkA = a.querySelector('.chk-loja');
-        const chkB = b.querySelector('.chk-loja');
+        const chkA = a.querySelector('.chk-loja'); const chkB = b.querySelector('.chk-loja');
         const aVinc = (chkA.getAttribute(`data-tab-${tipo}`) === tab && tab !== "");
         const bVinc = (chkB.getAttribute(`data-tab-${tipo}`) === tab && tab !== "");
-        if (aVinc && !bVinc) return -1;
-        if (!aVinc && bVinc) return 1;
+        if (aVinc && !bVinc) return -1; if (!aVinc && bVinc) return 1;
         return chkA.getAttribute('data-search').localeCompare(chkB.getAttribute('data-search'));
     });
     itens.forEach(item => container.appendChild(item));
@@ -300,77 +253,29 @@ window.vincularTabelaEmMassa = async () => {
     const tipo = document.getElementById('tipoVinculoTabela').value;
     const ids = Array.from(document.querySelectorAll('.chk-loja:checked')).map(c => c.value);
     if(!tab || !ids.length) return alert("Selecione a tabela e marque as lojas na lista!");
-    
     const btn = document.querySelector('#sec-precos .btn-sucesso'); btn.innerText = "⏳ Aplicando...";
-    try {
-        await Promise.all(ids.map(id => setDoc(doc(db, "usuarios", id), { 
-            tabelasPreco: { [tipo]: tab } 
-        }, { merge: true })));
-        alert("Vínculo aplicado com sucesso!"); carregarLojas(); carregarTabelasPrecos(); 
-    } finally { btn.innerText = "💾 Aplicar Tabela Selecionada"; document.getElementById('selectTabelaAssociar').value = ""; }
+    try { await Promise.all(ids.map(id => setDoc(doc(db, "usuarios", id), { tabelasPreco: { [tipo]: tab } }, { merge: true }))); alert("Vínculo aplicado com sucesso!"); carregarLojas(); carregarTabelasPrecos(); } 
+    finally { btn.innerText = "💾 Aplicar Tabela Selecionada"; document.getElementById('selectTabelaAssociar').value = ""; }
 };
-
 window.filtrarLojasChecklist = () => { const t = document.getElementById('buscaFilialVinculo').value.toUpperCase(); document.querySelectorAll('.loja-check-item').forEach(i => { i.style.display = i.querySelector('input').getAttribute('data-search').includes(t) ? 'flex' : 'none'; }); };
 window.marcarTodosLojas = (v) => document.querySelectorAll('.chk-loja').forEach(c => { if(c.parentElement.style.display !== 'none') c.checked = v; });
 
-
-// --- GESTÃO DE LOJAS AVANÇADA ---
 async function carregarLojas() {
     const snap = await getDocs(collection(db, "usuarios"));
     let html = ""; listaLojasAdmin = [];
     snap.forEach(d => {
         if(d.id === 'admin') return;
         const u = { id: d.id, ...d.data() }; listaLojasAdmin.push(u);
-        const tp = u.tabelasPreco || {};
-        const vVenda = tp.venda || u.tabelaPreco || '-';
-        const vTransf = tp.transferencia || 'tf';
-        const vPromo = tp.promocao || '-';
-        const vBalde = tp.balde || '-';
-        
-        html += `<tr>
-            <td>${d.id}</td><td>${u.nomeLoja || '-'}</td><td>${u.cnpj || '-'}</td>
-            <td><div style="font-size:11px; color:var(--text-muted); line-height: 1.4;">Venda: <b style="color:var(--primary)">${vVenda.toUpperCase()}</b> | Transf: <b>${vTransf.toUpperCase()}</b><br>Promo: <b>${vPromo.toUpperCase()}</b> | Balde: <b>${vBalde.toUpperCase()}</b></div></td>
-            <td style="text-align: center;"><button class="btn-small" style="background:#3b82f6; color:white;" onclick="window.abrirEdicaoLoja('${u.id}')">✏️</button></td>
-        </tr>`;
+        const tp = u.tabelasPreco || {}; const vVenda = tp.venda || u.tabelaPreco || '-'; const vTransf = tp.transferencia || 'tf'; const vPromo = tp.promocao || '-'; const vBalde = tp.balde || '-';
+        html += `<tr><td>${d.id}</td><td>${u.nomeLoja || '-'}</td><td>${u.cnpj || '-'}</td><td><div style="font-size:11px; color:var(--text-muted); line-height: 1.4;">Venda: <b style="color:var(--primary)">${vVenda.toUpperCase()}</b> | Transf: <b>${vTransf.toUpperCase()}</b><br>Promo: <b>${vPromo.toUpperCase()}</b> | Balde: <b>${vBalde.toUpperCase()}</b></div></td><td style="text-align: center;"><button class="btn-small" style="background:#3b82f6; color:white;" onclick="window.abrirEdicaoLoja('${u.id}')">✏️</button></td></tr>`;
     });
     document.getElementById('corpoTabelaLojas').innerHTML = html;
 }
-
-window.abrirNovaLoja = () => { 
-    document.getElementById('lojaEditId').disabled = false; document.getElementById('lojaEditIsNew').value = 'sim'; document.querySelectorAll('#modalLoja input[type="text"], #modalLoja input[type="password"]').forEach(i => i.value = ''); 
-    document.getElementById('permVenda').checked = true; document.getElementById('permTransf').checked = true; document.getElementById('permPromo').checked = true; document.getElementById('permBalde').checked = true;
-    document.querySelectorAll('.sel-tabelas-loja').forEach(sel => sel.value = '');
-    document.getElementById('modalLoja').style.display = 'flex'; 
-};
-
-window.abrirEdicaoLoja = (id) => { 
-    const u = listaLojasAdmin.find(x => x.id === id); if(!u) return; 
-    document.getElementById('lojaEditId').value = u.id; document.getElementById('lojaEditId').disabled = true; document.getElementById('lojaEditIsNew').value = 'nao'; document.getElementById('lojaEditNome').value = u.nomeLoja || ''; document.getElementById('lojaEditCnpj').value = u.cnpj || ''; document.getElementById('lojaEditSenha').value = ''; 
-    const p = u.planilhas || {};
-    document.getElementById('permVenda').checked = p.venda !== false; document.getElementById('permTransf').checked = p.transferencia !== false; document.getElementById('permPromo').checked = p.promocao !== false; document.getElementById('permBalde').checked = p.balde !== false;
-    
-    const tp = u.tabelasPreco || {};
-    document.getElementById('lojaEditTabVenda').value = tp.venda || u.tabelaPreco || '';
-    document.getElementById('lojaEditTabTransf').value = tp.transferencia || '';
-    document.getElementById('lojaEditTabPromo').value = tp.promocao || '';
-    document.getElementById('lojaEditTabBalde').value = tp.balde || '';
-
-    document.getElementById('modalLoja').style.display = 'flex'; 
-};
-
-window.salvarLoja = async () => { 
-    const id = document.getElementById('lojaEditId').value.trim(); if(!id) return alert("Preencha o Login!");
-    const d = { 
-        nomeLoja: document.getElementById('lojaEditNome').value, cnpj: document.getElementById('lojaEditCnpj').value, 
-        planilhas: { venda: document.getElementById('permVenda').checked, transferencia: document.getElementById('permTransf').checked, promocao: document.getElementById('permPromo').checked, balde: document.getElementById('permBalde').checked },
-        tabelasPreco: { venda: document.getElementById('lojaEditTabVenda').value, transferencia: document.getElementById('lojaEditTabTransf').value, promocao: document.getElementById('lojaEditTabPromo').value, balde: document.getElementById('lojaEditTabBalde').value }
-    }; 
-    const s = document.getElementById('lojaEditSenha').value.trim(); if(s) d.senha = s; 
-    await setDoc(doc(db, "usuarios", id), d, { merge: true }); alert("Loja Salva com Sucesso!"); window.fecharModal('modalLoja'); carregarLojas(); carregarTabelasPrecos(); 
-};
+window.abrirNovaLoja = () => { document.getElementById('lojaEditId').disabled = false; document.getElementById('lojaEditIsNew').value = 'sim'; document.querySelectorAll('#modalLoja input[type="text"], #modalLoja input[type="password"]').forEach(i => i.value = ''); document.getElementById('permVenda').checked = true; document.getElementById('permTransf').checked = true; document.getElementById('permPromo').checked = true; document.getElementById('permBalde').checked = true; document.querySelectorAll('.sel-tabelas-loja').forEach(sel => sel.value = ''); document.getElementById('modalLoja').style.display = 'flex'; };
+window.abrirEdicaoLoja = (id) => { const u = listaLojasAdmin.find(x => x.id === id); if(!u) return; document.getElementById('lojaEditId').value = u.id; document.getElementById('lojaEditId').disabled = true; document.getElementById('lojaEditIsNew').value = 'nao'; document.getElementById('lojaEditNome').value = u.nomeLoja || ''; document.getElementById('lojaEditCnpj').value = u.cnpj || ''; document.getElementById('lojaEditSenha').value = ''; const p = u.planilhas || {}; document.getElementById('permVenda').checked = p.venda !== false; document.getElementById('permTransf').checked = p.transferencia !== false; document.getElementById('permPromo').checked = p.promocao !== false; document.getElementById('permBalde').checked = p.balde !== false; const tp = u.tabelasPreco || {}; document.getElementById('lojaEditTabVenda').value = tp.venda || u.tabelaPreco || ''; document.getElementById('lojaEditTabTransf').value = tp.transferencia || ''; document.getElementById('lojaEditTabPromo').value = tp.promocao || ''; document.getElementById('lojaEditTabBalde').value = tp.balde || ''; document.getElementById('modalLoja').style.display = 'flex'; };
+window.salvarLoja = async () => { const id = document.getElementById('lojaEditId').value.trim(); if(!id) return alert("Preencha o Login!"); const d = { nomeLoja: document.getElementById('lojaEditNome').value, cnpj: document.getElementById('lojaEditCnpj').value, planilhas: { venda: document.getElementById('permVenda').checked, transferencia: document.getElementById('permTransf').checked, promocao: document.getElementById('permPromo').checked, balde: document.getElementById('permBalde').checked }, tabelasPreco: { venda: document.getElementById('lojaEditTabVenda').value, transferencia: document.getElementById('lojaEditTabTransf').value, promocao: document.getElementById('lojaEditTabPromo').value, balde: document.getElementById('lojaEditTabBalde').value } }; const s = document.getElementById('lojaEditSenha').value.trim(); if(s) d.senha = s; await setDoc(doc(db, "usuarios", id), d, { merge: true }); alert("Loja Salva com Sucesso!"); window.fecharModal('modalLoja'); carregarLojas(); carregarTabelasPrecos(); };
 window.resetarSenhaPadrao = () => { document.getElementById('lojaEditSenha').value = '123456'; alert("Senha definida para '123456'. Clique em 'Salvar Loja' para aplicar."); };
 
-// --- BACKUP E INICIALIZAÇÃO ---
 window.gerarBackupCompleto = async () => { const btn = document.getElementById('btnGerarBackup'); btn.innerText = "⏳ Compactando..."; try { const zip = new JSZip(); const cols = ["usuarios", "produtos", "precos", "clientes", "historico"]; for(let c of cols) { const s = await getDocs(collection(db, c)); let d = []; s.forEach(doc => d.push({id: doc.id, ...doc.data()})); zip.file(`${c}.json`, JSON.stringify(d)); } const blob = await zip.generateAsync({type:"blob"}); saveAs(blob, `BACKUP_ESKIMO_${new Date().toLocaleDateString().replace(/\//g, '-')}.zip`); } catch(e) { alert(e.message); } finally { btn.innerText = "⬇️ Baixar Backup (.zip)"; } };
 window.restaurarBackupCompleto = async () => { const f = document.getElementById('fileRestoreZip').files[0]; if(!f || !confirm("Isso apagará/sobrescreverá os dados atuais. Continuar?")) return; const btn = document.getElementById('btnRestaurarBackup'); btn.innerText = "⏳ Restaurando..."; try { const zip = await JSZip.loadAsync(f); for(let n in zip.files) { const c = n.replace('.json', ''); const cont = await zip.files[n].async("string"); const l = JSON.parse(cont); for(let i of l) { const id = i.id; delete i.id; await setDoc(doc(db, c, id), i, {merge: true}); } } alert("Restaurado com sucesso!"); location.reload(); } catch(e) { alert(e.message); btn.innerText = "⚡ Restaurar Dados"; } };
 window.regerar = async (id) => { await regenerarPlanilhaExcel(historicoGlobal[id]); };
