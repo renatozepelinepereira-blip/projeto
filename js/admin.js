@@ -12,13 +12,13 @@ let listaLojasAdmin = [];
 let carregandoDash = false;
 
 // ==========================================
-// MOTOR DE ZOOM CENTRALIZADO NO MEIO DA TELA
+// MOTOR DE ZOOM 100% CENTRO E À PROVA DE CORTE
 // ==========================================
 if (!document.getElementById('zoomOverlay')) {
     const overlay = document.createElement('div');
     overlay.id = 'zoomOverlay';
-    overlay.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:999999; pointer-events:none; background:rgba(255,255,255,0.8); align-items:center; justify-content:center;';
-    overlay.innerHTML = '<img id="zoomImg" src="" style="width: 350px; max-width: 90vw; height: 350px; max-height: 90vh; object-fit: contain; background: white; padding: 15px; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">';
+    overlay.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:9999999; pointer-events:none; background:rgba(255,255,255,0.9); align-items:center; justify-content:center;';
+    overlay.innerHTML = '<img id="zoomImg" src="" style="width: 350px; max-width: 90vw; height: 350px; max-height: 90vh; object-fit: contain; background: white; padding: 15px; border-radius: 16px; box-shadow: 0 25px 50px rgba(0,0,0,0.3);">';
     document.body.appendChild(overlay);
 }
 window.mostrarZoom = (imgSrc) => { if(!imgSrc) return; document.getElementById('zoomImg').src = imgSrc; document.getElementById('zoomOverlay').style.display = 'flex'; };
@@ -155,12 +155,14 @@ window.carregarProdutos = async () => {
             htmlPreco = `<td style="font-weight:900; color:var(--primary); font-size:15px; text-align: center;">${val}</td>`;
         }
         
-        let hasImg = p.imagem ? true : false;
-        let evZoom = hasImg ? `onmouseenter="window.mostrarZoom('${p.imagem}')" onmouseleave="window.esconderZoom()"` : '';
-        let styleCur = hasImg ? 'cursor: zoom-in;' : '';
+        // CONSTRUÇÃO BLINDADA CONTRA O CSS ANTIGO
+        let hasImg = (p.imagem && p.imagem.trim() !== "");
+        let imgHtml = hasImg 
+            ? `<img src="${p.imagem}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; cursor: zoom-in;" loading="lazy" onmouseenter="window.mostrarZoom('${p.imagem}')" onmouseleave="window.esconderZoom()">`
+            : `<div style="width: 40px; height: 40px; display:flex; align-items:center; justify-content:center; background:#f1f5f9; font-size:20px; border-radius:6px; border: 1px solid #e2e8f0; cursor: default;">📦</div>`;
 
         htmlBuffers[cat] += `<tr class="linha-produto-admin" data-search="${String(p.codigo).toLowerCase()} ${String(p.descricao).toLowerCase()}">
-            <td style="text-align: center;"><img src="${p.imagem || ''}" class="img-produto" style="${styleCur}" onerror="this.src='https://placehold.co/40?text=📦'" ${evZoom}></td>
+            <td style="text-align: center;">${imgHtml}</td>
             <td><b>${p.codigo}</b></td>
             <td>${p.descricao}</td>
             <td style="text-align: center;">${p.engradado}</td>
@@ -321,13 +323,7 @@ window.salvarLoja = async () => {
         nomeLoja: document.getElementById('lojaEditNome').value, cnpj: document.getElementById('lojaEditCnpj').value, 
         planilhas: { venda: document.getElementById('permVenda').checked, transferencia: document.getElementById('permTransf').checked, promocao: document.getElementById('permPromo').checked, balde: document.getElementById('permBalde').checked }, 
         tabelasPreco: { venda: document.getElementById('lojaEditTabVenda').value, transferencia: document.getElementById('lojaEditTabTransf').value, promocao: document.getElementById('lojaEditTabPromo').value, balde: document.getElementById('lojaEditTabBalde').value },
-        descontosMax: { 
-            sorvete: getDesc('descMaxSorvete'), 
-            acai: getDesc('descMaxAcai'), 
-            seco: getDesc('descMaxSeco'), 
-            balde: getDesc('descMaxBalde'), 
-            promo: getDesc('descMaxPromo') 
-        }
+        descontosMax: { sorvete: getDesc('descMaxSorvete'), acai: getDesc('descMaxAcai'), seco: getDesc('descMaxSeco'), balde: getDesc('descMaxBalde'), promo: getDesc('descMaxPromo') }
     }; 
     const s = document.getElementById('lojaEditSenha').value.trim(); if(s) d.senha = s; await setDoc(doc(db, "usuarios", id), d, { merge: true }); alert("Loja Salva com Sucesso!"); window.fecharModal('modalLoja'); window.carregarLojas(); window.carregarTabelasPrecos(); 
 };
