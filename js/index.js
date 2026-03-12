@@ -1,25 +1,149 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Eskimó Sorvetes</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍨</text></svg>">
-    <link rel="stylesheet" href="./css/login.css">
-</head>
-<body>
-    <div class="login-container">
-        <div class="login-box">
-            <h1><span>🍨</span> Eskimó</h1>
-            <p>Acesse o portal de gestão e pedidos</p>
+import { db } from "./api/firebase.js";
+import { processarExcelVenda } from "./utils/excel.js";
+import { doc, getDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+const userId = localStorage.getItem('user'); 
+const nomeLoja = localStorage.getItem('nome') || userId;
+if(!userId) window.location.href = 'index.html'; 
+
+let produtosGlobais = []; 
+let clientesSalvos = [];
+window.resumoGlobal = { totalV: 0 };
+
+document.getElementById('txtLoja').innerText = nomeLoja;
+
+window.mudarAba = (cat) => { 
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); 
+    document.getElementById('btnTab' + cat.charAt(0).toUpperCase() + cat.slice(1)).classList.add('active'); 
+    document.getElementById('content_' + cat).classList.add('active'); 
+};
+
+// Controle do Prazo (bloqueia se for à vista)
+document.getElementById('cliFormaPagamento').addEventListener('change', (e) => {
+    const prazo = document.getElementById('cliPrazo');
+    if(e.target.value === 'A vista') { 
+        prazo.value = ''; prazo.disabled = true; 
+        prazo.style.background = '#e2e8f0'; prazo.style.cursor = 'not-allowed'; 
+    } else { 
+        prazo.disabled = false; prazo.style.background = '#f8fafc'; prazo.style.cursor = 'text'; 
+    }
+});
+
+async function iniciar() {
+    const userSnap = await getDoc(doc(db, "usuarios", userId)); 
+    const dadosUsuario = userSnap.data() || {};
+    let nomeTabela = (dadosUsuario.tabelaPreco || 'tf').toLowerCase();
+    
+    // Autocompletar Clientes
+    const cliSnap = await getDocs(collection(db, "clientes"));
+    const listaNomes = document.getElementById('listaNomesClientes');
+    cliSnap.forEach(c => { 
+        clientesSalvos.push(c.data()); 
+        listaNomes.innerHTML += `<option value="${c.data().razao}">`; 
+    });
+
+    document.getElementById('cliRazao').addEventListener('change', (e) => {
+        const cliente = clientesSalvos.find(c => c.razao === e.target.value);
+        if(cliente) document.getElementById('cliCnpj').value = cliente.cnpj || '';
+    });
+
+    // Puxar Preços e Produtos
+    const [precoSnap, prodSnap] = await Promise.all([ 
+        getDoc(doc(db, "precos", nomeTabela)), 
+        getDocs(collection(db, "produtos")) 
+    ]);
+    const precosLoja = precoSnap.exists() ? precoSnap.data() : {};
+
+    let htmlBuffers = { sorvete: "", seco: "", balde: "", promo: "" };
+
+    prodSnap.forEach(d => {
+        const item = d.data(); 
+        const preco = precosLoja[item.codigo]; 
+        
+        if (preco !== undefined) {
+            let rawCat = (item.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            let cat = 'sorvete'; 
+            if (rawCat.includes('seco')) cat = 'seco'; else if (rawCat.includes('balde')) cat = 'balde'; else if (rawCat.includes('promo')) cat = 'promo';
             
-            <input type="text" id="user" placeholder="Usuário">
-            <input type="password" id="pass" placeholder="Senha">
+            const idx = produtosGlobais.length;
+            produtosGlobais.push({ ...item, precoFinal: preco, catReal: cat });
             
-            <button id="btnLogin">Entrar no Sistema</button>
-            <div id="errorMsg" style="color: #ef4444; font-size: 14px; margin-top: 15px; display: none; font-weight: 600;">⚠️ Login ou senha inválidos</div>
-        </div>
-    </div>
-    <script type="module" src="./js/index.js"></script>
-</body>
-</html>
+            let imgHtml = item.imagem ? `<img src="${item.imagem}" class="img-produto" loading="lazy">` : `<div class="img-produto" style="display:flex;align-items:center;justify-content:center;background:#f1f5f9;font-size:20px;">📦</div>`;
+            
+            htmlBuffers[cat] += `<tr id="tr_${idx}">
+                <td style="text-align:center;">${imgHtml}</td>
+                <td><b>${item.codigo}</b></td>
+                <td>${item.descricao}</td>
+                <td>${item.engradado}</td>
+                <td style="color:#10b981; font-weight:600;">R$ ${preco.toFixed(2)}</td>
+                <td><input type="number" id="eng_${idx}" placeholder="0" min="0" step="0.5" oninput="window.calcularTudo()"></td>
+                <td><input type="number" id="uni_${idx}" placeholder="0" min="0" step="1" oninput="window.calcularTudo()"></td>
+                <td id="sub_${idx}" style="font-weight:700; color:var(--primary);">R$ 0,00</td>
+            </tr>`;
+        }
+    });
+    
+    Object.keys(htmlBuffers).forEach(k => {
+        const tbody = document.querySelector(`#tbl_${k} tbody`);
+        if(tbody) tbody.innerHTML = htmlBuffers[k] || `<tr><td colspan="8" style="text-align:center; padding:20px;">Nenhum produto cadastrado nesta categoria.</td></tr>`;
+    });
+}
+
+window.calcularTudo = () => {
+    let totalGeral = 0;
+    produtosGlobais.forEach((p, i) => {
+        let inputEng = document.getElementById(`eng_${i}`); 
+        let inputUni = document.getElementById(`uni_${i}`); 
+        if(!inputEng || !inputUni) return;
+        
+        let cxStr = inputEng.value;
+        let cx = parseFloat(cxStr) || 0; 
+        let un = parseFloat(inputUni.value) || 0;
+        
+        if (cxStr !== "" && (cx * 10) % 5 !== 0) { alert(`Apenas múltiplos de 0.5 nas caixas.`); inputEng.value = ""; cx = 0; }
+        if (inputUni.value !== "" && un % 1 !== 0) { alert(`Apenas unidades inteiras.`); inputUni.value = ""; un = 0; }
+
+        let cap = parseFloat(p.engradado) || 1; 
+        let qtd = (cx * cap) + un; 
+        let sub = qtd * p.precoFinal;
+        
+        document.getElementById(`sub_${i}`).innerText = `R$ ${sub.toFixed(2)}`;
+        p.calcTotalUnidades = qtd; 
+        p.calcSubtotal = sub;
+        totalGeral += sub;
+        
+        let tr = document.getElementById(`tr_${i}`); 
+        if (tr) { if (qtd > 0) tr.classList.add('linha-destaque'); else tr.classList.remove('linha-destaque'); }
+    });
+    
+    document.getElementById('valComDesc').innerText = "R$ " + totalGeral.toFixed(2); 
+    window.resumoGlobal.totalV = totalGeral;
+};
+
+window.gerarExcelPedido = async () => {
+    const razao = document.getElementById('cliRazao').value.trim();
+    const cnpj = document.getElementById('cliCnpj').value.trim();
+    const formaPagamento = document.getElementById('cliFormaPagamento').value;
+    const prazo = document.getElementById('cliPrazo').value.trim();
+    
+    if(!razao) return alert("Preencha a Razão Social do Cliente!");
+    
+    let itens = produtosGlobais.filter(p => p.calcTotalUnidades > 0);
+    if (itens.length === 0) return alert("Preencha alguma quantidade!");
+
+    const btn = document.querySelector('.btn-sucesso'); 
+    btn.innerHTML = "⏳ GERANDO..."; btn.disabled = true;
+    
+    try { 
+        await processarExcelVenda({ userId, nomeLoja, razao, cnpj, formaPagamento, prazo, totalV: window.resumoGlobal.totalV, itens }); 
+        alert("✅ Pedido gerado com sucesso! O Excel foi baixado.");
+    } catch (e) { 
+        alert("Falha: " + e.message); 
+    } finally { 
+        btn.innerHTML = "<span style='font-size: 20px;'>⬇️</span> Gerar Pedido Excel"; 
+        btn.disabled = false; 
+    }
+};
+
+iniciar();
