@@ -10,25 +10,39 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js" defer></script>
 </head>
 <body>
-    <div class="sidebar-admin">
-        <div class="sidebar-header"><span class="sidebar-logo-icon">🍨</span><h2 class="sidebar-title">Eskimó</h2></div>
-        <div class="nav-links">
-            <button onclick="window.location.href='loja.html'"><i>🛒</i> <span>Nova Venda</span></button>
-            <button onclick="window.location.href='transferencia.html'"><i>🔄</i> <span>Transferência</span></button>
-            <button class="active"><i>📜</i> <span>Histórico</span></button>
-            <button onclick="localStorage.clear(); window.location.href='index.html'" style="margin-top:auto; color:#ef4444;"><i>🚪</i> <span>Sair</span></button>
+
+    <div class="top-header">
+        <div class="top-header-left">
+            <button class="menu-btn" onclick="window.toggleMenu()">☰</button>
+            <div class="logo-container">🍨 Eskimó</div>
         </div>
+        <div class="store-badge" id="txtLoja">Carregando...</div>
     </div>
 
-    <div class="main-content">
-        <h2 class="section-title">Seu Histórico de Pedidos</h2>
+    <div class="sidebar">
+        <div class="sidebar-head">
+            <h2>🍨 Eskimó</h2>
+            <button class="close-btn" onclick="window.toggleMenu()">×</button>
+        </div>
+        <div class="sidebar-links">
+            <button onclick="window.location.href='loja.html'"><i>🛒</i> Nova Venda</button>
+            <button onclick="window.location.href='transferencia.html'"><i>🔄</i> Transferência</button>
+            <button class="active"><i>📜</i> Histórico</button>
+            <button onclick="localStorage.clear(); window.location.href='index.html'" style="margin-top:auto; color:#ef4444;"><i>🚪</i> Sair</button>
+        </div>
+    </div>
+    <div class="overlay" onclick="window.toggleMenu()"></div>
+
+    <div class="container">
+        <h2 class="section-title">Seu Histórico de Pedidos e Transferências</h2>
+        
         <div class="card-panel">
-            <input type="text" id="filtroHist" placeholder="🔍 Pesquisar por data, ação ou filial destino..." oninput="window.filtrar()" style="margin-bottom: 20px; padding: 14px; border-radius: 10px; border: 1px solid #e2e8f0; width: 100%; background: #f8fafc; font-size: 15px;">
+            <input type="text" id="filtroHist" placeholder="🔍 Pesquisar por data, ação ou destino..." oninput="window.filtrar()" style="margin-bottom: 20px; padding: 14px; border-radius: 10px; border: 1px solid var(--border); width: 100%; background: #f8fafc; font-size: 15px;">
             
             <div class="table-container">
                 <table>
-                    <thead style="background: #f1f5f9;">
-                        <tr><th>Data do Pedido</th><th>Ação Realizada</th><th>Cliente / Destino</th><th>Planilha</th></tr>
+                    <thead style="background: #f8fafc;">
+                        <tr><th>Data do Registro</th><th>Ação Realizada</th><th>Cliente / Filial Destino</th><th>Download</th></tr>
                     </thead>
                     <tbody id="corpoHist">
                         </tbody>
