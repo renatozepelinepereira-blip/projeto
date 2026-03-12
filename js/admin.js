@@ -60,15 +60,10 @@ window.visualizarLog = (id) => {
     document.getElementById('conteudoDetalhesLog').innerHTML = html; document.getElementById('btnRegerarPlanilhaModal').onclick = () => window.regerar(id); document.getElementById('modalDetalhesLog').style.display = 'flex';
 };
 
-// --- PRODUTOS, CATÁLOGO E PREÇOS ---
-window.previewImagemLocal = (event) => {
-    const file = event.target.files[0];
-    const pv = document.getElementById('previewFoto');
-    if(file) { pv.src = URL.createObjectURL(file); pv.style.display = 'block'; }
-};
+// --- PRODUTOS E CATÁLOGO ---
+window.previewImagemLocal = (event) => { const file = event.target.files[0]; const pv = document.getElementById('previewFoto'); if(file) { pv.src = URL.createObjectURL(file); pv.style.display = 'block'; } };
 
 async function carregarProdutos() {
-    // 1. Popula o Select de Tabelas no topo da tela, se estiver vazio
     const selCat = document.getElementById('selectFiltroTabelaCat');
     if (selCat.options.length === 0) {
         const sT = await getDocs(collection(db, "precos"));
@@ -79,26 +74,20 @@ async function carregarProdutos() {
     const tabelaSelecionada = selCat.value;
     const thPreco = document.getElementById('thPrecoCat');
     
-    // 2. Busca os preços da tabela selecionada (se houver)
     let precosTabela = {};
     if (tabelaSelecionada) {
         const snapPrecos = await getDoc(doc(db, "precos", tabelaSelecionada));
         if (snapPrecos.exists()) precosTabela = snapPrecos.data();
         thPreco.innerText = `Preço (${tabelaSelecionada.toUpperCase()})`;
         thPreco.style.display = 'table-cell';
-    } else {
-        thPreco.style.display = 'none';
-    }
+    } else { thPreco.style.display = 'none'; }
 
-    // 3. Busca o catálogo e monta a tabela mesclando as informações
     const snap = await getDocs(collection(db, "produtos"));
     let html = ""; listaProdutosAdmin = [];
     
     snap.forEach(d => {
         const p = { id: d.id, ...d.data() }; 
-        if (tabelaSelecionada) {
-            p.precoAtual = precosTabela[p.codigo] !== undefined ? precosTabela[p.codigo] : null;
-        }
+        if (tabelaSelecionada) p.precoAtual = precosTabela[p.codigo] !== undefined ? precosTabela[p.codigo] : null;
         listaProdutosAdmin.push(p);
         
         let htmlPreco = '';
@@ -106,122 +95,60 @@ async function carregarProdutos() {
             const val = p.precoAtual !== null ? `R$ ${parseFloat(p.precoAtual).toFixed(2)}` : '<span style="color:#ef4444;font-size:12px;">Sem Preço</span>';
             htmlPreco = `<td style="font-weight:900; color:var(--primary); font-size:15px;">${val}</td>`;
         }
-
-        html += `<tr>
-            <td><img src="${p.imagem || ''}" class="img-produto" onerror="this.src='https://placehold.co/40?text=📦'"></td>
-            <td><b>${p.codigo}</b></td>
-            <td>${p.descricao}</td>
-            <td>${p.engradado}</td>
-            <td><span style="background:#e2e8f0; padding:4px 8px; border-radius:6px; font-size:12px;">${p.categoria || 'sorvete'}</span></td>
-            ${htmlPreco}
-            <td style="display: flex; gap: 8px; justify-content: center;">
-                <button class="btn-small" style="background:#3b82f6; color:white;" onclick="window.abrirEdicaoProduto('${p.codigo}')">✏️</button>
-                <button class="btn-small" style="background:#ef4444; color:white;" onclick="window.excluirProduto('${p.codigo}')">🗑️</button>
-            </td>
-        </tr>`;
+        html += `<tr><td><img src="${p.imagem || ''}" class="img-produto" onerror="this.src='https://placehold.co/40?text=📦'"></td><td><b>${p.codigo}</b></td><td>${p.descricao}</td><td>${p.engradado}</td><td><span style="background:#e2e8f0; padding:4px 8px; border-radius:6px; font-size:12px;">${p.categoria || 'sorvete'}</span></td>${htmlPreco}<td style="display: flex; gap: 8px; justify-content: center;"><button class="btn-small" style="background:#3b82f6; color:white;" onclick="window.abrirEdicaoProduto('${p.codigo}')">✏️</button><button class="btn-small" style="background:#ef4444; color:white;" onclick="window.excluirProduto('${p.codigo}')">🗑️</button></td></tr>`;
     });
     document.getElementById('corpoTabelaProdutos').innerHTML = html;
 }
 
 window.abrirEdicaoProduto = (cod) => { 
-    const p = listaProdutosAdmin.find(x => x.codigo === cod); 
-    if(!p) return; 
-    
-    document.getElementById('prodEditCodigo').value = p.codigo; 
-    document.getElementById('prodEditCodigo').disabled = true; 
-    document.getElementById('prodEditDescricao').value = p.descricao || ''; 
-    document.getElementById('prodEditCategoria').value = p.categoria || ''; 
-    document.getElementById('prodEditEngradado').value = p.engradado || ''; 
-    document.getElementById('prodEditImagemUrl').value = p.imagem || ''; 
-    
-    // Ativa campo de preço SE estiver editando focado em uma tabela
+    const p = listaProdutosAdmin.find(x => x.codigo === cod); if(!p) return; 
+    document.getElementById('prodEditCodigo').value = p.codigo; document.getElementById('prodEditCodigo').disabled = true; document.getElementById('prodEditDescricao').value = p.descricao || ''; document.getElementById('prodEditCategoria').value = p.categoria || ''; document.getElementById('prodEditEngradado').value = p.engradado || ''; document.getElementById('prodEditImagemUrl').value = p.imagem || ''; 
     const tabelaSelecionada = document.getElementById('selectFiltroTabelaCat').value;
     const divPreco = document.getElementById('divPrecoEdit');
-    if (tabelaSelecionada) {
-        document.getElementById('lblNomeTabelaEdit').innerText = tabelaSelecionada.toUpperCase();
-        document.getElementById('prodEditPreco').value = p.precoAtual !== null ? p.precoAtual : '';
-        divPreco.style.display = 'block';
-    } else {
-        divPreco.style.display = 'none';
-        document.getElementById('prodEditPreco').value = '';
-    }
-
-    const pv = document.getElementById('previewFoto'); 
-    if(p.imagem) { pv.src = p.imagem; pv.style.display = 'block'; } else { pv.style.display = 'none'; } 
-    
+    if (tabelaSelecionada) { document.getElementById('lblNomeTabelaEdit').innerText = tabelaSelecionada.toUpperCase(); document.getElementById('prodEditPreco').value = p.precoAtual !== null ? p.precoAtual : ''; divPreco.style.display = 'block'; } else { divPreco.style.display = 'none'; document.getElementById('prodEditPreco').value = ''; }
+    const pv = document.getElementById('previewFoto'); if(p.imagem) { pv.src = p.imagem; pv.style.display = 'block'; } else { pv.style.display = 'none'; } 
     document.getElementById('modalProduto').style.display = 'flex'; 
 };
-
 window.abrirNovoProduto = () => { 
-    document.getElementById('prodEditCodigo').disabled = false; 
-    document.querySelectorAll('#modalProduto input[type="text"], #modalProduto input[type="number"]').forEach(i => i.value = ''); 
-    
-    // Ativa campo de preço no "Novo" também se estiver na visão de tabela
+    document.getElementById('prodEditCodigo').disabled = false; document.querySelectorAll('#modalProduto input[type="text"], #modalProduto input[type="number"]').forEach(i => i.value = ''); 
     const tabelaSelecionada = document.getElementById('selectFiltroTabelaCat').value;
     const divPreco = document.getElementById('divPrecoEdit');
-    if (tabelaSelecionada) {
-        document.getElementById('lblNomeTabelaEdit').innerText = tabelaSelecionada.toUpperCase();
-        divPreco.style.display = 'block';
-    } else {
-        divPreco.style.display = 'none';
-    }
-
-    document.getElementById('previewFoto').style.display = 'none'; 
-    document.getElementById('modalProduto').style.display = 'flex'; 
+    if (tabelaSelecionada) { document.getElementById('lblNomeTabelaEdit').innerText = tabelaSelecionada.toUpperCase(); divPreco.style.display = 'block'; } else { divPreco.style.display = 'none'; }
+    document.getElementById('previewFoto').style.display = 'none'; document.getElementById('modalProduto').style.display = 'flex'; 
 };
-
 window.salvarProduto = async () => {
     const cod = document.getElementById('prodEditCodigo').value.trim();
     if(!cod) return alert("Código obrigatório!");
     const btn = document.getElementById('btnSalvarProd');
     const file = document.getElementById('prodEditImagemFile').files[0];
     btn.disabled = true; btn.innerText = "⏳ Salvando...";
-    
     try {
         let url = document.getElementById('prodEditImagemUrl').value;
-        if(file) { 
-            const sRef = ref(storage, `produtos/${cod}`); 
-            await uploadBytes(sRef, file); 
-            url = await getDownloadURL(sRef); 
-        }
-        
-        // 1. Salva os dados básicos do Produto
-        await setDoc(doc(db, "produtos", cod), { 
-            codigo: cod, 
-            descricao: document.getElementById('prodEditDescricao').value, 
-            categoria: document.getElementById('prodEditCategoria').value, 
-            engradado: document.getElementById('prodEditEngradado').value, 
-            imagem: url 
-        }, { merge: true });
-        
-        // 2. Salva o Preço (Se houver tabela selecionada)
+        if(file) { const sRef = ref(storage, `produtos/${cod}`); await uploadBytes(sRef, file); url = await getDownloadURL(sRef); }
+        await setDoc(doc(db, "produtos", cod), { codigo: cod, descricao: document.getElementById('prodEditDescricao').value, categoria: document.getElementById('prodEditCategoria').value, engradado: document.getElementById('prodEditEngradado').value, imagem: url }, { merge: true });
         const tabelaSelecionada = document.getElementById('selectFiltroTabelaCat').value;
         if (tabelaSelecionada) {
             const precoVal = document.getElementById('prodEditPreco').value;
-            if (precoVal !== "") {
-                // merge: true garante que ele só mude o preço daquele código, preservando os demais
-                await setDoc(doc(db, "precos", tabelaSelecionada), {
-                    [cod]: parseFloat(precoVal)
-                }, { merge: true });
-            }
+            if (precoVal !== "") await setDoc(doc(db, "precos", tabelaSelecionada), { [cod]: parseFloat(precoVal) }, { merge: true });
         }
-
-        window.fecharModal('modalProduto'); 
-        carregarProdutos();
-    } catch (e) {
-        console.error("Erro no upload:", e);
-        alert("Erro ao salvar o produto ou enviar a imagem.");
-    } finally { btn.disabled = false; btn.innerText = "Salvar Produto"; }
+        window.fecharModal('modalProduto'); carregarProdutos();
+    } catch (e) { alert("Erro ao salvar o produto."); } finally { btn.disabled = false; btn.innerText = "Salvar Produto"; }
 };
-
 window.excluirProduto = async (cod) => { if(confirm(`ATENÇÃO: Excluir permanentemente o produto ${cod}?`)) { try { await deleteDoc(doc(db, "produtos", cod)); carregarProdutos(); } catch(e) { alert("Erro ao excluir."); } } };
 
-// --- PREÇOS E VÍNCULOS (GESTOR DE MASSAS) ---
+// --- PREÇOS E VÍNCULOS DE MÓDULOS ---
 async function carregarTabelasPrecos() {
     const sT = await getDocs(collection(db, "precos"));
     const selT = document.getElementById('selectTabelaAssociar');
     selT.innerHTML = '<option value="">Selecione a Tabela...</option>';
-    sT.forEach(d => selT.innerHTML += `<option value="${d.id}">${d.id.toUpperCase()}</option>`);
+    
+    let optionsHtml = '<option value="">(Nenhuma)</option>';
+    sT.forEach(d => {
+        selT.innerHTML += `<option value="${d.id}">${d.id.toUpperCase()}</option>`;
+        optionsHtml += `<option value="${d.id}">${d.id.toUpperCase()}</option>`;
+    });
+
+    document.querySelectorAll('.sel-tabelas-loja').forEach(sel => sel.innerHTML = optionsHtml);
 
     const sL = await getDocs(collection(db, "usuarios"));
     const cont = document.getElementById('listaLojasChecklist');
@@ -232,58 +159,73 @@ async function carregarTabelasPrecos() {
         if(u.id === 'admin') return;
         const d = u.data(); const fil = extrairFilial(d.cnpj);
         const txt = `[FILIAL ${fil}] ${d.nomeLoja || u.id} - ${d.cnpj || ""}`.toUpperCase();
-        const tabAtual = d.tabelaPreco || '';
+        
+        // Puxa as tabelas da loja
+        const tp = d.tabelasPreco || {};
+        const vVenda = (tp.venda || d.tabelaPreco || '').toLowerCase();
+        const vTransf = (tp.transferencia || 'tf').toLowerCase();
+        const vPromo = (tp.promocao || '').toLowerCase();
+        const vBalde = (tp.balde || '').toLowerCase();
         
         const div = document.createElement('div');
         div.className = 'loja-check-item';
         div.style.cssText = 'display:flex; gap:10px; padding:10px; border-bottom:1px solid #f1f5f9; align-items: center;';
         div.innerHTML = `
-            <input type="checkbox" class="chk-loja" value="${u.id}" data-search="${txt}" data-tabela="${tabAtual}" style="width:18px; height:18px; margin:0; cursor:pointer;">
-            <label style="font-size:13px; margin:0; cursor:pointer; flex-grow:1;">
-                <b>${fil?`Filial ${fil}`:''}</b> ${d.nomeLoja || u.id} 
-                <span style="color:var(--primary); font-size:11px; float:right; background:#fef2f2; padding:2px 6px; border-radius:4px;">${tabAtual ? tabAtual.toUpperCase() : 'Sem tabela'}</span>
+            <input type="checkbox" class="chk-loja" value="${u.id}" data-search="${txt}" 
+                data-tab-venda="${vVenda}" data-tab-transferencia="${vTransf}" 
+                data-tab-promocao="${vPromo}" data-tab-balde="${vBalde}"
+                style="width:18px; height:18px; margin:0; cursor:pointer;">
+            <label style="font-size:13px; margin:0; cursor:pointer; flex-grow:1; display:flex; flex-direction:column;">
+                <span><b>${fil?`Filial ${fil}`:''}</b> ${d.nomeLoja || u.id}</span>
+                <span style="color:var(--text-muted); font-size:11px; margin-top:4px;">
+                    Venda: <b style="color:var(--primary)">${(vVenda||'N/A').toUpperCase()}</b> | 
+                    Transf: <b>${(vTransf||'N/A').toUpperCase()}</b> | 
+                    Promo: <b>${(vPromo||'N/A').toUpperCase()}</b> | 
+                    Balde: <b>${(vBalde||'N/A').toUpperCase()}</b>
+                </span>
             </label>
         `;
         divsLojas.push(div);
     });
     
-    divsLojas.sort((a, b) => {
-        const textA = a.querySelector('input').getAttribute('data-search');
-        const textB = b.querySelector('input').getAttribute('data-search');
-        return textA.localeCompare(textB);
-    });
+    divsLojas.sort((a, b) => a.querySelector('input').getAttribute('data-search').localeCompare(b.querySelector('input').getAttribute('data-search')));
     divsLojas.forEach(div => cont.appendChild(div));
 }
 
 window.aoSelecionarTabela = () => {
-    const tabelaSelecionada = document.getElementById('selectTabelaAssociar').value;
+    const tab = document.getElementById('selectTabelaAssociar').value.toLowerCase();
+    const tipo = document.getElementById('tipoVinculoTabela').value; 
     const container = document.getElementById('listaLojasChecklist');
     const itens = Array.from(container.querySelectorAll('.loja-check-item'));
 
     itens.forEach(item => {
-        const checkbox = item.querySelector('.chk-loja');
-        checkbox.checked = (checkbox.getAttribute('data-tabela') === tabelaSelecionada && tabelaSelecionada !== "");
+        const chk = item.querySelector('.chk-loja');
+        chk.checked = (chk.getAttribute(`data-tab-${tipo}`) === tab && tab !== "");
     });
 
     itens.sort((a, b) => {
         const chkA = a.querySelector('.chk-loja');
         const chkB = b.querySelector('.chk-loja');
-        const aVinculada = (chkA.getAttribute('data-tabela') === tabelaSelecionada && tabelaSelecionada !== "");
-        const bVinculada = (chkB.getAttribute('data-tabela') === tabelaSelecionada && tabelaSelecionada !== "");
-        if (aVinculada && !bVinculada) return -1;
-        if (!aVinculada && bVinculada) return 1;
+        const aVinc = (chkA.getAttribute(`data-tab-${tipo}`) === tab && tab !== "");
+        const bVinc = (chkB.getAttribute(`data-tab-${tipo}`) === tab && tab !== "");
+        if (aVinc && !bVinc) return -1;
+        if (!aVinc && bVinc) return 1;
         return chkA.getAttribute('data-search').localeCompare(chkB.getAttribute('data-search'));
     });
     itens.forEach(item => container.appendChild(item));
 };
 
 window.vincularTabelaEmMassa = async () => {
-    const tab = document.getElementById('selectTabelaAssociar').value;
+    const tab = document.getElementById('selectTabelaAssociar').value.toLowerCase();
+    const tipo = document.getElementById('tipoVinculoTabela').value;
     const ids = Array.from(document.querySelectorAll('.chk-loja:checked')).map(c => c.value);
     if(!tab || !ids.length) return alert("Selecione a tabela e marque as lojas na lista!");
+    
     const btn = document.querySelector('#sec-precos .btn-sucesso'); btn.innerText = "⏳ Aplicando...";
     try {
-        await Promise.all(ids.map(id => setDoc(doc(db, "usuarios", id), { tabelaPreco: tab }, { merge: true })));
+        await Promise.all(ids.map(id => setDoc(doc(db, "usuarios", id), { 
+            tabelasPreco: { [tipo]: tab } 
+        }, { merge: true })));
         alert("Vínculo aplicado com sucesso!"); carregarLojas(); carregarTabelasPrecos(); 
     } finally { btn.innerText = "💾 Aplicar Tabela Selecionada"; document.getElementById('selectTabelaAssociar').value = ""; }
 };
@@ -292,14 +234,24 @@ window.filtrarLojasChecklist = () => { const t = document.getElementById('buscaF
 window.marcarTodosLojas = (v) => document.querySelectorAll('.chk-loja').forEach(c => { if(c.parentElement.style.display !== 'none') c.checked = v; });
 window.importarTabelaPrecos = async () => { const nome = document.getElementById('nomeTabelaPreco').value.trim().toLowerCase(); const file = document.getElementById('fileCsvPrecos').files[0]; if(!nome || !file) return alert("Preencha o nome e selecione o arquivo!"); const reader = new FileReader(); reader.onload = async (e) => { const data = new Uint8Array(e.target.result); const wb = XLSX.read(data, {type: 'array'}); const sheet = wb.Sheets[wb.SheetNames[0]]; const json = XLSX.utils.sheet_to_json(sheet, {header: 1}); let precos = {}; for(let i = 1; i < json.length; i++) { if(json[i][0] && json[i][1]) precos[String(json[i][0]).trim()] = parseFloat(String(json[i][1]).replace(',', '.')); } await setDoc(doc(db, "precos", nome), precos, { merge: true }); alert("Tabela Importada!"); carregarTabelasPrecos(); carregarProdutos(); }; reader.readAsArrayBuffer(file); };
 
-// --- GESTÃO DE LOJAS E PERMISSÕES ---
+// --- GESTÃO DE LOJAS AVANÇADA ---
 async function carregarLojas() {
     const snap = await getDocs(collection(db, "usuarios"));
     let html = ""; listaLojasAdmin = [];
     snap.forEach(d => {
         if(d.id === 'admin') return;
         const u = { id: d.id, ...d.data() }; listaLojasAdmin.push(u);
-        html += `<tr><td>${d.id}</td><td>${u.nomeLoja || '-'}</td><td>${u.cnpj || '-'}</td><td><span style="background:#fef2f2; color:var(--primary); padding:4px 8px; border-radius:6px; font-weight:700;">${(u.tabelaPreco || 'Sem Tabela').toUpperCase()}</span></td><td style="text-align: center;"><button class="btn-small" style="background:#3b82f6; color:white;" onclick="window.abrirEdicaoLoja('${u.id}')">✏️</button></td></tr>`;
+        const tp = u.tabelasPreco || {};
+        const vVenda = tp.venda || u.tabelaPreco || '-';
+        const vTransf = tp.transferencia || 'tf';
+        const vPromo = tp.promocao || '-';
+        const vBalde = tp.balde || '-';
+        
+        html += `<tr>
+            <td>${d.id}</td><td>${u.nomeLoja || '-'}</td><td>${u.cnpj || '-'}</td>
+            <td><div style="font-size:11px; color:var(--text-muted); line-height: 1.4;">Venda: <b style="color:var(--primary)">${vVenda.toUpperCase()}</b> | Transf: <b>${vTransf.toUpperCase()}</b><br>Promo: <b>${vPromo.toUpperCase()}</b> | Balde: <b>${vBalde.toUpperCase()}</b></div></td>
+            <td style="text-align: center;"><button class="btn-small" style="background:#3b82f6; color:white;" onclick="window.abrirEdicaoLoja('${u.id}')">✏️</button></td>
+        </tr>`;
     });
     document.getElementById('corpoTabelaLojas').innerHTML = html;
 }
@@ -307,18 +259,32 @@ async function carregarLojas() {
 window.abrirNovaLoja = () => { 
     document.getElementById('lojaEditId').disabled = false; document.getElementById('lojaEditIsNew').value = 'sim'; document.querySelectorAll('#modalLoja input[type="text"], #modalLoja input[type="password"]').forEach(i => i.value = ''); 
     document.getElementById('permVenda').checked = true; document.getElementById('permTransf').checked = true; document.getElementById('permPromo').checked = true; document.getElementById('permBalde').checked = true;
+    document.querySelectorAll('.sel-tabelas-loja').forEach(sel => sel.value = '');
     document.getElementById('modalLoja').style.display = 'flex'; 
 };
+
 window.abrirEdicaoLoja = (id) => { 
     const u = listaLojasAdmin.find(x => x.id === id); if(!u) return; 
     document.getElementById('lojaEditId').value = u.id; document.getElementById('lojaEditId').disabled = true; document.getElementById('lojaEditIsNew').value = 'nao'; document.getElementById('lojaEditNome').value = u.nomeLoja || ''; document.getElementById('lojaEditCnpj').value = u.cnpj || ''; document.getElementById('lojaEditSenha').value = ''; 
     const p = u.planilhas || {};
     document.getElementById('permVenda').checked = p.venda !== false; document.getElementById('permTransf').checked = p.transferencia !== false; document.getElementById('permPromo').checked = p.promocao !== false; document.getElementById('permBalde').checked = p.balde !== false;
+    
+    const tp = u.tabelasPreco || {};
+    document.getElementById('lojaEditTabVenda').value = tp.venda || u.tabelaPreco || '';
+    document.getElementById('lojaEditTabTransf').value = tp.transferencia || '';
+    document.getElementById('lojaEditTabPromo').value = tp.promocao || '';
+    document.getElementById('lojaEditTabBalde').value = tp.balde || '';
+
     document.getElementById('modalLoja').style.display = 'flex'; 
 };
+
 window.salvarLoja = async () => { 
     const id = document.getElementById('lojaEditId').value.trim(); if(!id) return alert("Preencha o Login!");
-    const d = { nomeLoja: document.getElementById('lojaEditNome').value, cnpj: document.getElementById('lojaEditCnpj').value, planilhas: { venda: document.getElementById('permVenda').checked, transferencia: document.getElementById('permTransf').checked, promocao: document.getElementById('permPromo').checked, balde: document.getElementById('permBalde').checked } }; 
+    const d = { 
+        nomeLoja: document.getElementById('lojaEditNome').value, cnpj: document.getElementById('lojaEditCnpj').value, 
+        planilhas: { venda: document.getElementById('permVenda').checked, transferencia: document.getElementById('permTransf').checked, promocao: document.getElementById('permPromo').checked, balde: document.getElementById('permBalde').checked },
+        tabelasPreco: { venda: document.getElementById('lojaEditTabVenda').value, transferencia: document.getElementById('lojaEditTabTransf').value, promocao: document.getElementById('lojaEditTabPromo').value, balde: document.getElementById('lojaEditTabBalde').value }
+    }; 
     const s = document.getElementById('lojaEditSenha').value.trim(); if(s) d.senha = s; 
     await setDoc(doc(db, "usuarios", id), d, { merge: true }); alert("Loja Salva com Sucesso!"); window.fecharModal('modalLoja'); carregarLojas(); carregarTabelasPrecos(); 
 };
