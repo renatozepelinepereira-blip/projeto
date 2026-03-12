@@ -14,7 +14,6 @@ window.filialDestinoNomeReal = "";
 iniciarInterfaceGlobais();
 document.getElementById('txtLoja').innerText = nomeLoja;
 
-// NAVEGAÇÃO COM ENTER (Global para Inputs de Número)
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type === 'number') {
         e.preventDefault();
@@ -78,7 +77,10 @@ async function iniciar() {
 
     prodSnap.forEach(d => {
         const item = d.data(); 
-        const preco = precosTF[item.codigo] || 0;
+        
+        // CORREÇÃO DO NaN AQUI: Força a transformar em Float numérico, ou assume 0.
+        const precoCru = precosTF[item.codigo];
+        const preco = parseFloat(precoCru) || 0;
         
         let rawCat = (item.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         let cat = rawCat.includes('seco') ? 'seco' : 'sorvete'; 
@@ -118,7 +120,10 @@ window.calcularTudo = () => {
         
         let cap = parseFloat(p.engradado) || 1; 
         let qtd = (cx * cap) + un; 
-        let sub = qtd * p.precoFinal;
+        
+        // CORREÇÃO DO NaN AQUI: Garante cálculo numérico seguro
+        let precoSeguro = parseFloat(p.precoFinal) || 0;
+        let sub = qtd * precoSeguro; 
         
         p.calcTotalUnidades = qtd; 
         p.calcSubtotal = sub;
@@ -142,14 +147,21 @@ window.gerarExcelTransferencia = async () => {
     if (itens.length === 0) return alert("Preencha alguma quantidade!");
 
     const btn = document.querySelector('.btn-primario'); 
-    btn.innerHTML = "⏳ GERANDO..."; btn.disabled = true;
+    btn.innerHTML = "⏳..."; btn.disabled = true;
     
     try { 
-        await processarExcelVenda({ userId, nomeLoja, razao, cnpj: document.getElementById('cliCnpj').value, formaPagamento: 'Transferência', prazo: '-', totalV: 0, itens, isTransferencia: true }); 
+        // Envia os dados para a função de Excel
+        await processarExcelVenda({ 
+            userId, nomeLoja, razao, 
+            cnpj: document.getElementById('cliCnpj').value, 
+            formaPagamento: 'Transferência', prazo: '-', 
+            totalV: parseFloat(document.getElementById('valComDesc').innerText.replace('R$ ', '')) || 0, 
+            itens, isTransferencia: true 
+        }); 
         alert("✅ Transferência gerada com sucesso!");
         window.location.reload(); 
     } catch (e) { alert("Falha: " + e.message); } 
-    finally { btn.innerHTML = "<span style='font-size: 18px; margin-right: 8px;'>⬇️</span> Gerar Transferência"; btn.disabled = false; }
+    finally { btn.innerHTML = "<span style='font-size: 18px; margin-right: 5px;'>⬇️</span> Gerar"; btn.disabled = false; }
 };
 
 iniciar();
