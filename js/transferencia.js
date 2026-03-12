@@ -71,17 +71,21 @@ async function iniciar() {
     ]);
     const precosTF = snapTransf.exists() ? snapTransf.data() : {};
 
-    let htmlBuffers = { sorvete: "", seco: "" };
+    let htmlBuffers = { sorvete: "", acai: "", seco: "" };
 
     prodSnap.forEach(d => {
         const item = d.data(); 
         let precoCru = precosTF[item.codigo];
-        let precoSeguro = parseFloat(precoCru);
-        if (isNaN(precoSeguro)) precoSeguro = 0;
+        let precoSeguro = parseFloat(precoCru) || 0;
         
         let rawCat = (item.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        let cat = rawCat.includes('seco') ? 'seco' : 'sorvete'; 
+        let cat = 'sorvete'; 
+        if (rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai';
+        else if (rawCat.includes('seco')) cat = 'seco'; 
         
+        // Pula promo e balde na transferência, ou coloca em sorvete se preferir
+        if (cat !== 'sorvete' && cat !== 'acai' && cat !== 'seco') cat = 'sorvete';
+
         const idx = produtosGlobais.length;
         produtosGlobais.push({ ...item, catReal: cat, precoFinal: precoSeguro });
         
@@ -132,23 +136,20 @@ window.calcularTudo = () => {
 window.gerarExcelTransferencia = async () => {
     const razao = window.filialDestinoNomeReal || document.getElementById('cliRazao').value.trim();
     if(!razao) return alert("Selecione a Filial de Destino!");
-    
     let itens = produtosGlobais.filter(p => p.calcTotalUnidades > 0);
     if (itens.length === 0) return alert("Preencha alguma quantidade!");
 
-    const btn = document.querySelector('.btn-primario'); 
-    btn.innerHTML = "⏳..."; btn.disabled = true;
-    
+    if(!confirm("Deseja confirmar a geração, baixar a planilha e salvar a transferência no histórico?")) return;
+
+    const btn = document.querySelector('.btn-primario'); btn.innerHTML = "⏳..."; btn.disabled = true;
     try { 
         await processarExcelVenda({ 
             userId, nomeLoja, razao, cnpj: document.getElementById('cliCnpj').value, 
-            formaPagamento: 'Transferência', prazo: '-', 
-            totalV: window.resumoGlobal.totalV, 
+            formaPagamento: 'Transferência', prazo: '-', totalV: window.resumoGlobal.totalV, 
             itens, isTransferencia: true 
         }); 
-        alert("✅ Transferência gerada com sucesso!");
-        window.location.reload(); 
-    } catch (e) { alert("Falha: " + e.message); } finally { btn.innerHTML = "<span style='font-size: 16px;'>⬇️</span> Gerar Transferência"; btn.disabled = false; }
+        alert("✅ Transferência gerada com sucesso!"); window.location.reload(); 
+    } catch (e) { alert("Falha: " + e.message); } finally { btn.innerHTML = "<span style='font-size: 16px;'>⬇️</span> Transferir"; btn.disabled = false; }
 };
 
 iniciar();
