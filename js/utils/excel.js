@@ -33,7 +33,6 @@ export async function processarExcelVenda(dados) {
             linhaAtual++;
         });
     } else {
-        // Verifica se a planilha possui uma aba dedicada ao Açaí
         let hasAcaiSheet = false;
         workbook.worksheets.forEach(s => { if (s.name.toUpperCase().includes('ACAI') || s.name.toUpperCase().includes('AÇAI')) hasAcaiSheet = true; });
 
@@ -84,13 +83,14 @@ export async function processarExcelVenda(dados) {
                 });
 
             } else {
+                // REGRA DA VENDA
                 sheet.getCell('E6').value = dados.razao;
                 sheet.getCell('I6').value = dados.cnpj || '';
                 sheet.getCell('F7').value = sheetQtdTotal;
                 sheet.getCell('K7').value = sheetValorTotal;
                 sheet.getCell('F8').value = `${dados.formaPagamento} ${dados.prazo && dados.prazo !== '-' ? '- ' + dados.prazo : ''}`;
                 
-                // NOVO: APLICA O DESCONTO DA ABA (L8)
+                // INJETA O DESCONTO EXATO DAQUELA ABA NA CÉLULA L8 (Somente se houver desconto inserido)
                 if (dados.descontos && dados.descontos[abaType] !== undefined) {
                     sheet.getCell('L8').value = dados.descontos[abaType];
                 }
