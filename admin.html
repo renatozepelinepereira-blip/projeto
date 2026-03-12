@@ -92,8 +92,9 @@
                 </div>
                 <div class="card-panel">
                     <h3 style="margin-bottom: 15px;">2. Vínculo em Massa</h3>
-                    <label>Tabela de Preço</label>
-                    <select id="selectTabelaAssociar" style="border: 2px solid var(--primary);"></select>
+                    <label>Selecione a Tabela para ver as filiais vinculadas</label>
+                    <select id="selectTabelaAssociar" style="border: 2px solid var(--primary);" onchange="window.aoSelecionarTabela()"></select>
+                    
                     <div style="margin: 15px 0; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
                         <label>Buscar Filial</label>
                         <input type="text" id="buscaFilialVinculo" placeholder="🔍 Buscar por Filial ou CNPJ..." oninput="window.filtrarLojasChecklist()">
@@ -101,9 +102,9 @@
                             <button onclick="window.marcarTodosLojas(true)" class="btn-secundario" style="padding: 8px 12px; font-size: 12px;">Marcar Todos</button>
                             <button onclick="window.marcarTodosLojas(false)" class="btn-secundario" style="padding: 8px 12px; font-size: 12px;">Desmarcar</button>
                         </div>
-                        <div id="listaLojasChecklist" style="max-height: 200px; overflow-y: auto; background:white; border:1px solid var(--border); padding:10px; border-radius: 8px;"></div>
+                        <div id="listaLojasChecklist" style="max-height: 250px; overflow-y: auto; background:white; border:1px solid var(--border); padding:10px; border-radius: 8px;"></div>
                     </div>
-                    <button onclick="window.vincularTabelaEmMassa()" class="btn-sucesso" style="width:100%;">💾 Aplicar Tabela</button>
+                    <button onclick="window.vincularTabelaEmMassa()" class="btn-sucesso" style="width:100%;">💾 Aplicar Tabela Selecionada</button>
                 </div>
             </div>
         </div>
@@ -141,18 +142,30 @@
 
     <div class="modal-overlay" id="modalProduto">
         <div class="modal-content">
-            <h2 style="margin-bottom: 20px;" id="titModalProduto">Produto</h2>
+            <h2 style="margin-bottom: 20px; color: var(--primary);" id="titModalProduto">Produto</h2>
             <input type="hidden" id="prodEditImagemUrl">
+            
             <div class="grid-2" style="gap: 15px;">
                 <div><label>Código</label><input type="text" id="prodEditCodigo"></div>
-                <div><label>Engradado</label><input type="number" id="prodEditEngradado"></div>
+                <div><label>Engradado (Qtd)</label><input type="number" id="prodEditEngradado"></div>
             </div>
-            <label>Descrição</label><input type="text" id="prodEditDescricao">
-            <label>Categoria</label><input type="text" id="prodEditCategoria" placeholder="Ex: sorvete, seco...">
-            <label>Foto</label><input type="file" id="prodEditImagemFile" accept="image/*">
-            <div style="text-align:center;"><img id="previewFoto" src="" style="width:120px; height:120px; object-fit:cover; display:none; border-radius:12px; margin:15px auto; border:1px solid var(--border);"></div>
-            <button onclick="window.salvarProduto()" id="btnSalvarProd" class="btn-primario" style="width:100%; margin-top: 10px;">Salvar Produto</button>
-            <button onclick="window.fecharModal('modalProduto')" class="btn-secundario" style="width:100%; margin-top:10px;">Cancelar</button>
+            
+            <div class="grid-2" style="gap: 15px;">
+                <div><label>Descrição</label><input type="text" id="prodEditDescricao"></div>
+                <div><label>Categoria</label><input type="text" id="prodEditCategoria" placeholder="Ex: sorvete, seco..."></div>
+            </div>
+            
+            <label>Foto do Produto (Opcional)</label>
+            <input type="file" id="prodEditImagemFile" accept="image/*" onchange="window.previewImagemLocal(event)">
+            
+            <div style="text-align:center;">
+                <img id="previewFoto" src="" style="width:140px; height:140px; object-fit:cover; display:none; border-radius:12px; margin:10px auto; border:1px solid var(--border); box-shadow: var(--shadow-sm);">
+            </div>
+            
+            <div class="grid-2" style="gap: 15px; margin-top: 20px;">
+                <button onclick="window.fecharModal('modalProduto')" class="btn-secundario" style="width:100%;">Cancelar</button>
+                <button onclick="window.salvarProduto()" id="btnSalvarProd" class="btn-primario" style="width:100%;">Salvar Produto</button>
+            </div>
         </div>
     </div>
 
@@ -172,11 +185,10 @@
     <div class="modal-overlay" id="modalDetalhesLog">
         <div class="modal-content" style="width: 700px; max-width: 95%;">
             <h2 style="margin-bottom: 20px; color: var(--primary);">Detalhes do Registro</h2>
-            <div id="conteudoDetalhesLog" style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid var(--border); max-height: 400px; overflow-y: auto; font-size: 14px; margin-bottom: 20px;">
-                </div>
+            <div id="conteudoDetalhesLog" style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid var(--border); max-height: 400px; overflow-y: auto; font-size: 14px; margin-bottom: 20px;"></div>
             <div style="display: flex; gap: 10px;">
-                <button id="btnRegerarPlanilhaModal" class="btn-sucesso" style="flex: 1;">⬇️ Baixar Excel</button>
                 <button onclick="window.fecharModal('modalDetalhesLog')" class="btn-secundario" style="flex: 1;">Fechar</button>
+                <button id="btnRegerarPlanilhaModal" class="btn-sucesso" style="flex: 1;">⬇️ Baixar Excel</button>
             </div>
         </div>
     </div>
