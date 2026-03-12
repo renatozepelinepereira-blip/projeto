@@ -14,6 +14,7 @@ window.filialDestinoNomeReal = "";
 iniciarInterfaceGlobais();
 document.getElementById('txtLoja').innerText = nomeLoja;
 
+// NAVEGAÇÃO COM ENTER (Global para Inputs de Número)
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type === 'number') {
         e.preventDefault();
@@ -78,7 +79,7 @@ async function iniciar() {
     prodSnap.forEach(d => {
         const item = d.data(); 
         
-        // CORREÇÃO DO NaN AQUI: Força a transformar em Float numérico, ou assume 0.
+        // CORREÇÃO DO NaN AQUI: Garante que vira número ou zero
         const precoCru = precosTF[item.codigo];
         const preco = parseFloat(precoCru) || 0;
         
@@ -121,7 +122,7 @@ window.calcularTudo = () => {
         let cap = parseFloat(p.engradado) || 1; 
         let qtd = (cx * cap) + un; 
         
-        // CORREÇÃO DO NaN AQUI: Garante cálculo numérico seguro
+        // CORREÇÃO DO NaN AQUI 2: Cálculo limpo
         let precoSeguro = parseFloat(p.precoFinal) || 0;
         let sub = qtd * precoSeguro; 
         
@@ -150,12 +151,11 @@ window.gerarExcelTransferencia = async () => {
     btn.innerHTML = "⏳..."; btn.disabled = true;
     
     try { 
-        // Envia os dados para a função de Excel
         await processarExcelVenda({ 
             userId, nomeLoja, razao, 
             cnpj: document.getElementById('cliCnpj').value, 
             formaPagamento: 'Transferência', prazo: '-', 
-            totalV: parseFloat(document.getElementById('valComDesc').innerText.replace('R$ ', '')) || 0, 
+            totalV: parseFloat(document.getElementById('valComDesc').innerText.replace('R$ ', '').replace('.', '').replace(',', '.')) || 0, 
             itens, isTransferencia: true 
         }); 
         alert("✅ Transferência gerada com sucesso!");
