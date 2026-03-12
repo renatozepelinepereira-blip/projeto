@@ -14,7 +14,7 @@ window.filialDestinoNomeReal = "";
 iniciarInterfaceGlobais();
 document.getElementById('txtLoja').innerText = nomeLoja;
 
-// NAVEGAÇÃO COM ENTER
+// NAVEGAÇÃO COM ENTER (Global para Inputs de Número)
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type === 'number') {
         e.preventDefault();
@@ -41,7 +41,6 @@ function extrairFilial(cnpj) {
 }
 
 async function iniciar() {
-    // Verifica permissão para ocultar botão de Venda
     const userSnap = await getDoc(doc(db, "usuarios", userId));
     const dadosUsuario = userSnap.data() || {};
     if (dadosUsuario.planilhas?.venda === false && userId !== 'admin') {
@@ -69,16 +68,23 @@ async function iniciar() {
         }
     });
 
-    const prodSnap = await getDocs(collection(db, "produtos"));
+    const [precoSnap, prodSnap] = await Promise.all([ 
+        getDoc(doc(db, "precos", "tf")), 
+        getDocs(collection(db, "produtos")) 
+    ]);
+    const precosTF = precoSnap.exists() ? precoSnap.data() : {};
+
     let htmlBuffers = { sorvete: "", seco: "" };
 
     prodSnap.forEach(d => {
         const item = d.data(); 
+        const preco = precosTF[item.codigo] || 0;
+        
         let rawCat = (item.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         let cat = rawCat.includes('seco') ? 'seco' : 'sorvete'; 
         
         const idx = produtosGlobais.length;
-        produtosGlobais.push({ ...item, catReal: cat, precoFinal: 0 });
+        produtosGlobais.push({ ...item, catReal: cat, precoFinal: preco });
         
         let imgHtml = item.imagem ? `<img src="${item.imagem}" class="img-produto" loading="lazy">` : `<div class="img-produto" style="display:flex;align-items:center;justify-content:center;background:#f1f5f9;font-size:20px;">📦</div>`;
         
@@ -99,6 +105,9 @@ async function iniciar() {
 }
 
 window.calcularTudo = () => {
+    let totalGeral = 0;
+    let qtdTotalGeral = 0;
+
     produtosGlobais.forEach((p, i) => {
         let inputEng = document.getElementById(`eng_${i}`); let inputUni = document.getElementById(`uni_${i}`); 
         if(!inputEng || !inputUni) return;
@@ -107,12 +116,22 @@ window.calcularTudo = () => {
         if (cxStr !== "" && (cx * 10) % 5 !== 0) { alert(`Apenas múltiplos de 0.5 nas caixas.`); inputEng.value = ""; cx = 0; }
         if (inputUni.value !== "" && un % 1 !== 0) { alert(`Apenas unidades inteiras.`); inputUni.value = ""; un = 0; }
         
-        let cap = parseFloat(p.engradado) || 1; let qtd = (cx * cap) + un; 
-        p.calcTotalUnidades = qtd; p.calcSubtotal = 0;
+        let cap = parseFloat(p.engradado) || 1; 
+        let qtd = (cx * cap) + un; 
+        let sub = qtd * p.precoFinal;
         
+        p.calcTotalUnidades = qtd; 
+        p.calcSubtotal = sub;
+        
+        totalGeral += sub;
+        qtdTotalGeral += qtd;
+
         let tr = document.getElementById(`tr_${i}`); 
         if (tr) { if (qtd > 0) tr.classList.add('linha-destaque'); else tr.classList.remove('linha-destaque'); }
     });
+
+    document.getElementById('valComDesc').innerText = "R$ " + totalGeral.toFixed(2);
+    document.getElementById('qtdTotal').innerText = qtdTotalGeral;
 };
 
 window.gerarExcelTransferencia = async () => {
@@ -128,9 +147,9 @@ window.gerarExcelTransferencia = async () => {
     try { 
         await processarExcelVenda({ userId, nomeLoja, razao, cnpj: document.getElementById('cliCnpj').value, formaPagamento: 'Transferência', prazo: '-', totalV: 0, itens, isTransferencia: true }); 
         alert("✅ Transferência gerada com sucesso!");
-        window.location.reload(); // Limpa a tela após sucesso
+        window.location.reload(); 
     } catch (e) { alert("Falha: " + e.message); } 
-    finally { btn.innerHTML = "<span style='font-size: 18px; margin-right: 8px;'>⬇️</span> Gerar Transferência Excel"; btn.disabled = false; }
+    finally { btn.innerHTML = "<span style='font-size: 18px; margin-right: 8px;'>⬇️</span> Gerar Transferência"; btn.disabled = false; }
 };
 
 iniciar();
