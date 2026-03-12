@@ -10,7 +10,6 @@ let historicoGlobal = {};
 window.listaProdutosAdmin = []; 
 let listaLojasAdmin = []; 
 let carregandoDash = false;
-window.codigosAcaiGlobais = [];
 
 function extrairFilial(cnpj) {
     if (!cnpj) return "";
@@ -89,7 +88,6 @@ window.mudarAbaAdminCat = (cat) => {
     const content = document.getElementById('content_admin_' + cat);
     if(content) content.style.display = 'block';
     
-    // Reseta a busca ao trocar de aba para evitar confusão
     document.getElementById('buscaCatalogoAdmin').value = "";
     window.filtrarCatalogo();
 };
@@ -100,21 +98,6 @@ window.previewImagemURL = () => {
     if (url) { pv.src = url; pv.style.display = 'block'; } else { pv.style.display = 'none'; }
 };
 
-// NOVO: SALVAR REGRA DE CÓDIGOS AÇAÍ
-window.salvarCodigosAcai = async () => {
-    const raw = document.getElementById('inputCodigosAcai').value;
-    const array = raw.split(',').map(c => c.trim().toUpperCase()).filter(c => c !== "");
-    try {
-        const btn = document.querySelector('button[onclick="window.salvarCodigosAcai()"]');
-        btn.innerText = "⏳...";
-        await setDoc(doc(db, "configuracoes", "geral"), { codigosAcai: array }, { merge: true });
-        alert("Códigos vinculados ao Açaí com sucesso!");
-        btn.innerText = "💾 Salvar Códigos";
-        window.carregarProdutos();
-    } catch (e) { alert("Erro ao salvar códigos: " + e.message); }
-};
-
-// NOVO: FILTRAR CATÁLOGO (PESQUISA)
 window.filtrarCatalogo = () => {
     const termo = document.getElementById('buscaCatalogoAdmin').value.toLowerCase();
     document.querySelectorAll('.linha-produto-admin').forEach(tr => {
@@ -130,18 +113,12 @@ window.carregarProdutos = async () => {
         else { th.style.display = 'none'; }
     });
 
-    const [snapPrecos, snapProd, snapConfig] = await Promise.all([
+    const [snapPrecos, snapProd] = await Promise.all([
         tabelaSelecionada ? getDoc(doc(db, "precos", tabelaSelecionada)) : Promise.resolve({exists:()=>false}),
-        getDocs(collection(db, "produtos")),
-        getDoc(doc(db, "configuracoes", "geral"))
+        getDocs(collection(db, "produtos"))
     ]);
 
     let precosTabela = snapPrecos.exists() ? snapPrecos.data() : {};
-    
-    // Puxa a lista de Açaís salvos
-    window.codigosAcaiGlobais = snapConfig.exists() && snapConfig.data().codigosAcai ? snapConfig.data().codigosAcai : [];
-    if(document.getElementById('inputCodigosAcai')) { document.getElementById('inputCodigosAcai').value = window.codigosAcaiGlobais.join(', '); }
-
     let htmlBuffers = { sorvete: "", acai: "", seco: "", balde: "", promo: "" };
     window.listaProdutosAdmin = [];
     
@@ -151,10 +128,9 @@ window.carregarProdutos = async () => {
         window.listaProdutosAdmin.push(p);
         
         let rawCat = (p.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        let isAcaiDefinido = window.codigosAcaiGlobais.includes(String(p.codigo).trim().toUpperCase());
         
         let cat = 'sorvete'; 
-        if (isAcaiDefinido || rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai';
+        if (rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai';
         else if (rawCat.includes('seco')) cat = 'seco'; 
         else if (rawCat.includes('balde')) cat = 'balde'; 
         else if (rawCat.includes('promo')) cat = 'promo';
@@ -165,7 +141,6 @@ window.carregarProdutos = async () => {
             htmlPreco = `<td style="font-weight:900; color:var(--primary); font-size:15px;">${val}</td>`;
         }
         
-        // Atributo data-search adicionado para o filtro funcionar
         htmlBuffers[cat] += `<tr class="linha-produto-admin" data-search="${String(p.codigo).toLowerCase()} ${String(p.descricao).toLowerCase()}">
             <td><img src="${p.imagem || ''}" class="img-produto" onerror="this.src='https://placehold.co/40?text=📦'"></td>
             <td><b>${p.codigo}</b></td>
@@ -185,7 +160,6 @@ window.carregarProdutos = async () => {
     if (document.getElementById('corpoAdminBalde')) document.getElementById('corpoAdminBalde').innerHTML = htmlBuffers.balde || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
     if (document.getElementById('corpoAdminPromo')) document.getElementById('corpoAdminPromo').innerHTML = htmlBuffers.promo || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
     
-    // Reaplica o filtro caso haja algo digitado
     window.filtrarCatalogo();
 };
 
