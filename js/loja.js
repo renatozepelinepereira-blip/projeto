@@ -9,10 +9,23 @@ if(!userId) window.location.href = 'index.html';
 
 let produtosGlobais = []; 
 let clientesSalvos = [];
-window.resumoGlobal = { totalV: 0 };
+window.resumoGlobal = { totalV: 0, qtdTotal: 0 };
 
-iniciarInterfaceGlobais(); // Habilita o menu sanduíche
+iniciarInterfaceGlobais();
 document.getElementById('txtLoja').innerText = nomeLoja;
+
+// NAVEGAÇÃO COM ENTER (Global para Inputs de Número)
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type === 'number') {
+        e.preventDefault();
+        const inputs = Array.from(document.querySelectorAll('.tab-content.active input[type="number"]:not([disabled])'));
+        const index = inputs.indexOf(e.target);
+        if (index > -1 && index < inputs.length - 1) {
+            inputs[index + 1].focus();
+            inputs[index + 1].select();
+        }
+    }
+});
 
 window.mudarAba = (cat) => { 
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
@@ -35,7 +48,6 @@ async function iniciar() {
     const userSnap = await getDoc(doc(db, "usuarios", userId)); 
     const dadosUsuario = userSnap.data() || {};
     
-    // Trava para filiais não autorizadas a vender
     if (dadosUsuario.planilhas?.venda === false && userId !== 'admin') { 
         window.location.replace('transferencia.html'); 
         return; 
@@ -98,6 +110,8 @@ async function iniciar() {
 
 window.calcularTudo = () => {
     let totalGeral = 0;
+    let qtdTotalGeral = 0;
+
     produtosGlobais.forEach((p, i) => {
         let inputEng = document.getElementById(`eng_${i}`); 
         let inputUni = document.getElementById(`uni_${i}`); 
@@ -117,14 +131,19 @@ window.calcularTudo = () => {
         document.getElementById(`sub_${i}`).innerText = `R$ ${sub.toFixed(2)}`;
         p.calcTotalUnidades = qtd; 
         p.calcSubtotal = sub;
+        
         totalGeral += sub;
+        qtdTotalGeral += qtd;
         
         let tr = document.getElementById(`tr_${i}`); 
         if (tr) { if (qtd > 0) tr.classList.add('linha-destaque'); else tr.classList.remove('linha-destaque'); }
     });
     
     document.getElementById('valComDesc').innerText = "R$ " + totalGeral.toFixed(2); 
+    document.getElementById('qtdTotal').innerText = qtdTotalGeral;
+
     window.resumoGlobal.totalV = totalGeral;
+    window.resumoGlobal.qtdTotal = qtdTotalGeral;
 };
 
 window.gerarExcelPedido = async () => {
