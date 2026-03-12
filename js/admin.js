@@ -94,12 +94,12 @@ window.salvarProduto = async () => {
         window.fecharModal('modalProduto'); carregarProdutos();
     } catch (e) {
         console.error("Erro no upload:", e);
-        alert("Erro ao salvar o produto ou enviar a imagem. Tente uma foto menor.");
+        alert("Erro ao salvar o produto ou enviar a imagem.");
     } finally { btn.disabled = false; btn.innerText = "Salvar Produto"; }
 };
 
 window.excluirProduto = async (cod) => { if(confirm(`ATENÇÃO: Excluir permanentemente o produto ${cod}?`)) { try { await deleteDoc(doc(db, "produtos", cod)); carregarProdutos(); } catch(e) { alert("Erro ao excluir."); } } };
-window.abrirNovoProduto = () => { document.getElementById('prodEditCodigo').disabled = false; document.querySelectorAll('#modalProduto input:not([type=hidden])').forEach(i => i.value = ''); document.getElementById('previewFoto').style.display = 'none'; document.getElementById('modalProduto').style.display = 'flex'; };
+window.abrirNovoProduto = () => { document.getElementById('prodEditCodigo').disabled = false; document.querySelectorAll('#modalProduto input[type="text"], #modalProduto input[type="number"]').forEach(i => i.value = ''); document.getElementById('previewFoto').style.display = 'none'; document.getElementById('modalProduto').style.display = 'flex'; };
 window.abrirEdicaoProduto = (cod) => { const p = listaProdutosAdmin.find(x => x.codigo === cod); if(!p) return; document.getElementById('prodEditCodigo').value = p.codigo; document.getElementById('prodEditCodigo').disabled = true; document.getElementById('prodEditDescricao').value = p.descricao || ''; document.getElementById('prodEditCategoria').value = p.categoria || ''; document.getElementById('prodEditEngradado').value = p.engradado || ''; document.getElementById('prodEditImagemUrl').value = p.imagem || ''; const pv = document.getElementById('previewFoto'); if(p.imagem) { pv.src = p.imagem; pv.style.display = 'block'; } else { pv.style.display = 'none'; } document.getElementById('modalProduto').style.display = 'flex'; };
 
 // --- PREÇOS E VÍNCULOS ---
@@ -113,7 +113,6 @@ async function carregarTabelasPrecos() {
     const cont = document.getElementById('listaLojasChecklist');
     cont.innerHTML = '';
     
-    // Arrays temporários para separar vinculadas e não vinculadas na primeira carga
     let divsLojas = [];
     
     sL.forEach(u => {
@@ -122,7 +121,6 @@ async function carregarTabelasPrecos() {
         const txt = `[FILIAL ${fil}] ${d.nomeLoja || u.id} - ${d.cnpj || ""}`.toUpperCase();
         const tabAtual = d.tabelaPreco || '';
         
-        // Criamos o elemento HTML em memória
         const div = document.createElement('div');
         div.className = 'loja-check-item';
         div.style.cssText = 'display:flex; gap:10px; padding:10px; border-bottom:1px solid #f1f5f9; align-items: center;';
@@ -136,7 +134,6 @@ async function carregarTabelasPrecos() {
         divsLojas.push(div);
     });
     
-    // Ordem alfabética inicial
     divsLojas.sort((a, b) => {
         const textA = a.querySelector('input').getAttribute('data-search');
         const textB = b.querySelector('input').getAttribute('data-search');
@@ -146,36 +143,26 @@ async function carregarTabelasPrecos() {
     divsLojas.forEach(div => cont.appendChild(div));
 }
 
-// === LÓGICA DE REORDENAÇÃO MÁGICA ===
 window.aoSelecionarTabela = () => {
     const tabelaSelecionada = document.getElementById('selectTabelaAssociar').value;
     const container = document.getElementById('listaLojasChecklist');
     const itens = Array.from(container.querySelectorAll('.loja-check-item'));
 
-    // 1. Marca/Desmarca
     itens.forEach(item => {
         const checkbox = item.querySelector('.chk-loja');
         checkbox.checked = (checkbox.getAttribute('data-tabela') === tabelaSelecionada && tabelaSelecionada !== "");
     });
 
-    // 2. Reordena: Joga as lojas vinculadas para o topo, o resto fica em ordem alfabética
     itens.sort((a, b) => {
         const chkA = a.querySelector('.chk-loja');
         const chkB = b.querySelector('.chk-loja');
-        
         const aVinculada = (chkA.getAttribute('data-tabela') === tabelaSelecionada && tabelaSelecionada !== "");
         const bVinculada = (chkB.getAttribute('data-tabela') === tabelaSelecionada && tabelaSelecionada !== "");
-        
-        // Se A é vinculada e B não é, A sobe
         if (aVinculada && !bVinculada) return -1;
-        // Se B é vinculada e A não é, B sobe
         if (!aVinculada && bVinculada) return 1;
-        
-        // Se ambas são iguais (ambas vinculadas ou ambas não vinculadas), desempata por ordem alfabética
         return chkA.getAttribute('data-search').localeCompare(chkB.getAttribute('data-search'));
     });
 
-    // 3. Re-insere os itens na nova ordem
     itens.forEach(item => container.appendChild(item));
 };
 
@@ -188,7 +175,7 @@ window.vincularTabelaEmMassa = async () => {
         await Promise.all(ids.map(id => setDoc(doc(db, "usuarios", id), { tabelaPreco: tab }, { merge: true })));
         alert("Vínculo aplicado com sucesso!"); 
         carregarLojas();
-        carregarTabelasPrecos(); // Atualiza a lista e as tags de "Tabela Atual"
+        carregarTabelasPrecos(); 
     } finally { btn.innerText = "💾 Aplicar Tabela Selecionada"; document.getElementById('selectTabelaAssociar').value = ""; }
 };
 
@@ -196,7 +183,7 @@ window.filtrarLojasChecklist = () => { const t = document.getElementById('buscaF
 window.marcarTodosLojas = (v) => document.querySelectorAll('.chk-loja').forEach(c => { if(c.parentElement.style.display !== 'none') c.checked = v; });
 window.importarTabelaPrecos = async () => { const nome = document.getElementById('nomeTabelaPreco').value.trim().toLowerCase(); const file = document.getElementById('fileCsvPrecos').files[0]; if(!nome || !file) return alert("Preencha o nome e selecione o arquivo!"); const reader = new FileReader(); reader.onload = async (e) => { const data = new Uint8Array(e.target.result); const wb = XLSX.read(data, {type: 'array'}); const sheet = wb.Sheets[wb.SheetNames[0]]; const json = XLSX.utils.sheet_to_json(sheet, {header: 1}); let precos = {}; for(let i = 1; i < json.length; i++) { if(json[i][0] && json[i][1]) precos[String(json[i][0]).trim()] = parseFloat(String(json[i][1]).replace(',', '.')); } await setDoc(doc(db, "precos", nome), precos, { merge: true }); alert("Tabela Importada!"); carregarTabelasPrecos(); }; reader.readAsArrayBuffer(file); };
 
-// --- LOJAS ---
+// --- GESTÃO DE LOJAS (ATUALIZADA) ---
 async function carregarLojas() {
     const snap = await getDocs(collection(db, "usuarios"));
     let html = ""; listaLojasAdmin = [];
@@ -208,9 +195,70 @@ async function carregarLojas() {
     document.getElementById('corpoTabelaLojas').innerHTML = html;
 }
 
-window.abrirNovaLoja = () => { document.getElementById('lojaEditId').disabled = false; document.getElementById('lojaEditIsNew').value = 'sim'; document.querySelectorAll('#modalLoja input').forEach(i => i.value = ''); document.getElementById('modalLoja').style.display = 'flex'; };
-window.abrirEdicaoLoja = (id) => { const u = listaLojasAdmin.find(x => x.id === id); if(!u) return; document.getElementById('lojaEditId').value = u.id; document.getElementById('lojaEditId').disabled = true; document.getElementById('lojaEditIsNew').value = 'nao'; document.getElementById('lojaEditNome').value = u.nomeLoja || ''; document.getElementById('lojaEditCnpj').value = u.cnpj || ''; document.getElementById('lojaEditSenha').value = ''; document.getElementById('modalLoja').style.display = 'flex'; };
-window.salvarLoja = async () => { const id = document.getElementById('lojaEditId').value.trim(); const d = { nomeLoja: document.getElementById('lojaEditNome').value, cnpj: document.getElementById('lojaEditCnpj').value }; const s = document.getElementById('lojaEditSenha').value.trim(); if(s) d.senha = s; await setDoc(doc(db, "usuarios", id), d, { merge: true }); alert("Loja Salva!"); window.fecharModal('modalLoja'); carregarLojas(); carregarTabelasPrecos(); };
+window.abrirNovaLoja = () => { 
+    document.getElementById('lojaEditId').disabled = false; 
+    document.getElementById('lojaEditIsNew').value = 'sim'; 
+    document.querySelectorAll('#modalLoja input[type="text"], #modalLoja input[type="password"]').forEach(i => i.value = ''); 
+    
+    // Por padrão, uma nova loja ganha todas as permissões
+    document.getElementById('permVenda').checked = true;
+    document.getElementById('permTransf').checked = true;
+    document.getElementById('permPromo').checked = true;
+    document.getElementById('permBalde').checked = true;
+
+    document.getElementById('modalLoja').style.display = 'flex'; 
+};
+
+window.abrirEdicaoLoja = (id) => { 
+    const u = listaLojasAdmin.find(x => x.id === id); 
+    if(!u) return; 
+    document.getElementById('lojaEditId').value = u.id; 
+    document.getElementById('lojaEditId').disabled = true; 
+    document.getElementById('lojaEditIsNew').value = 'nao'; 
+    document.getElementById('lojaEditNome').value = u.nomeLoja || ''; 
+    document.getElementById('lojaEditCnpj').value = u.cnpj || ''; 
+    document.getElementById('lojaEditSenha').value = ''; 
+    
+    // Carrega as permissões (Se não existir 'planilhas', assume que tem acesso total)
+    const p = u.planilhas || {};
+    document.getElementById('permVenda').checked = p.venda !== false;
+    document.getElementById('permTransf').checked = p.transferencia !== false;
+    document.getElementById('permPromo').checked = p.promocao !== false;
+    document.getElementById('permBalde').checked = p.balde !== false;
+
+    document.getElementById('modalLoja').style.display = 'flex'; 
+};
+
+window.salvarLoja = async () => { 
+    const id = document.getElementById('lojaEditId').value.trim(); 
+    if(!id) return alert("Preencha o Login!");
+    
+    const d = { 
+        nomeLoja: document.getElementById('lojaEditNome').value, 
+        cnpj: document.getElementById('lojaEditCnpj').value,
+        planilhas: {
+            venda: document.getElementById('permVenda').checked,
+            transferencia: document.getElementById('permTransf').checked,
+            promocao: document.getElementById('permPromo').checked,
+            balde: document.getElementById('permBalde').checked
+        }
+    }; 
+    
+    const s = document.getElementById('lojaEditSenha').value.trim(); 
+    if(s) d.senha = s; 
+    
+    await setDoc(doc(db, "usuarios", id), d, { merge: true }); 
+    alert("Loja Salva com Sucesso!"); 
+    window.fecharModal('modalLoja'); 
+    carregarLojas(); 
+    carregarTabelasPrecos(); 
+};
+
+// --- REINICIAR SENHA PADRÃO ---
+window.resetarSenhaPadrao = () => {
+    document.getElementById('lojaEditSenha').value = '123456';
+    alert("Senha definida para '123456'. Clique em 'Salvar Loja' para aplicar.");
+};
 
 // --- BACKUP E INICIALIZAÇÃO ---
 window.gerarBackupCompleto = async () => { const btn = document.getElementById('btnGerarBackup'); btn.innerText = "⏳ Compactando..."; try { const zip = new JSZip(); const cols = ["usuarios", "produtos", "precos", "clientes", "historico"]; for(let c of cols) { const s = await getDocs(collection(db, c)); let d = []; s.forEach(doc => d.push({id: doc.id, ...doc.data()})); zip.file(`${c}.json`, JSON.stringify(d)); } const blob = await zip.generateAsync({type:"blob"}); saveAs(blob, `BACKUP_ESKIMO_${new Date().toLocaleDateString().replace(/\//g, '-')}.zip`); } catch(e) { alert(e.message); } finally { btn.innerText = "⬇️ Baixar Backup (.zip)"; } };
