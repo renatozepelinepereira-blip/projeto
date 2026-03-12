@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vendas - Eskimó Sorvetes</title>
+    <title>Vendas - Eskimó</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍨</text></svg>">
     <link rel="stylesheet" href="./css/loja.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js" defer></script>
@@ -13,49 +13,60 @@
     <div class="sidebar-admin">
         <div class="sidebar-header"><span class="sidebar-logo-icon">🍨</span><h2 class="sidebar-title">Eskimó</h2></div>
         <div class="nav-links">
-            <button class="active"><i>🛒</i> <span>Vendas</span></button>
+            <button class="active"><i>🛒</i> <span>Nova Venda</span></button>
             <button onclick="window.location.href='transferencia.html'"><i>🔄</i> <span>Transferência</span></button>
             <button onclick="window.location.href='historico.html'"><i>📜</i> <span>Histórico</span></button>
-            <button onclick="localStorage.clear(); window.location.href='index.html'" style="margin-top:auto; color:#ff7675;"><i>🚪</i> <span>Sair</span></button>
+            <button onclick="localStorage.clear(); window.location.href='index.html'" style="margin-top:auto; color:#ef4444;"><i>🚪</i> <span>Sair</span></button>
         </div>
     </div>
 
     <div class="main-content">
-        <header class="section-title">
-            <div>Portal de Vendas - <span id="txtLoja">Carregando...</span></div>
-        </header>
+        <div class="section-title">
+            <span>Portal de Vendas</span>
+            <span class="store-badge" id="txtLoja">Carregando...</span>
+        </div>
 
         <div class="card-panel client-box">
-            <div><label>Razão Social</label><input type="text" id="cliRazao" list="listaNomesClientes" placeholder="Nome do Cliente"></div>
+            <div><label>Razão Social do Cliente</label><input type="text" id="cliRazao" list="listaNomesClientes" placeholder="Ex: Supermercado XYZ"></div>
             <div><label>CNPJ</label><input type="text" id="cliCnpj" placeholder="00.000.000/0000-00"></div>
             <div><label>Pagamento</label><select id="cliFormaPagamento"><option>A vista</option><option>Boleto</option><option>Cartão</option></select></div>
-            <div><label>Prazo</label><input type="text" id="cliPrazo" placeholder="Ex: 7 dias"></div>
+            <div><label>Prazo</label><input type="text" id="cliPrazo" placeholder="Ex: 7 dias" disabled style="background:#e2e8f0; cursor:not-allowed;"></div>
         </div>
 
         <div class="tabs">
-            <button class="tab-btn active" id="btnTabSorvete" onclick="mudarAba('sorvete')">Sorvetes</button>
-            <button class="tab-btn" id="btnTabSeco" onclick="mudarAba('seco')">Secos</button>
-            <button class="tab-btn" id="btnTabBalde" onclick="mudarAba('balde')">Baldes</button>
-            <button class="tab-btn" id="btnTabPromo" onclick="mudarAba('promo')">Promoções</button>
+            <button class="tab-btn active" id="btnTabSorvete" onclick="window.mudarAba('sorvete')">Sorvetes</button>
+            <button class="tab-btn" id="btnTabSeco" onclick="window.mudarAba('seco')">Secos</button>
+            <button class="tab-btn" id="btnTabBalde" onclick="window.mudarAba('balde')">Baldes</button>
+            <button class="tab-btn" id="btnTabPromo" onclick="window.mudarAba('promo')">Promoções</button>
         </div>
 
-        <div id="content_sorvete" class="tab-content active">
-            <table id="tbl_sorvete"><thead><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
-        </div>
-        <div id="content_seco" class="tab-content" style="display:none;">
-            <table id="tbl_seco"><thead><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
-        </div>
-        <div id="content_balde" class="tab-content" style="display:none;">
-            <table id="tbl_balde"><thead><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
-        </div>
-        <div id="content_promo" class="tab-content" style="display:none;">
-            <table id="tbl_promo"><thead><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
+        <div class="table-container">
+            <div id="content_sorvete" class="tab-content active">
+                <table id="tbl_sorvete">
+                    <thead style="position: sticky; top: 0; z-index: 1;"><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço un.</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div id="content_seco" class="tab-content">
+                <table id="tbl_seco"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço un.</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
+            </div>
+            <div id="content_balde" class="tab-content">
+                <table id="tbl_balde"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço un.</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
+            </div>
+            <div id="content_promo" class="tab-content">
+                <table id="tbl_promo"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th>Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço un.</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
+            </div>
         </div>
 
-        <div class="card-panel resumo-box">
+        <div class="resumo-box">
             <div class="resumo-grid">
-                <div class="resumo-item"><b>Total Venda</b><span id="valComDesc">R$ 0,00</span></div>
-                <button onclick="window.gerarExcelPedido()" class="btn-sucesso" style="grid-column: span 2; font-size: 18px;">⬇️ GERAR PEDIDO EXCEL</button>
+                <div class="resumo-info">
+                    <b>Valor Total do Pedido</b>
+                    <span id="valComDesc">R$ 0,00</span>
+                </div>
+                <button onclick="window.gerarExcelPedido()" class="btn-sucesso">
+                    <span style="font-size: 20px;">⬇️</span> Gerar Pedido Excel
+                </button>
             </div>
         </div>
     </div>
