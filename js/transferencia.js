@@ -11,6 +11,7 @@ let produtosGlobais = [];
 let filiaisSalvas = [];
 window.filialDestinoNomeReal = ""; 
 window.resumoGlobal = { totalV: 0, qtdTotal: 0 };
+window.codigosAcaiGlobais = [];
 
 iniciarInterfaceGlobais();
 document.getElementById('txtLoja').innerText = nomeLoja;
@@ -65,11 +66,13 @@ async function iniciar() {
     const tabelas = dadosUsuario.tabelasPreco || {};
     const tabTransf = (tabelas.transferencia || 'tf').toLowerCase();
 
-    const [snapTransf, prodSnap] = await Promise.all([ 
+    const [snapTransf, prodSnap, configSnap] = await Promise.all([ 
         getDoc(doc(db, "precos", tabTransf)), 
-        getDocs(collection(db, "produtos")) 
+        getDocs(collection(db, "produtos")),
+        getDoc(doc(db, "configuracoes", "geral")) 
     ]);
     const precosTF = snapTransf.exists() ? snapTransf.data() : {};
+    window.codigosAcaiGlobais = configSnap.exists() && configSnap.data().codigosAcai ? configSnap.data().codigosAcai : [];
 
     let htmlBuffers = { sorvete: "", acai: "", seco: "" };
 
@@ -79,11 +82,12 @@ async function iniciar() {
         let precoSeguro = parseFloat(precoCru) || 0;
         
         let rawCat = (item.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        let isAcaiDefinido = window.codigosAcaiGlobais.includes(String(item.codigo).trim().toUpperCase());
+        
         let cat = 'sorvete'; 
-        if (rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai';
+        if (isAcaiDefinido || rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai';
         else if (rawCat.includes('seco')) cat = 'seco'; 
         
-        // Pula promo e balde na transferência, ou coloca em sorvete se preferir
         if (cat !== 'sorvete' && cat !== 'acai' && cat !== 'seco') cat = 'sorvete';
 
         const idx = produtosGlobais.length;
@@ -149,7 +153,7 @@ window.gerarExcelTransferencia = async () => {
             itens, isTransferencia: true 
         }); 
         alert("✅ Transferência gerada com sucesso!"); window.location.reload(); 
-    } catch (e) { alert("Falha: " + e.message); } finally { btn.innerHTML = "<span style='font-size: 16px;'>⬇️</span> Transferir"; btn.disabled = false; }
+    } catch (e) { alert("Falha: " + e.message); } finally { btn.innerHTML = "<span style='font-size: 14px;'>⬇️</span> Transferir"; btn.disabled = false; }
 };
 
 iniciar();
