@@ -25,7 +25,7 @@
             <button class="close-btn" onclick="window.toggleMenu()">×</button>
         </div>
         <div class="sidebar-links">
-            <button onclick="window.location.href='loja.html'"><i>🛒</i> Nova Venda</button>
+            <button id="btnNavVenda" onclick="window.location.href='loja.html'"><i>🛒</i> Nova Venda</button>
             <button class="active"><i>🔄</i> Transferência</button>
             <button onclick="window.location.href='historico.html'"><i>📜</i> Histórico</button>
             <button onclick="localStorage.clear(); window.location.href='index.html'" style="margin-top:auto; color:#ef4444;"><i>🚪</i> Sair</button>
@@ -37,7 +37,7 @@
         <h2 class="section-title">Transferência de Estoque</h2>
 
         <div class="card-panel client-box" style="grid-template-columns: 2fr 1fr; border-left-color: #3b82f6;">
-            <div><label>Filial de Destino</label><input type="text" id="cliRazao" list="listaFiliais" placeholder="Ex: Filial 03 - Canoas"></div>
+            <div><label>Buscar Filial (Nome, CNPJ ou Nº)</label><input type="text" id="cliRazao" list="listaFiliais" placeholder="Ex: 003, Canoas ou CNPJ"></div>
             <div><label>CNPJ Destino</label><input type="text" id="cliCnpj" readonly style="background:#e2e8f0; cursor:not-allowed;"></div>
         </div>
 
@@ -58,10 +58,10 @@
             </div>
         </div>
 
-        <div class="resumo-box" style="border-color: #3b82f6;">
+        <div class="resumo-box" style="border-color: #3b82f6; padding: 15px 20px;">
             <div class="resumo-grid" style="grid-template-columns: 1fr;">
-                <button onclick="window.gerarExcelTransferencia()" class="btn-primario" style="background: #3b82f6; width: 100%; justify-content: center;">
-                    <span style="font-size: 22px; margin-right: 10px;">⬇️</span> Gerar Transferência Excel
+                <button onclick="window.gerarExcelTransferencia()" class="btn-primario" style="background: #3b82f6; width: 100%; justify-content: center; padding: 12px; font-size: 15px;">
+                    <span style="font-size: 18px; margin-right: 8px;">⬇️</span> Gerar Transferência Excel
                 </button>
             </div>
         </div>
