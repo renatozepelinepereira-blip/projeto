@@ -9,8 +9,18 @@ if(!userId) window.location.href = 'index.html';
 
 let produtosGlobais = []; 
 let clientesSalvos = [];
-window.descontosMaxGlobais = { sorvete: 100, acai: 100, seco: 100, balde: 100, promo: 100 };
+window.categoriasGlobais = [];
+window.categoriasPermitidas = [];
+window.descontosMaxGlobais = {};
 window.resumoGlobal = { totalV: 0, qtdTotal: 0, descontos: {} };
+
+const DEFAULT_CATS = [
+    { id: 'sorvete', nome: 'Sorvetes', icone: '🍦', abaVenda: 'SORVETE', abaTransf: 'PROD' },
+    { id: 'acai', nome: 'Açaí', icone: '🍇', abaVenda: 'ACAI', abaTransf: 'ACAI' },
+    { id: 'seco', nome: 'Secos', icone: '📦', abaVenda: 'SECO', abaTransf: 'SECO' },
+    { id: 'balde', nome: 'Baldes', icone: '🪣', abaVenda: 'BALDE', abaTransf: 'PROD' },
+    { id: 'promo', nome: 'Promoções', icone: '🌟', abaVenda: 'SORVETE', abaTransf: 'PROD' }
+];
 
 iniciarInterfaceGlobais();
 document.getElementById('txtLoja').innerText = nomeLoja;
@@ -27,7 +37,6 @@ if (!document.getElementById('zoomOverlay')) {
 }
 window.mostrarZoom = (imgSrc) => { if(!imgSrc) return; document.getElementById('zoomImg').src = imgSrc; document.getElementById('zoomOverlay').style.display = 'flex'; };
 window.esconderZoom = () => { document.getElementById('zoomOverlay').style.display = 'none'; };
-// ==========================================
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type === 'number') {
@@ -41,7 +50,7 @@ document.addEventListener('keydown', (e) => {
 window.mudarAba = (cat) => { 
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); 
-    document.getElementById('btnTab' + cat.charAt(0).toUpperCase() + cat.slice(1)).classList.add('active'); 
+    document.getElementById('btnTab_' + cat).classList.add('active'); 
     document.getElementById('content_' + cat).classList.add('active'); 
 };
 
@@ -52,46 +61,66 @@ document.getElementById('cliFormaPagamento').addEventListener('change', (e) => {
 });
 
 async function iniciar() {
-    const userSnap = await getDoc(doc(db, "usuarios", userId)); 
-    const dadosUsuario = userSnap.data() || {};
     const isAdmin = userId === 'admin';
+    const [userSnap, configSnap] = await Promise.all([
+        getDoc(doc(db, "usuarios", userId)),
+        getDoc(doc(db, "configuracoes", "categorias"))
+    ]);
     
-    if (dadosUsuario.planilhas?.venda === false && !isAdmin) { 
+    const dadosUsuario = userSnap.data() || {};
+    window.categoriasGlobais = configSnap.exists() && configSnap.data().lista ? configSnap.data().lista : DEFAULT_CATS;
+
+    window.categoriasPermitidas = window.categoriasGlobais.filter(c => {
+        if(isAdmin) return true;
+        return dadosUsuario.planilhas?.[c.id] !== false; // Só bloqueia se for explicitamente falso
+    });
+
+    if (window.categoriasPermitidas.length === 0) { 
+        alert("Sua loja não tem permissão em nenhuma categoria.");
         window.location.replace('transferencia.html'); return; 
     }
 
+    const dmax = dadosUsuario.descontosMax || {};
     const getLimit = (val) => { if(val === undefined || val === null || val === "") return 100; return parseFloat(val); };
     
-    const dmax = dadosUsuario.descontosMax || {};
-    window.descontosMaxGlobais = { 
-        sorvete: isAdmin ? 100 : getLimit(dmax.sorvete), 
-        acai: isAdmin ? 100 : getLimit(dmax.acai), 
-        seco: isAdmin ? 100 : getLimit(dmax.seco), 
-        balde: isAdmin ? 100 : getLimit(dmax.balde), 
-        promo: isAdmin ? 100 : getLimit(dmax.promo) 
-    };
-    
-    Object.keys(window.descontosMaxGlobais).forEach(k => { 
-        let el = document.getElementById('max_desc_' + k); 
-        let maxVal = window.descontosMaxGlobais[k];
-        if(el) {
-            if(maxVal >= 100) { 
-                el.style.display = 'none'; 
-                el.innerText = '';
-            } else { 
-                el.style.display = 'inline-block';
-                el.innerText = `Máx: ${maxVal}%`; 
-                el.style.color = '#ef4444'; 
-                el.style.background = '#fee2e2'; 
-            }
-        }
+    window.categoriasGlobais.forEach(c => {
+        window.descontosMaxGlobais[c.id] = isAdmin ? 100 : getLimit(dmax[c.id]);
     });
+
+    // GERADOR DE HTML DINÂMICO
+    let tabsHtml = ''; let tablesHtml = '';
+    window.categoriasPermitidas.forEach((c, idx) => {
+        let isAct = idx === 0 ? 'active' : '';
+        tabsHtml += `<button class="tab-btn ${isAct}" id="btnTab_${c.id}" onclick="window.mudarAba('${c.id}')">${c.icone} ${c.nome}</button>`;
+        
+        let labelDesconto = "";
+        let maxVal = window.descontosMaxGlobais[c.id];
+        // ESCONDE O "LIVRE" DEFINITIVAMENTE! SÓ MOSTRA SE TIVER LIMITE REAL
+        if(maxVal < 100) {
+            labelDesconto = `<span id="max_desc_${c.id}" style="margin-left: 10px; font-size: 12px; font-weight: bold; background: #fee2e2; color: #ef4444; padding: 4px 8px; border-radius: 6px;">Máx: ${maxVal}%</span>`;
+        }
+
+        tablesHtml += `
+        <div id="content_${c.id}" class="tab-content ${isAct}">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: #f8fafc; border-bottom: 2px solid var(--border); border-radius: 8px 8px 0 0;">
+                <span style="color: var(--primary); font-weight: bold; font-size: 14px;">${c.icone} Catálogo de ${c.nome}</span>
+                <div style="display: flex; align-items: center;">
+                    <label style="margin: 0; font-weight: 900; color: var(--text-main); margin-right: 10px; font-size: 14px;">🎯 Desconto (%):</label>
+                    <input type="number" id="desc_${c.id}" value="0" min="0" step="1" style="width: 80px; margin: 0; font-size: 16px; font-weight: bold; color: var(--primary); border: 2px solid var(--primary); border-radius: 6px; text-align: center;" onkeydown="if(['.', ',', '-', '+'].includes(event.key)) event.preventDefault();" oninput="this.value=this.value.replace(/[^0-9]/g,''); window.calcularTudo();">
+                    ${labelDesconto}
+                </div>
+            </div>
+            <table id="tbl_${c.id}"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço un.</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody id="tbody_${c.id}"></tbody></table>
+        </div>`;
+    });
+
+    document.getElementById('containerTabsLoja').innerHTML = tabsHtml;
+    document.getElementById('containerTabelasLoja').innerHTML = tablesHtml;
 
     const tabelas = dadosUsuario.tabelasPreco || {};
     let tabVenda = (tabelas.venda || dadosUsuario.tabelaPreco || 'padrao').toLowerCase();
-    let tabPromo = (tabelas.promocao || tabVenda).toLowerCase(); 
-    let tabBalde = (tabelas.balde || tabVenda).toLowerCase();   
     
+    // Antigamente liam tabelas fixas, agora todas leem da base de Vendas para simplificar ou do específico (se vc quiser separar). Para não quebrar sua estrutura, usaremos a tabela de venda principal para todas
     const cliSnap = await getDocs(collection(db, "clientes"));
     const listaNomes = document.getElementById('listaNomesClientes');
     cliSnap.forEach(c => { clientesSalvos.push(c.data()); listaNomes.innerHTML += `<option value="${c.data().razao}">`; });
@@ -101,32 +130,22 @@ async function iniciar() {
         if(cliente) document.getElementById('cliCnpj').value = cliente.cnpj || '';
     });
 
-    const [snapVenda, snapPromo, snapBalde, prodSnap] = await Promise.all([ 
-        getDoc(doc(db, "precos", tabVenda)), getDoc(doc(db, "precos", tabPromo)), getDoc(doc(db, "precos", tabBalde)), 
-        getDocs(collection(db, "produtos")) 
-    ]);
-    
+    // Pega preços
+    const [snapVenda, prodSnap] = await Promise.all([ getDoc(doc(db, "precos", tabVenda)), getDocs(collection(db, "produtos")) ]);
     const precosVenda = snapVenda.exists() ? snapVenda.data() : {};
-    const precosPromo = snapPromo.exists() ? snapPromo.data() : {};
-    const precosBalde = snapBalde.exists() ? snapBalde.data() : {};
 
-    let htmlBuffers = { sorvete: "", acai: "", seco: "", balde: "", promo: "" };
+    let htmlBuffers = {};
+    window.categoriasPermitidas.forEach(c => htmlBuffers[c.id] = '');
 
     prodSnap.forEach(d => {
         const item = d.data(); 
-        let rawCat = (item.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        
-        let cat = 'sorvete'; 
-        if (rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai';
-        else if (rawCat.includes('seco')) cat = 'seco'; 
-        else if (rawCat.includes('balde')) cat = 'balde'; 
-        else if (rawCat.includes('promo')) cat = 'promo';
-        
-        let precoCru;
-        if (cat === 'promo') precoCru = precosPromo[item.codigo];
-        else if (cat === 'balde') precoCru = precosBalde[item.codigo];
-        else precoCru = precosVenda[item.codigo]; 
-        
+        let rawCat = (item.categoria || window.categoriasGlobais[0].id).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        let cat = rawCat;
+
+        // Se a categoria deste produto não for permitida para o lojista, ignora e não carrega na tela
+        if(htmlBuffers[cat] === undefined) return; 
+
+        let precoCru = precosVenda[item.codigo]; 
         let precoSeguro = parseFloat(precoCru);
         if (isNaN(precoSeguro)) precoSeguro = 0;
         
@@ -152,14 +171,15 @@ async function iniciar() {
         </tr>`;
     });
     
-    Object.keys(htmlBuffers).forEach(k => {
-        const tbody = document.querySelector(`#tbl_${k} tbody`);
-        if(tbody) tbody.innerHTML = htmlBuffers[k] || `<tr><td colspan="8" style="text-align:center; padding:20px;">Nenhum produto cadastrado nesta categoria.</td></tr>`;
+    window.categoriasPermitidas.forEach(c => {
+        const tbody = document.getElementById(`tbody_${c.id}`);
+        if(tbody) tbody.innerHTML = htmlBuffers[c.id] || `<tr><td colspan="8" style="text-align:center; padding:20px;">Nenhum produto cadastrado nesta categoria.</td></tr>`;
     });
 }
 
 window.calcularTudo = () => {
-    let totaisCat = { sorvete: 0, acai: 0, seco: 0, balde: 0, promo: 0 };
+    let totaisCat = {};
+    window.categoriasPermitidas.forEach(c => totaisCat[c.id] = 0);
     let qtdTotalGeral = 0;
     
     produtosGlobais.forEach((p, i) => {
@@ -175,41 +195,36 @@ window.calcularTudo = () => {
         
         document.getElementById(`sub_${i}`).innerText = `R$ ${sub.toFixed(2)}`;
         p.calcTotalUnidades = qtd; p.calcSubtotal = sub;
-        totaisCat[p.catReal] += sub; qtdTotalGeral += qtd;
+        
+        if(totaisCat[p.catReal] !== undefined) totaisCat[p.catReal] += sub; 
+        qtdTotalGeral += qtd;
         
         let tr = document.getElementById(`tr_${i}`); 
         if (tr) { if (qtd > 0) tr.classList.add('linha-destaque'); else tr.classList.remove('linha-destaque'); }
     });
 
-    let desc = {
-        sorvete: parseInt(document.getElementById('desc_sorvete').value) || 0,
-        acai: parseInt(document.getElementById('desc_acai').value) || 0,
-        seco: parseInt(document.getElementById('desc_seco').value) || 0,
-        balde: parseInt(document.getElementById('desc_balde').value) || 0,
-        promo: parseInt(document.getElementById('desc_promo').value) || 0
-    };
+    let desc = {};
+    window.categoriasPermitidas.forEach(c => {
+        let el = document.getElementById(`desc_${c.id}`);
+        desc[c.id] = el && el.value !== "" ? parseInt(el.value) : 0;
 
-    Object.keys(desc).forEach(k => {
-        let el = document.getElementById('desc_' + k);
-        let max = window.descontosMaxGlobais[k];
-        
-        if (desc[k] > max) { 
-            alert(`ATENÇÃO: O desconto máximo permitido para a aba de ${k.toUpperCase()} é ${max}%`); 
-            desc[k] = max; 
+        let max = window.descontosMaxGlobais[c.id];
+        if (desc[c.id] > max) { 
+            alert(`ATENÇÃO: O desconto máximo permitido para ${c.nome} é ${max}%`); 
+            desc[c.id] = max; 
             if(el) el.value = max; 
         }
     });
     
-    // CÁLCULO DO VALOR BRUTO E DESCONTO EM REAIS
     let totalGeralBruto = 0;
-    Object.keys(totaisCat).forEach(k => { totalGeralBruto += totaisCat[k]; });
-
     let totalGeralDescontado = 0;
-    Object.keys(totaisCat).forEach(k => { totalGeralDescontado += totaisCat[k] * (1 - desc[k] / 100); });
+    Object.keys(totaisCat).forEach(k => { 
+        totalGeralBruto += totaisCat[k]; 
+        totalGeralDescontado += totaisCat[k] * (1 - desc[k] / 100); 
+    });
     
     let valorEconomizado = totalGeralBruto - totalGeralDescontado;
 
-    // Atualiza interface do rodapé
     document.getElementById('valComDesc').innerText = "R$ " + totalGeralDescontado.toFixed(2); 
     document.getElementById('qtdTotal').innerText = qtdTotalGeral;
     
@@ -219,11 +234,9 @@ window.calcularTudo = () => {
     if(valorEconomizado > 0) {
         document.getElementById('valBruto').innerText = "R$ " + totalGeralBruto.toFixed(2);
         document.getElementById('valDesconto').innerText = "- R$ " + valorEconomizado.toFixed(2);
-        divBruto.style.display = 'flex';
-        divDesc.style.display = 'flex';
+        divBruto.style.display = 'flex'; divDesc.style.display = 'flex';
     } else {
-        divBruto.style.display = 'none';
-        divDesc.style.display = 'none';
+        divBruto.style.display = 'none'; divDesc.style.display = 'none';
     }
 
     window.resumoGlobal = { totalV: totalGeralDescontado, qtdTotal: qtdTotalGeral, descontos: desc };
@@ -237,7 +250,7 @@ window.gerarExcelPedido = async () => {
     if(!confirm("Deseja confirmar a geração, baixar a planilha e salvar este pedido no histórico?")) return;
     const btn = document.querySelector('.btn-sucesso'); btn.innerHTML = "⏳ GERANDO..."; btn.disabled = true;
     try { 
-        await processarExcelVenda({ userId, nomeLoja, razao, cnpj, formaPagamento, prazo, totalV: window.resumoGlobal.totalV, itens, isTransferencia: false, descontos: window.resumoGlobal.descontos }); 
+        await processarExcelVenda({ userId, nomeLoja, razao, cnpj, formaPagamento, prazo, totalV: window.resumoGlobal.totalV, itens, isTransferencia: false, descontos: window.resumoGlobal.descontos, categorias: window.categoriasGlobais }); 
         alert("✅ Pedido gerado com sucesso! O Excel foi baixado."); window.location.reload();
     } catch (e) { alert("Falha: " + e.message); } finally { btn.innerHTML = "<span style='font-size: 14px;'>⬇️</span> Gerar Pedido"; btn.disabled = false; }
 };
