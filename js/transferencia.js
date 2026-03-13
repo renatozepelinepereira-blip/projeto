@@ -1,7 +1,7 @@
 import { db } from "./api/firebase.js";
 import { processarExcelVenda } from "./utils/excel.js";
 import { iniciarInterfaceGlobais } from "./utils/interface.js";
-import { getDocs, getDoc, doc, collection } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import { getDocs, getDoc, setDoc, doc, collection } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
 const userId = localStorage.getItem('user'); 
 const nomeLoja = localStorage.getItem('nome') || userId;
@@ -55,11 +55,36 @@ function extrairFilial(cnpj) {
     const match = cnpj.match(/\/(\d{4})/); return match ? parseInt(match[1], 10) : "";
 }
 
+// ==========================================
+// TRAVA DE SEGURANÇA OBRIGATÓRIA DA SENHA
+// ==========================================
+window.salvarNovaSenhaObrigatoria = async () => {
+    const senha = document.getElementById('novaSenhaForcada').value.trim();
+    if(senha.length < 4) return alert("A senha deve ter no mínimo 4 caracteres.");
+    
+    const btn = document.querySelector('#modalForcarSenha button');
+    btn.innerText = "⏳ Salvando..."; btn.disabled = true;
+    
+    try {
+        await setDoc(doc(db, "usuarios", userId), { senha: senha, precisaTrocarSenha: false }, { merge: true });
+        alert("✅ Senha atualizada com sucesso! Bem-vindo(a).");
+        document.getElementById('modalForcarSenha').style.display = 'none';
+    } catch(e) {
+        alert("Erro ao salvar: " + e.message);
+        btn.innerText = "💾 Salvar Senha e Acessar"; btn.disabled = false;
+    }
+};
+
 async function iniciar() {
     const isAdmin = userId === 'admin';
     const [userSnap, adminSnap] = await Promise.all([getDoc(doc(db, "usuarios", userId)), getDoc(doc(db, "usuarios", "admin"))]);
     const dadosUsuario = userSnap.data() || {};
     
+    // VERIFICA SE PRECISA TROCAR A SENHA
+    if(dadosUsuario.precisaTrocarSenha && !isAdmin) {
+        document.getElementById('modalForcarSenha').style.display = 'flex';
+    }
+
     if (dadosUsuario.planilhas?.venda === false && !isAdmin) {
         const btnVenda = document.getElementById('btnNavVenda'); if (btnVenda) btnVenda.style.display = 'none';
     }
