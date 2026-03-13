@@ -182,7 +182,7 @@
     </div>
 
     <div class="modal-overlay" id="modalCategoria">
-        <div class="modal-content">
+        <div class="modal-content" onclick="event.stopPropagation()">
             <h2 style="margin-bottom: 20px; color: var(--primary);" id="titModalCat">Categoria</h2>
             <input type="hidden" id="catEditId">
             <div class="grid-2" style="gap: 15px;">
@@ -193,12 +193,15 @@
                 <div><label>Nome Exato da Aba Venda (Excel)</label><input type="text" id="catEditVenda" placeholder="Ex: SORVETE"></div>
                 <div><label>Nome Exato da Aba Transf. (Excel)</label><input type="text" id="catEditTransf" placeholder="Ex: PROD"></div>
             </div>
-            <div class="grid-2" style="gap: 15px; margin-top: 25px;"><button onclick="window.fecharModal('modalCategoria')" class="btn-secundario" style="width:100%;">Cancelar</button><button id="btnSalvarCat" onclick="window.salvarCategoria()" class="btn-primario" style="width:100%;">💾 Salvar Categoria</button></div>
+            <div class="grid-2" style="gap: 15px; margin-top: 25px;">
+                <button type="button" onclick="window.fecharModal('modalCategoria')" class="btn-secundario" style="width:100%;">Cancelar</button>
+                <button type="button" id="btnSalvarCat" onclick="window.salvarCategoria()" class="btn-primario" style="width:100%;">💾 Salvar Categoria</button>
+            </div>
         </div>
     </div>
 
     <div class="modal-overlay" id="modalProduto">
-        <div class="modal-content">
+        <div class="modal-content" onclick="event.stopPropagation()">
             <h2 style="margin-bottom: 20px; color: var(--primary);" id="titModalProduto">Produto</h2>
             <div class="grid-2" style="gap: 15px;">
                 <div><label>Código</label><input type="text" id="prodEditCodigo"></div>
@@ -215,12 +218,15 @@
             <label style="margin-top: 15px; display: block;">Link da Foto (URL da internet)</label>
             <input type="text" id="prodEditImagemUrl" placeholder="Ex: https://i.imgur.com/foto.png" oninput="window.previewImagemURL()">
             <div style="text-align:center;"><img id="previewFoto" src="" style="width:140px; height:140px; object-fit:cover; display:none; border-radius:12px; margin:10px auto; border:1px solid var(--border);"></div>
-            <div class="grid-2" style="gap: 15px; margin-top: 20px;"><button onclick="window.fecharModal('modalProduto')" class="btn-secundario" style="width:100%;">Cancelar</button><button id="btnSalvarProd" onclick="window.salvarProduto()" class="btn-primario" style="width:100%;">Salvar Produto</button></div>
+            <div class="grid-2" style="gap: 15px; margin-top: 20px;">
+                <button type="button" onclick="window.fecharModal('modalProduto')" class="btn-secundario" style="width:100%;">Cancelar</button>
+                <button type="button" id="btnSalvarProd" onclick="window.salvarProduto()" class="btn-primario" style="width:100%;">Salvar Produto</button>
+            </div>
         </div>
     </div>
 
     <div class="modal-overlay" id="modalLoja">
-        <div class="modal-content">
+        <div class="modal-content" onclick="event.stopPropagation()">
             <h2 style="margin-bottom: 20px;" id="titModalLoja">Loja / Usuário</h2>
             <input type="hidden" id="lojaEditIsNew">
             <label>Login (Usuário)</label><input type="text" id="lojaEditId">
@@ -249,11 +255,14 @@
             <div id="containerLojaPermissoes" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
                 </div>
             
-            <div class="grid-2" style="gap: 15px; margin-top: 25px;"><button onclick="window.fecharModal('modalLoja')" class="btn-secundario" style="width:100%;">Cancelar</button><button onclick="window.salvarLoja()" class="btn-primario" style="width:100%;">💾 Salvar Loja</button></div>
+            <div class="grid-2" style="gap: 15px; margin-top: 25px;">
+                <button type="button" onclick="window.fecharModal('modalLoja')" class="btn-secundario" style="width:100%;">Cancelar</button>
+                <button type="button" onclick="window.salvarLoja()" class="btn-primario" style="width:100%;">💾 Salvar Loja</button>
+            </div>
         </div>
     </div>
 
-    <div class="modal-overlay" id="modalDetalhesLog"><div class="modal-content" style="width: 700px; max-width: 95%;"><h2 style="margin-bottom: 20px; color: var(--primary);">Detalhes do Registro</h2><div id="conteudoDetalhesLog" style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid var(--border); max-height: 400px; overflow-y: auto; font-size: 14px; margin-bottom: 20px;"></div><div style="display: flex; gap: 10px;"><button onclick="window.fecharModal('modalDetalhesLog')" class="btn-secundario" style="flex: 1;">Fechar</button><button id="btnRegerarPlanilhaModal" class="btn-sucesso" style="flex: 1;">⬇️ Baixar Excel</button></div></div></div>
+    <div class="modal-overlay" id="modalDetalhesLog"><div class="modal-content" onclick="event.stopPropagation()" style="width: 700px; max-width: 95%;"><h2 style="margin-bottom: 20px; color: var(--primary);">Detalhes do Registro</h2><div id="conteudoDetalhesLog" style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid var(--border); max-height: 400px; overflow-y: auto; font-size: 14px; margin-bottom: 20px;"></div><div style="display: flex; gap: 10px;"><button type="button" onclick="window.fecharModal('modalDetalhesLog')" class="btn-secundario" style="flex: 1;">Fechar</button><button type="button" id="btnRegerarPlanilhaModal" class="btn-sucesso" style="flex: 1;">⬇️ Baixar Excel</button></div></div></div>
 
     <script type="module" src="./js/admin.js"></script>
 </body>
