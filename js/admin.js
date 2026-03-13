@@ -70,10 +70,21 @@ window.carregarCategoriasBase = async () => {
         
         tabsHtml += `<button class="admin-cat-tab ${act}" id="btnAdminTab_${c.id}" onclick="window.mudarAbaAdminCat('${c.id}')" style="padding: 10px 20px; border: none; background: ${idx===0?'white':'transparent'}; border-radius: 8px; cursor: pointer; font-weight: bold; color: ${idx===0?'var(--primary)':'#64748b'}; box-shadow: ${idx===0?'var(--shadow-sm)':'none'};">${c.icone} ${c.nome}</button>`;
         
+        // ADICIONADO CHECKBOX NO CABEÇALHO PARA SELECIONAR TODOS
         tablesHtml += `
         <div id="content_admin_${c.id}" class="admin-cat-content" style="display: ${dis};">
             <table style="width: 100%; border-collapse: collapse;">
-                <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th style="width: 60px; text-align: center;">Foto</th><th style="width: 100px; text-align: left;">Cód</th><th style="text-align: left;">Descrição</th><th style="width: 80px; text-align: center;">Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary); text-align: center; width: 120px;">Preço</th><th style="width: 100px; text-align: center;">Ações</th></tr></thead>
+                <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;">
+                    <tr>
+                        <th style="width: 40px; text-align: center;"><input type="checkbox" onclick="window.toggleSelectAll('${c.id}', this)" style="cursor: pointer; width: 16px; height: 16px; margin: 0;"></th>
+                        <th style="width: 60px; text-align: center;">Foto</th>
+                        <th style="width: 100px; text-align: left;">Cód</th>
+                        <th style="text-align: left;">Descrição</th>
+                        <th style="width: 80px; text-align: center;">Engr.</th>
+                        <th class="thPrecoCat" style="display: none; color: var(--primary); text-align: center; width: 120px;">Preço</th>
+                        <th style="width: 100px; text-align: center;">Ações</th>
+                    </tr>
+                </thead>
                 <tbody id="corpoAdmin_${c.id}"></tbody>
             </table>
         </div>`;
@@ -229,6 +240,48 @@ window.filtrarCatalogo = () => {
     });
 };
 
+// ==============================================================
+// FUNÇÕES DE SELEÇÃO E EXCLUSÃO EM MASSA DE PRODUTOS
+// ==============================================================
+window.toggleSelectAll = (catId, el) => {
+    document.querySelectorAll(`.chk-prod-${catId}`).forEach(chk => {
+        // Marca apenas se a linha estiver visível (pra não apagar coisa filtrada escondida)
+        if (chk.closest('tr').style.display !== 'none') {
+            chk.checked = el.checked;
+        }
+    });
+};
+
+window.excluirProdutosSelecionados = async () => {
+    let selecionados = [];
+    document.querySelectorAll('input[class^="chk-prod-"]:checked').forEach(chk => {
+        selecionados.push(chk.value);
+    });
+
+    if(selecionados.length === 0) return alert("Selecione pelo menos um produto marcando a caixinha na tabela!");
+
+    if(confirm(`🚨 ATENÇÃO: Você está prestes a excluir ${selecionados.length} produto(s) permanentemente.\n\nDeseja continuar?`)) {
+        const btn = document.getElementById('btnExcluirSelecionados');
+        btn.innerText = "⏳ Apagando...";
+        btn.disabled = true;
+
+        try {
+            const promessas = selecionados.map(cod => deleteDoc(doc(db, "produtos", cod)));
+            await Promise.all(promessas);
+            alert("✅ Produtos excluídos com sucesso!");
+            
+            // Desmarca a caixinha de "selecionar todos" que ficou ativa
+            document.querySelectorAll('thead input[type="checkbox"]').forEach(c => c.checked = false);
+            window.carregarProdutos();
+        } catch(e) {
+            alert("Erro ao excluir: " + e.message);
+        } finally {
+            btn.innerText = "🗑️ Apagar Selecionados";
+            btn.disabled = false;
+        }
+    }
+};
+
 window.carregarProdutos = async () => {
     const tabelaSelecionada = document.getElementById('selectFiltroTabelaCat').value;
     document.querySelectorAll('.thPrecoCat').forEach(th => {
@@ -267,7 +320,9 @@ window.carregarProdutos = async () => {
             ? `<img src="${p.imagem}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; cursor: zoom-in;" loading="lazy" onmouseenter="window.mostrarZoom('${p.imagem}')" onmouseleave="window.esconderZoom()">`
             : `<div style="width: 40px; height: 40px; display:flex; align-items:center; justify-content:center; background:#f1f5f9; font-size:20px; border-radius:6px; border: 1px solid #e2e8f0; cursor: default;">📦</div>`;
 
+        // ADICIONADO CHECKBOX INDIVIDUAL
         htmlBuffers[cat] += `<tr class="linha-produto-admin" data-search="${String(p.codigo).toLowerCase()} ${String(p.descricao).toLowerCase()}">
+            <td style="text-align: center;"><input type="checkbox" class="chk-prod-${cat}" value="${p.codigo}" style="cursor: pointer; width: 16px; height: 16px; margin: 0;"></td>
             <td style="text-align: center;">${imgHtml}</td>
             <td><b>${p.codigo}</b></td>
             <td>${p.descricao}</td>
@@ -284,7 +339,7 @@ window.carregarProdutos = async () => {
 
     window.categoriasGlobais.forEach(c => {
         let el = document.getElementById('corpoAdmin_' + c.id);
-        if(el) el.innerHTML = htmlBuffers[c.id] || '<tr><td colspan="6" style="text-align:center;">Nenhum produto nesta categoria.</td></tr>';
+        if(el) el.innerHTML = htmlBuffers[c.id] || '<tr><td colspan="7" style="text-align:center;">Nenhum produto nesta categoria.</td></tr>';
     });
     
     window.filtrarCatalogo();
@@ -417,9 +472,6 @@ window.carregarLojas = async () => {
     document.getElementById('corpoTabelaLojas').innerHTML = html;
 };
 
-// ==========================================
-// RENAME LOGIN FUNCTIONALITY (O Truque da Troca de ID)
-// ==========================================
 window.abrirNovaLoja = () => { 
     document.getElementById('lojaEditId').disabled = false; 
     document.getElementById('lojaEditIsNew').value = 'sim'; 
@@ -440,8 +492,8 @@ window.abrirNovaLoja = () => {
 window.abrirEdicaoLoja = (id) => { 
     const u = listaLojasAdmin.find(x => x.id === id); if(!u) return; 
     document.getElementById('lojaEditId').value = u.id; 
-    document.getElementById('lojaEditId').disabled = false; // Agora permite editar o Login!
-    document.getElementById('lojaEditOriginalId').value = u.id; // Salva o ID original escondido
+    document.getElementById('lojaEditId').disabled = false; 
+    document.getElementById('lojaEditOriginalId').value = u.id; 
     document.getElementById('lojaEditIsNew').value = 'nao'; 
     document.getElementById('lojaEditNome').value = u.nomeLoja || ''; 
     document.getElementById('lojaEditCnpj').value = u.cnpj || ''; 
@@ -494,7 +546,6 @@ window.salvarLoja = async () => {
         d.senha = s; 
         if(s === '123456') d.precisaTrocarSenha = true; 
     } else if (idOriginal && idOriginal !== novoId) {
-        // Se mudou o login mas não digitou senha, temos que puxar a senha antiga para o login novo não ficar sem senha!
         const dadosAntigos = listaLojasAdmin.find(x => x.id === idOriginal);
         if (dadosAntigos && dadosAntigos.senha) d.senha = dadosAntigos.senha;
         if (dadosAntigos && dadosAntigos.precisaTrocarSenha !== undefined) d.precisaTrocarSenha = dadosAntigos.precisaTrocarSenha;
@@ -505,19 +556,15 @@ window.salvarLoja = async () => {
 
     try {
         if (idOriginal && idOriginal !== novoId) {
-            // VERIFICA SE O NOVO NOME JÁ ESTÁ EM USO POR OUTRA LOJA
             const check = await getDoc(doc(db, "usuarios", novoId));
             if (check.exists()) {
                 alert("Este login já está sendo usado por outra loja!");
                 btn.innerText = "💾 Salvar Loja"; btn.disabled = false;
                 return;
             }
-            
-            // O TRUQUE: Salva com o novo ID e deleta o antigo
             await setDoc(doc(db, "usuarios", novoId), d, { merge: true }); 
             await deleteDoc(doc(db, "usuarios", idOriginal));
         } else {
-            // Apenas atualizando ou criando uma loja nova normalmente
             await setDoc(doc(db, "usuarios", novoId), d, { merge: true }); 
         }
 
