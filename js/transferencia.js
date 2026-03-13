@@ -9,15 +9,22 @@ if(!userId) window.location.href = 'index.html';
 
 let produtosGlobais = []; 
 let filiaisSalvas = [];
+window.categoriasGlobais = [];
+window.categoriasPermitidas = [];
 window.filialDestinoNomeReal = ""; 
 window.resumoGlobal = { totalV: 0, qtdTotal: 0 };
+
+const DEFAULT_CATS = [
+    { id: 'sorvete', nome: 'Sorvetes', icone: '🍦', abaVenda: 'SORVETE', abaTransf: 'PROD' },
+    { id: 'acai', nome: 'Açaí', icone: '🍇', abaVenda: 'ACAI', abaTransf: 'ACAI' },
+    { id: 'seco', nome: 'Secos', icone: '📦', abaVenda: 'SECO', abaTransf: 'SECO' },
+    { id: 'balde', nome: 'Baldes', icone: '🪣', abaVenda: 'BALDE', abaTransf: 'PROD' },
+    { id: 'promo', nome: 'Promoções', icone: '🌟', abaVenda: 'SORVETE', abaTransf: 'PROD' }
+];
 
 iniciarInterfaceGlobais();
 document.getElementById('txtLoja').innerText = nomeLoja;
 
-// ==========================================
-// MOTOR DE ZOOM 100% CENTRO E À PROVA DE CORTE
-// ==========================================
 if (!document.getElementById('zoomOverlay')) {
     const overlay = document.createElement('div');
     overlay.id = 'zoomOverlay';
@@ -27,7 +34,6 @@ if (!document.getElementById('zoomOverlay')) {
 }
 window.mostrarZoom = (imgSrc) => { if(!imgSrc) return; document.getElementById('zoomImg').src = imgSrc; document.getElementById('zoomOverlay').style.display = 'flex'; };
 window.esconderZoom = () => { document.getElementById('zoomOverlay').style.display = 'none'; };
-// ==========================================
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type === 'number') {
@@ -41,33 +47,50 @@ document.addEventListener('keydown', (e) => {
 window.mudarAba = (cat) => { 
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); 
-    document.getElementById('btnTab' + cat.charAt(0).toUpperCase() + cat.slice(1)).classList.add('active'); 
+    document.getElementById('btnTab_' + cat).classList.add('active'); 
     document.getElementById('content_' + cat).classList.add('active'); 
 };
 
 function extrairFilial(cnpj) {
-    if (!cnpj) return "";
-    const match = cnpj.match(/\/(\d{4})/);
-    return match ? parseInt(match[1], 10) : "";
+    const match = cnpj.match(/\/(\d{4})/); return match ? parseInt(match[1], 10) : "";
 }
 
 async function iniciar() {
-    const userSnap = await getDoc(doc(db, "usuarios", userId));
+    const isAdmin = userId === 'admin';
+    const [userSnap, configSnap] = await Promise.all([getDoc(doc(db, "usuarios", userId)), getDoc(doc(db, "configuracoes", "categorias"))]);
     const dadosUsuario = userSnap.data() || {};
-    if (dadosUsuario.planilhas?.venda === false && userId !== 'admin') {
-        const btnVenda = document.getElementById('btnNavVenda');
-        if (btnVenda) btnVenda.style.display = 'none';
+    
+    if (dadosUsuario.planilhas?.venda === false && !isAdmin) {
+        const btnVenda = document.getElementById('btnNavVenda'); if (btnVenda) btnVenda.style.display = 'none';
     }
+
+    window.categoriasGlobais = configSnap.exists() && configSnap.data().lista ? configSnap.data().lista : DEFAULT_CATS;
+    window.categoriasPermitidas = window.categoriasGlobais.filter(c => {
+        if(isAdmin) return true; return dadosUsuario.planilhas?.[c.id] !== false;
+    });
+
+    let tabsHtml = ''; let tablesHtml = '';
+    window.categoriasPermitidas.forEach((c, idx) => {
+        let isAct = idx === 0 ? 'active' : '';
+        tabsHtml += `<button class="tab-btn ${isAct}" id="btnTab_${c.id}" onclick="window.mudarAba('${c.id}')">${c.icone} ${c.nome}</button>`;
+        tablesHtml += `
+        <div id="content_${c.id}" class="tab-content ${isAct}">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: #f8fafc; border-bottom: 2px solid var(--border); border-radius: 8px 8px 0 0;">
+                <span style="color: var(--primary); font-weight: bold; font-size: 14px;">${c.icone} Transferência: ${c.nome}</span>
+            </div>
+            <table id="tbl_${c.id}"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Caixas</th><th>Unid.</th></tr></thead><tbody id="tbody_${c.id}"></tbody></table>
+        </div>`;
+    });
+    document.getElementById('containerTabsTransf').innerHTML = tabsHtml;
+    document.getElementById('containerTabelasTransf').innerHTML = tablesHtml;
 
     const uSnap = await getDocs(collection(db, "usuarios"));
     const listaNomes = document.getElementById('listaFiliais');
     uSnap.forEach(u => { 
         if(u.id !== 'admin' && u.id !== userId) {
-            const f = u.data();
-            const num = extrairFilial(f.cnpj);
+            const f = u.data(); const num = extrairFilial(f.cnpj);
             f.textoBusca = `[Filial ${num}] ${f.nomeLoja || u.id} - ${f.cnpj || ''}`;
-            filiaisSalvas.push(f);
-            listaNomes.innerHTML += `<option value="${f.textoBusca}">`; 
+            filiaisSalvas.push(f); listaNomes.innerHTML += `<option value="${f.textoBusca}">`; 
         }
     });
 
@@ -78,35 +101,25 @@ async function iniciar() {
 
     const tabelas = dadosUsuario.tabelasPreco || {};
     const tabTransf = (tabelas.transferencia || 'tf').toLowerCase();
-
-    const [snapTransf, prodSnap] = await Promise.all([ 
-        getDoc(doc(db, "precos", tabTransf)), 
-        getDocs(collection(db, "produtos")) 
-    ]);
+    const [snapTransf, prodSnap] = await Promise.all([ getDoc(doc(db, "precos", tabTransf)), getDocs(collection(db, "produtos")) ]);
     const precosTF = snapTransf.exists() ? snapTransf.data() : {};
 
-    let htmlBuffers = { sorvete: "", acai: "", seco: "" };
+    let htmlBuffers = {};
+    window.categoriasPermitidas.forEach(c => htmlBuffers[c.id] = '');
 
     prodSnap.forEach(d => {
         const item = d.data(); 
+        let cat = (item.categoria || window.categoriasGlobais[0].id).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        if(htmlBuffers[cat] === undefined) return;
+
         let precoCru = precosTF[item.codigo];
         let precoSeguro = parseFloat(precoCru) || 0;
-        
-        let rawCat = (item.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        
-        let cat = 'sorvete'; 
-        if (rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai';
-        else if (rawCat.includes('seco')) cat = 'seco'; 
-        
-        if (cat !== 'sorvete' && cat !== 'acai' && cat !== 'seco') cat = 'sorvete';
-
         const idx = produtosGlobais.length;
         produtosGlobais.push({ ...item, catReal: cat, precoFinal: precoSeguro });
         
-        // CONSTRUÇÃO BLINDADA CONTRA O CSS ANTIGO
         let hasImg = (item.imagem && item.imagem.trim() !== "");
         let imgHtml = hasImg 
-            ? `<img src="${item.imagem}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; cursor: zoom-in;" loading="lazy" onmouseenter="window.mostrarZoom('${item.imagem}')" onmouseleave="window.esconderZoom()">`
+            ? `<img src="${item.imagem}" class="img-produto" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; cursor: zoom-in;" loading="lazy" onmouseenter="window.mostrarZoom('${item.imagem}')" onmouseleave="window.esconderZoom()">`
             : `<div style="width: 40px; height: 40px; display:flex; align-items:center; justify-content:center; background:#f1f5f9; font-size:20px; border-radius:6px; border: 1px solid #e2e8f0; cursor: default;">📦</div>`;
         
         htmlBuffers[cat] += `<tr id="tr_${idx}">
@@ -119,9 +132,9 @@ async function iniciar() {
         </tr>`;
     });
     
-    Object.keys(htmlBuffers).forEach(k => {
-        const tbody = document.querySelector(`#tbl_${k} tbody`);
-        if(tbody) tbody.innerHTML = htmlBuffers[k] || `<tr><td colspan="6" style="text-align:center; padding:20px;">Nenhum produto.</td></tr>`;
+    window.categoriasPermitidas.forEach(c => {
+        const tbody = document.getElementById(`tbody_${c.id}`);
+        if(tbody) tbody.innerHTML = htmlBuffers[c.id] || `<tr><td colspan="6" style="text-align:center; padding:20px;">Nenhum produto.</td></tr>`;
     });
 }
 
@@ -130,7 +143,6 @@ window.calcularTudo = () => {
     produtosGlobais.forEach((p, i) => {
         let inputEng = document.getElementById(`eng_${i}`); let inputUni = document.getElementById(`uni_${i}`); 
         if(!inputEng || !inputUni) return;
-        
         let cxStr = inputEng.value; let cx = parseFloat(cxStr) || 0; let un = parseFloat(inputUni.value) || 0;
         if (cxStr !== "" && (cx * 10) % 5 !== 0) { alert(`Apenas múltiplos de 0.5 nas caixas.`); inputEng.value = ""; cx = 0; }
         if (inputUni.value !== "" && un % 1 !== 0) { alert(`Apenas unidades inteiras.`); inputUni.value = ""; un = 0; }
@@ -161,11 +173,7 @@ window.gerarExcelTransferencia = async () => {
 
     const btn = document.querySelector('.btn-primario'); btn.innerHTML = "⏳..."; btn.disabled = true;
     try { 
-        await processarExcelVenda({ 
-            userId, nomeLoja, razao, cnpj: document.getElementById('cliCnpj').value, 
-            formaPagamento: 'Transferência', prazo: '-', totalV: window.resumoGlobal.totalV, 
-            itens, isTransferencia: true 
-        }); 
+        await processarExcelVenda({ userId, nomeLoja, razao, cnpj: document.getElementById('cliCnpj').value, formaPagamento: 'Transferência', prazo: '-', totalV: window.resumoGlobal.totalV, itens, isTransferencia: true, categorias: window.categoriasGlobais }); 
         alert("✅ Transferência gerada com sucesso!"); window.location.reload(); 
     } catch (e) { alert("Falha: " + e.message); } finally { btn.innerHTML = "<span style='font-size: 14px;'>⬇️</span> Transferir"; btn.disabled = false; }
 };
