@@ -86,6 +86,8 @@
                 
                 <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; align-items: center; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
                     <button onclick="window.abrirNovoProduto()" class="btn-primario" style="white-space: nowrap; margin: 0; flex-shrink: 0;">+ Novo Produto</button>
+                    <button onclick="window.excluirProdutosSelecionados()" class="btn-primario" style="background: #ef4444; white-space: nowrap; margin: 0; flex-shrink: 0;" id="btnExcluirSelecionados">🗑️ Apagar Selecionados</button>
+                    
                     <input type="text" id="buscaCatalogoAdmin" placeholder="🔍 Buscar código ou descrição..." oninput="window.filtrarCatalogo()" style="margin: 0; flex-grow: 1; min-width: 200px;">
                     <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
                         <label style="margin: 0; font-size: 14px; font-weight: 700; white-space: nowrap;">✏️ Editar Preços:</label>
