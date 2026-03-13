@@ -322,6 +322,9 @@ window.salvarProduto = async () => {
 
 window.excluirProduto = async (cod) => { if(confirm(`ATENÇÃO: Excluir permanentemente o produto ${cod}?`)) { try { await deleteDoc(doc(db, "produtos", cod)); window.carregarProdutos(); } catch(e) { alert("Erro ao excluir."); } } };
 
+// =======================================================
+// IMPORTAÇÃO DE PRODUTOS: PROTEGE O ENGRADADO SE FOR VAZIO
+// =======================================================
 window.importarTabelaPrecos = async () => { 
     const nome = document.getElementById('nomeTabelaPreco').value.trim().toLowerCase(); const file = document.getElementById('fileCsvPrecos').files[0]; 
     if(!nome || !file) return alert("Preencha o nome e selecione o arquivo!"); 
@@ -331,25 +334,40 @@ window.importarTabelaPrecos = async () => {
         try {
             const data = new Uint8Array(e.target.result); const wb = XLSX.read(data, {type: 'array'}); const sheet = wb.Sheets[wb.SheetNames[0]]; const json = XLSX.utils.sheet_to_json(sheet, {header: 1}); 
             let precos = {}; let importados = 0; const promessasProdutos = [];
+            
             for(let i = 1; i < json.length; i++) { 
                 if(!json[i] || json[i].length === 0) continue;
                 let rawCod = json[i][0]; let rawDesc = json[i][1]; let rawEng = json[i][2]; let rawPreco = json[i][3]; let rawCat = json[i][4];   
+                
                 if(rawCod === undefined || rawPreco === undefined) continue;
-                let cod = String(rawCod).trim(); let precoStr = String(rawPreco).replace(/[R$\s]/g, '').replace(',', '.'); let precoVal = parseFloat(precoStr);
+                
+                let cod = String(rawCod).trim(); 
+                let precoStr = String(rawPreco).replace(/[R$\s]/g, '').replace(',', '.'); 
+                let precoVal = parseFloat(precoStr);
+                
                 if(cod && !isNaN(precoVal)) {
                     precos[cod] = precoVal;
+                    
                     let dadosProduto = { codigo: cod };
-                    if (rawDesc !== undefined) dadosProduto.descricao = String(rawDesc).trim();
-                    if (rawEng !== undefined) dadosProduto.engradado = String(rawEng).trim();
-                    if (rawCat !== undefined) dadosProduto.categoria = String(rawCat).trim().toLowerCase();
-                    promessasProdutos.push(setDoc(doc(db, "produtos", cod), dadosProduto, { merge: true }));
+                    let atualizarProd = false;
+
+                    if (rawDesc !== undefined && String(rawDesc).trim() !== "") { dadosProduto.descricao = String(rawDesc).trim(); atualizarProd = true; }
+                    if (rawEng !== undefined && String(rawEng).trim() !== "") { dadosProduto.engradado = String(rawEng).trim(); atualizarProd = true; }
+                    if (rawCat !== undefined && String(rawCat).trim() !== "") { dadosProduto.categoria = String(rawCat).trim().toLowerCase(); atualizarProd = true; }
+                    
+                    if(atualizarProd) {
+                        promessasProdutos.push(setDoc(doc(db, "produtos", cod), dadosProduto, { merge: true }));
+                    }
                     importados++;
                 }
             } 
             if(importados === 0) { alert("Nenhum item válido. Cheque se as colunas são: A=Cód, B=Desc, C=Engrad, D=Preço, E=Cat."); return; }
-            await setDoc(doc(db, "precos", nome), precos, { merge: true }); await Promise.all(promessasProdutos);
+            await setDoc(doc(db, "precos", nome), precos, { merge: true }); 
+            if(promessasProdutos.length > 0) await Promise.all(promessasProdutos);
+            
             alert(`🚀 INCRÍVEL! ${importados} produtos processados.\nTabela ${nome.toUpperCase()} salva e Catálogo Atualizado!`); 
-            await window.carregarTabelasPrecos(); const selCat = document.getElementById('selectFiltroTabelaCat');
+            await window.carregarTabelasPrecos(); 
+            const selCat = document.getElementById('selectFiltroTabelaCat');
             if (selCat) { selCat.value = nome; window.carregarProdutos(); }
         } catch(err) { alert("Erro ao ler o Excel."); } finally { btn.innerText = "⚡ Importar Tabela"; document.getElementById('nomeTabelaPreco').value = ""; document.getElementById('fileCsvPrecos').value = ""; }
     }; 
@@ -460,7 +478,7 @@ window.salvarLoja = async () => {
     const s = document.getElementById('lojaEditSenha').value.trim(); 
     if(s) { 
         d.senha = s; 
-        if(s === '123456') d.precisaTrocarSenha = true; // Força a troca se for a senha padrão
+        if(s === '123456') d.precisaTrocarSenha = true; 
     }
     
     await setDoc(doc(db, "usuarios", id), d, { merge: true }); alert("Loja Salva com Sucesso!"); window.fecharModal('modalLoja'); window.carregarLojas(); window.carregarTabelasPrecos(); 
@@ -468,9 +486,6 @@ window.salvarLoja = async () => {
 
 window.resetarSenhaPadrao = () => { document.getElementById('lojaEditSenha').value = '123456'; alert("Senha definida para '123456'. Clique em 'Salvar Loja' para aplicar."); };
 
-// ===============================================
-// IMPORTAÇÃO INTELIGENTE DE LOJAS EM MASSA
-// ===============================================
 window.importarLojasMassa = async () => {
     const file = document.getElementById('fileCsvLojas').files[0];
     if(!file) return alert("Selecione um arquivo Excel ou CSV!");
@@ -505,10 +520,9 @@ window.importarLojasMassa = async () => {
 
                 let nomeLoja = String(rawNome).trim();
                 
-                // GERA O LOGIN INTELIGENTE
                 let baseName = nomeLoja.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                 baseName = baseName.replace(/\b(eskimo|atacado|sorvetes|sorvete|distribuidora|loja|de|do|da|e|-)\b/g, " ");
-                let id = baseName.replace(/[^a-z0-9]/g, ""); // Tira tudo que não for letra ou numero
+                let id = baseName.replace(/[^a-z0-9]/g, ""); 
                 if(!id) id = "loja" + Math.floor(Math.random() * 10000);
 
                 let cnpj = rawCnpj !== undefined ? String(rawCnpj).trim() : "";
@@ -517,7 +531,7 @@ window.importarLojasMassa = async () => {
                     nomeLoja: nomeLoja,
                     cnpj: cnpj,
                     senha: "123456",
-                    precisaTrocarSenha: true, // Obriga a trocar a senha no 1º login
+                    precisaTrocarSenha: true,
                     planilhas: defaultPerms,
                     tabelasPreco: { venda: "", transferencia: "", promocao: "", balde: "" },
                     descontosMax: defaultDescontos
