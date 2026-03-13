@@ -25,9 +25,6 @@ const DEFAULT_CATS = [
 iniciarInterfaceGlobais();
 document.getElementById('txtLoja').innerText = nomeLoja;
 
-// ==========================================
-// MOTOR DE ZOOM 100% CENTRO E À PROVA DE CORTE
-// ==========================================
 if (!document.getElementById('zoomOverlay')) {
     const overlay = document.createElement('div');
     overlay.id = 'zoomOverlay';
@@ -62,10 +59,11 @@ document.getElementById('cliFormaPagamento').addEventListener('change', (e) => {
 
 async function iniciar() {
     const isAdmin = userId === 'admin';
-    const [userSnap, configSnap] = await Promise.all([getDoc(doc(db, "usuarios", userId)), getDoc(doc(db, "configuracoes", "categorias"))]);
+    // Lê as categorias do mesmo lugar seguro
+    const [userSnap, adminSnap] = await Promise.all([getDoc(doc(db, "usuarios", userId)), getDoc(doc(db, "usuarios", "admin"))]);
     
     const dadosUsuario = userSnap.data() || {};
-    window.categoriasGlobais = configSnap.exists() && configSnap.data().lista ? configSnap.data().lista : DEFAULT_CATS;
+    window.categoriasGlobais = adminSnap.exists() && adminSnap.data().categorias ? adminSnap.data().categorias : DEFAULT_CATS;
 
     window.categoriasPermitidas = window.categoriasGlobais.filter(c => {
         if(isAdmin) return true;
@@ -93,7 +91,6 @@ async function iniciar() {
         let displayMax = "none";
         let maxVal = window.descontosMaxGlobais[c.id];
         
-        // SE FOR 100 (LIVRE), FICA INVISÍVEL. SE TIVER LIMITE, APARECE A ETIQUETA
         if(maxVal < 100) {
             displayMax = "inline-block";
             tagMax = `Máx: ${maxVal}%`;
@@ -138,11 +135,10 @@ async function iniciar() {
         const item = d.data(); 
         let cat = (item.categoria || window.categoriasGlobais[0].id).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         
-        // Se não tiver essa categoria ou ela não for permitida, tenta o fallback
         if(htmlBuffers[cat] === undefined) {
             let existsGlobal = window.categoriasGlobais.find(x => x.id === cat);
             if(!existsGlobal) cat = window.categoriasGlobais[0].id;
-            if(htmlBuffers[cat] === undefined) return; // Se ainda não tem, pula o produto.
+            if(htmlBuffers[cat] === undefined) return; 
         }
 
         let precoCru = precosVenda[item.codigo]; 
@@ -206,6 +202,7 @@ window.calcularTudo = () => {
     let desc = {};
     window.categoriasPermitidas.forEach(c => {
         let el = document.getElementById(`desc_${c.id}`);
+        // Força a ser inteiro, ignorando qualquer trambique do usuário
         desc[c.id] = el && el.value !== "" ? parseInt(el.value) : 0;
 
         let max = window.descontosMaxGlobais[c.id];
