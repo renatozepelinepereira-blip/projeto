@@ -110,7 +110,11 @@ async function iniciar() {
     prodSnap.forEach(d => {
         const item = d.data(); 
         let cat = (item.categoria || window.categoriasGlobais[0].id).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        if(htmlBuffers[cat] === undefined) return;
+        if(htmlBuffers[cat] === undefined) {
+            let existsGlobal = window.categoriasGlobais.find(x => x.id === cat);
+            if(!existsGlobal) cat = window.categoriasGlobais[0].id;
+            if(htmlBuffers[cat] === undefined) return;
+        }
 
         let precoCru = precosTF[item.codigo];
         let precoSeguro = parseFloat(precoCru) || 0;
@@ -143,6 +147,7 @@ window.calcularTudo = () => {
     produtosGlobais.forEach((p, i) => {
         let inputEng = document.getElementById(`eng_${i}`); let inputUni = document.getElementById(`uni_${i}`); 
         if(!inputEng || !inputUni) return;
+        
         let cxStr = inputEng.value; let cx = parseFloat(cxStr) || 0; let un = parseFloat(inputUni.value) || 0;
         if (cxStr !== "" && (cx * 10) % 5 !== 0) { alert(`Apenas múltiplos de 0.5 nas caixas.`); inputEng.value = ""; cx = 0; }
         if (inputUni.value !== "" && un % 1 !== 0) { alert(`Apenas unidades inteiras.`); inputUni.value = ""; un = 0; }
@@ -173,7 +178,10 @@ window.gerarExcelTransferencia = async () => {
 
     const btn = document.querySelector('.btn-primario'); btn.innerHTML = "⏳..."; btn.disabled = true;
     try { 
-        await processarExcelVenda({ userId, nomeLoja, razao, cnpj: document.getElementById('cliCnpj').value, formaPagamento: 'Transferência', prazo: '-', totalV: window.resumoGlobal.totalV, itens, isTransferencia: true, categorias: window.categoriasGlobais }); 
+        await processarExcelVenda({ 
+            userId, nomeLoja, razao, cnpj: document.getElementById('cliCnpj').value, formaPagamento: 'Transferência', prazo: '-', totalV: window.resumoGlobal.totalV, 
+            itens, isTransferencia: true, categorias: window.categoriasGlobais 
+        }); 
         alert("✅ Transferência gerada com sucesso!"); window.location.reload(); 
     } catch (e) { alert("Falha: " + e.message); } finally { btn.innerHTML = "<span style='font-size: 14px;'>⬇️</span> Transferir"; btn.disabled = false; }
 };
