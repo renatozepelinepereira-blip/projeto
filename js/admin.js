@@ -322,9 +322,6 @@ window.salvarProduto = async () => {
 
 window.excluirProduto = async (cod) => { if(confirm(`ATENÇÃO: Excluir permanentemente o produto ${cod}?`)) { try { await deleteDoc(doc(db, "produtos", cod)); window.carregarProdutos(); } catch(e) { alert("Erro ao excluir."); } } };
 
-// =======================================================
-// IMPORTAÇÃO DE PRODUTOS: PROTEGE O ENGRADADO SE FOR VAZIO
-// =======================================================
 window.importarTabelaPrecos = async () => { 
     const nome = document.getElementById('nomeTabelaPreco').value.trim().toLowerCase(); const file = document.getElementById('fileCsvPrecos').files[0]; 
     if(!nome || !file) return alert("Preencha o nome e selecione o arquivo!"); 
@@ -420,8 +417,14 @@ window.carregarLojas = async () => {
     document.getElementById('corpoTabelaLojas').innerHTML = html;
 };
 
+// ==========================================
+// RENAME LOGIN FUNCTIONALITY (O Truque da Troca de ID)
+// ==========================================
 window.abrirNovaLoja = () => { 
-    document.getElementById('lojaEditId').disabled = false; document.getElementById('lojaEditIsNew').value = 'sim'; document.querySelectorAll('#modalLoja input[type="text"], #modalLoja input[type="password"], #modalLoja input[type="number"]').forEach(i => i.value = ''); 
+    document.getElementById('lojaEditId').disabled = false; 
+    document.getElementById('lojaEditIsNew').value = 'sim'; 
+    document.getElementById('lojaEditOriginalId').value = ''; 
+    document.querySelectorAll('#modalLoja input[type="text"], #modalLoja input[type="password"], #modalLoja input[type="number"]').forEach(i => i.value = ''); 
     
     let descHtml = ''; let permHtml = '';
     window.categoriasGlobais.forEach(c => {
@@ -436,7 +439,13 @@ window.abrirNovaLoja = () => {
 
 window.abrirEdicaoLoja = (id) => { 
     const u = listaLojasAdmin.find(x => x.id === id); if(!u) return; 
-    document.getElementById('lojaEditId').value = u.id; document.getElementById('lojaEditId').disabled = true; document.getElementById('lojaEditIsNew').value = 'nao'; document.getElementById('lojaEditNome').value = u.nomeLoja || ''; document.getElementById('lojaEditCnpj').value = u.cnpj || ''; document.getElementById('lojaEditSenha').value = ''; 
+    document.getElementById('lojaEditId').value = u.id; 
+    document.getElementById('lojaEditId').disabled = false; // Agora permite editar o Login!
+    document.getElementById('lojaEditOriginalId').value = u.id; // Salva o ID original escondido
+    document.getElementById('lojaEditIsNew').value = 'nao'; 
+    document.getElementById('lojaEditNome').value = u.nomeLoja || ''; 
+    document.getElementById('lojaEditCnpj').value = u.cnpj || ''; 
+    document.getElementById('lojaEditSenha').value = ''; 
     
     const p = u.planilhas || {}; 
     const dmax = u.descontosMax || {}; 
@@ -457,7 +466,11 @@ window.abrirEdicaoLoja = (id) => {
 };
 
 window.salvarLoja = async () => { 
-    const id = document.getElementById('lojaEditId').value.trim(); if(!id) return alert("Preencha o Login!"); 
+    const novoId = document.getElementById('lojaEditId').value.trim().toLowerCase(); 
+    const idOriginal = document.getElementById('lojaEditOriginalId').value;
+    
+    if(!novoId) return alert("Preencha o Login!"); 
+    if(novoId === 'admin') return alert("Você não pode usar o login 'admin'.");
     
     let planilhas = {}; let descontosMax = {};
     window.categoriasGlobais.forEach(c => {
@@ -469,7 +482,8 @@ window.salvarLoja = async () => {
     });
 
     const d = { 
-        nomeLoja: document.getElementById('lojaEditNome').value, cnpj: document.getElementById('lojaEditCnpj').value, 
+        nomeLoja: document.getElementById('lojaEditNome').value, 
+        cnpj: document.getElementById('lojaEditCnpj').value, 
         planilhas: planilhas, 
         tabelasPreco: { venda: document.getElementById('lojaEditTabVenda').value, transferencia: document.getElementById('lojaEditTabTransf').value, promocao: document.getElementById('lojaEditTabPromo').value, balde: document.getElementById('lojaEditTabBalde').value },
         descontosMax: descontosMax
@@ -479,9 +493,43 @@ window.salvarLoja = async () => {
     if(s) { 
         d.senha = s; 
         if(s === '123456') d.precisaTrocarSenha = true; 
+    } else if (idOriginal && idOriginal !== novoId) {
+        // Se mudou o login mas não digitou senha, temos que puxar a senha antiga para o login novo não ficar sem senha!
+        const dadosAntigos = listaLojasAdmin.find(x => x.id === idOriginal);
+        if (dadosAntigos && dadosAntigos.senha) d.senha = dadosAntigos.senha;
+        if (dadosAntigos && dadosAntigos.precisaTrocarSenha !== undefined) d.precisaTrocarSenha = dadosAntigos.precisaTrocarSenha;
     }
     
-    await setDoc(doc(db, "usuarios", id), d, { merge: true }); alert("Loja Salva com Sucesso!"); window.fecharModal('modalLoja'); window.carregarLojas(); window.carregarTabelasPrecos(); 
+    const btn = document.getElementById('btnSalvarLoj');
+    btn.innerText = "⏳..."; btn.disabled = true;
+
+    try {
+        if (idOriginal && idOriginal !== novoId) {
+            // VERIFICA SE O NOVO NOME JÁ ESTÁ EM USO POR OUTRA LOJA
+            const check = await getDoc(doc(db, "usuarios", novoId));
+            if (check.exists()) {
+                alert("Este login já está sendo usado por outra loja!");
+                btn.innerText = "💾 Salvar Loja"; btn.disabled = false;
+                return;
+            }
+            
+            // O TRUQUE: Salva com o novo ID e deleta o antigo
+            await setDoc(doc(db, "usuarios", novoId), d, { merge: true }); 
+            await deleteDoc(doc(db, "usuarios", idOriginal));
+        } else {
+            // Apenas atualizando ou criando uma loja nova normalmente
+            await setDoc(doc(db, "usuarios", novoId), d, { merge: true }); 
+        }
+
+        alert("Loja Salva com Sucesso!"); 
+        window.fecharModal('modalLoja'); 
+        window.carregarLojas(); 
+        window.carregarTabelasPrecos(); 
+    } catch (e) {
+        alert("Erro ao salvar: " + e.message);
+    } finally {
+        btn.innerText = "💾 Salvar Loja"; btn.disabled = false;
+    }
 };
 
 window.resetarSenhaPadrao = () => { document.getElementById('lojaEditSenha').value = '123456'; alert("Senha definida para '123456'. Clique em 'Salvar Loja' para aplicar."); };
@@ -561,7 +609,7 @@ window.importarLojasMassa = async () => {
     reader.readAsArrayBuffer(file);
 };
 
-window.gerarBackupCompleto = async () => { const btn = document.getElementById('btnGerarBackup'); btn.innerText = "⏳ Compactando..."; try { const zip = new JSZip(); const cols = ["usuarios", "produtos", "precos", "clientes", "historico"]; for(let c of cols) { const s = await getDocs(collection(db, c)); let d = []; s.forEach(doc => d.push({id: doc.id, ...doc.data()})); zip.file(`${c}.json`, JSON.stringify(d)); } const blob = await zip.generateAsync({type:"blob"}); saveAs(blob, `BACKUP_ESKIMO_${new Date().toLocaleDateString().replace(/\//g, '-')}.zip`); } catch(e) { alert(e.message); } finally { btn.innerText = "⬇️ Baixar Backup (.zip)"; } };
+window.gerarBackupCompleto = async () => { const btn = document.getElementById('btnGerarBackup'); btn.innerText = "⏳ Compactando..."; try { const zip = new JSZip(); const cols = ["usuarios", "produtos", "precos", "clientes", "historico", "configuracoes"]; for(let c of cols) { const s = await getDocs(collection(db, c)); let d = []; s.forEach(doc => d.push({id: doc.id, ...doc.data()})); zip.file(`${c}.json`, JSON.stringify(d)); } const blob = await zip.generateAsync({type:"blob"}); saveAs(blob, `BACKUP_ESKIMO_${new Date().toLocaleDateString().replace(/\//g, '-')}.zip`); } catch(e) { alert(e.message); } finally { btn.innerText = "⬇️ Baixar Backup (.zip)"; } };
 window.restaurarBackupCompleto = async () => { const f = document.getElementById('fileRestoreZip').files[0]; if(!f || !confirm("Isso apagará/sobrescreverá os dados atuais. Continuar?")) return; const btn = document.getElementById('btnRestaurarBackup'); btn.innerText = "⏳ Restaurando..."; try { const zip = await JSZip.loadAsync(f); for(let n in zip.files) { const c = n.replace('.json', ''); const cont = await zip.files[n].async("string"); const l = JSON.parse(cont); for(let i of l) { const id = i.id; delete i.id; await setDoc(doc(db, c, id), i, {merge: true}); } } alert("Restaurado com sucesso!"); location.reload(); } catch(e) { alert(e.message); btn.innerText = "⚡ Restaurar Dados"; } };
 window.regerar = async (id) => { await regenerarPlanilhaExcel(historicoGlobal[id]); };
 
