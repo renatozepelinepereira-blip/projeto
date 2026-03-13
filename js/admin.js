@@ -50,10 +50,6 @@ window.mudarSecao = async (id) => {
 window.toggleTabelaHistorico = () => { const w = document.getElementById('wrapperHistorico'); const b = document.getElementById('btnToggleHist'); const isH = w.style.display === 'none'; w.style.display = isH ? 'block' : 'none'; b.innerText = isH ? '👁️ Esconder' : '👁️ Mostrar'; };
 window.filtrarLogDash = () => { const t = document.getElementById('pesquisaLogAdmin').value.toLowerCase(); document.querySelectorAll('.linha-hist-admin').forEach(i => { i.style.display = i.innerText.toLowerCase().includes(t) ? '' : 'none'; }); };
 
-// ==============================================================
-// GESTÃO DE CATEGORIAS DINÂMICAS (BURLANDO BLOQUEIO DE SEGURANÇA)
-// Salva no doc "admin" dentro da coleção "usuarios"
-// ==============================================================
 window.carregarCategoriasBase = async () => {
     try {
         const snap = await getDoc(doc(db, "usuarios", "admin"));
@@ -63,7 +59,6 @@ window.carregarCategoriasBase = async () => {
             window.categoriasGlobais = DEFAULT_CATS;
         }
     } catch(e) {
-        console.error("Aviso: Falha ao carregar categorias personalizadas, usando padrão.", e);
         window.categoriasGlobais = DEFAULT_CATS;
     }
     
@@ -461,12 +456,98 @@ window.salvarLoja = async () => {
         tabelasPreco: { venda: document.getElementById('lojaEditTabVenda').value, transferencia: document.getElementById('lojaEditTabTransf').value, promocao: document.getElementById('lojaEditTabPromo').value, balde: document.getElementById('lojaEditTabBalde').value },
         descontosMax: descontosMax
     }; 
-    const s = document.getElementById('lojaEditSenha').value.trim(); if(s) d.senha = s; await setDoc(doc(db, "usuarios", id), d, { merge: true }); alert("Loja Salva com Sucesso!"); window.fecharModal('modalLoja'); window.carregarLojas(); window.carregarTabelasPrecos(); 
+    
+    const s = document.getElementById('lojaEditSenha').value.trim(); 
+    if(s) { 
+        d.senha = s; 
+        if(s === '123456') d.precisaTrocarSenha = true; // Força a troca se for a senha padrão
+    }
+    
+    await setDoc(doc(db, "usuarios", id), d, { merge: true }); alert("Loja Salva com Sucesso!"); window.fecharModal('modalLoja'); window.carregarLojas(); window.carregarTabelasPrecos(); 
 };
 
 window.resetarSenhaPadrao = () => { document.getElementById('lojaEditSenha').value = '123456'; alert("Senha definida para '123456'. Clique em 'Salvar Loja' para aplicar."); };
 
-window.gerarBackupCompleto = async () => { const btn = document.getElementById('btnGerarBackup'); btn.innerText = "⏳ Compactando..."; try { const zip = new JSZip(); const cols = ["usuarios", "produtos", "precos", "clientes", "historico", "configuracoes"]; for(let c of cols) { const s = await getDocs(collection(db, c)); let d = []; s.forEach(doc => d.push({id: doc.id, ...doc.data()})); zip.file(`${c}.json`, JSON.stringify(d)); } const blob = await zip.generateAsync({type:"blob"}); saveAs(blob, `BACKUP_ESKIMO_${new Date().toLocaleDateString().replace(/\//g, '-')}.zip`); } catch(e) { alert(e.message); } finally { btn.innerText = "⬇️ Baixar Backup (.zip)"; } };
+// ===============================================
+// IMPORTAÇÃO INTELIGENTE DE LOJAS EM MASSA
+// ===============================================
+window.importarLojasMassa = async () => {
+    const file = document.getElementById('fileCsvLojas').files[0];
+    if(!file) return alert("Selecione um arquivo Excel ou CSV!");
+    const btn = document.getElementById('btnImportarLojas');
+    btn.innerText = "⏳ Importando...";
+    btn.disabled = true;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const wb = XLSX.read(data, {type: 'array'});
+            const sheet = wb.Sheets[wb.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(sheet, {header: 1});
+
+            let importados = 0;
+            const promessasLojas = [];
+
+            let defaultPerms = {};
+            let defaultDescontos = {};
+            window.categoriasGlobais.forEach(c => {
+                defaultPerms[c.id] = true;
+                defaultDescontos[c.id] = ""; 
+            });
+
+            for(let i = 1; i < json.length; i++) { 
+                if(!json[i] || json[i].length === 0) continue;
+                let rawNome = json[i][0];
+                let rawCnpj = json[i][1];
+
+                if(rawNome === undefined || String(rawNome).trim() === "") continue;
+
+                let nomeLoja = String(rawNome).trim();
+                
+                // GERA O LOGIN INTELIGENTE
+                let baseName = nomeLoja.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                baseName = baseName.replace(/\b(eskimo|atacado|sorvetes|sorvete|distribuidora|loja|de|do|da|e|-)\b/g, " ");
+                let id = baseName.replace(/[^a-z0-9]/g, ""); // Tira tudo que não for letra ou numero
+                if(!id) id = "loja" + Math.floor(Math.random() * 10000);
+
+                let cnpj = rawCnpj !== undefined ? String(rawCnpj).trim() : "";
+
+                let dadosLoja = {
+                    nomeLoja: nomeLoja,
+                    cnpj: cnpj,
+                    senha: "123456",
+                    precisaTrocarSenha: true, // Obriga a trocar a senha no 1º login
+                    planilhas: defaultPerms,
+                    tabelasPreco: { venda: "", transferencia: "", promocao: "", balde: "" },
+                    descontosMax: defaultDescontos
+                };
+
+                promessasLojas.push(setDoc(doc(db, "usuarios", id), dadosLoja, { merge: true }));
+                importados++;
+            }
+
+            if(importados === 0) {
+                alert("Nenhuma loja válida encontrada. Verifique se a Coluna A é o Nome e a B é o CNPJ.");
+                return;
+            }
+
+            await Promise.all(promessasLojas);
+            alert(`✅ Sucesso! ${importados} lojas criadas com senha 123456 e bloqueio de primeiro acesso ativado.`);
+            document.getElementById('fileCsvLojas').value = "";
+            window.carregarLojas();
+
+        } catch(err) {
+            alert("Erro ao ler o arquivo: " + err.message);
+        } finally {
+            btn.innerText = "📥 Enviar Lojas";
+            btn.disabled = false;
+        }
+    };
+    reader.readAsArrayBuffer(file);
+};
+
+window.gerarBackupCompleto = async () => { const btn = document.getElementById('btnGerarBackup'); btn.innerText = "⏳ Compactando..."; try { const zip = new JSZip(); const cols = ["usuarios", "produtos", "precos", "clientes", "historico"]; for(let c of cols) { const s = await getDocs(collection(db, c)); let d = []; s.forEach(doc => d.push({id: doc.id, ...doc.data()})); zip.file(`${c}.json`, JSON.stringify(d)); } const blob = await zip.generateAsync({type:"blob"}); saveAs(blob, `BACKUP_ESKIMO_${new Date().toLocaleDateString().replace(/\//g, '-')}.zip`); } catch(e) { alert(e.message); } finally { btn.innerText = "⬇️ Baixar Backup (.zip)"; } };
 window.restaurarBackupCompleto = async () => { const f = document.getElementById('fileRestoreZip').files[0]; if(!f || !confirm("Isso apagará/sobrescreverá os dados atuais. Continuar?")) return; const btn = document.getElementById('btnRestaurarBackup'); btn.innerText = "⏳ Restaurando..."; try { const zip = await JSZip.loadAsync(f); for(let n in zip.files) { const c = n.replace('.json', ''); const cont = await zip.files[n].async("string"); const l = JSON.parse(cont); for(let i of l) { const id = i.id; delete i.id; await setDoc(doc(db, c, id), i, {merge: true}); } } alert("Restaurado com sucesso!"); location.reload(); } catch(e) { alert(e.message); btn.innerText = "⚡ Restaurar Dados"; } };
 window.regerar = async (id) => { await regenerarPlanilhaExcel(historicoGlobal[id]); };
 
