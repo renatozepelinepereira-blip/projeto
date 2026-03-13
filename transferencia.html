@@ -41,23 +41,11 @@
             <div><label>CNPJ Destino</label><input type="text" id="cliCnpj" readonly style="background:#e2e8f0; cursor:not-allowed;"></div>
         </div>
 
-        <div class="tabs">
-            <button class="tab-btn active" id="btnTabSorvete" onclick="window.mudarAba('sorvete')">Sorvetes</button>
-            <button class="tab-btn" id="btnTabAcai" onclick="window.mudarAba('acai')">Açaí</button>
-            <button class="tab-btn" id="btnTabSeco" onclick="window.mudarAba('seco')">Secos</button>
-        </div>
+        <div class="tabs" id="containerTabsTransf">
+            </div>
 
-        <div class="table-container">
-            <div id="content_sorvete" class="tab-content active">
-                <table id="tbl_sorvete"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Caixas</th><th>Unid.</th></tr></thead><tbody></tbody></table>
+        <div class="table-container" id="containerTabelasTransf">
             </div>
-            <div id="content_acai" class="tab-content">
-                <table id="tbl_acai"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Caixas</th><th>Unid.</th></tr></thead><tbody></tbody></table>
-            </div>
-            <div id="content_seco" class="tab-content">
-                <table id="tbl_seco"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Caixas</th><th>Unid.</th></tr></thead><tbody></tbody></table>
-            </div>
-        </div>
 
         <div class="resumo-box" style="border-top-color: #3b82f6;">
             <div class="resumo-grid">
