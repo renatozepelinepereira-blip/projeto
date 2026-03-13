@@ -73,7 +73,7 @@ export async function processarExcelVenda(dados) {
                 sheet.getCell('E6').value = dados.razao;
                 sheet.getCell('I6').value = dados.cnpj || '';
                 sheet.getCell('F7').value = sheetQtdTotal;
-                sheet.getCell('K7').value = sheetValorTotal;
+                sheet.getCell('L7').value = sheetValorTotal;
                 sheet.getCell('F8').value = `${dados.formaPagamento} ${dados.prazo && dados.prazo !== '-' ? '- ' + dados.prazo : ''}`;
                 
                 // INJETA O DESCONTO DINÂMICO
