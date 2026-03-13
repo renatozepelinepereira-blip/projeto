@@ -19,7 +19,7 @@
         </div>
         <div class="nav-links">
             <button onclick="window.mudarSecao('dashboard')" class="active" id="nav-dashboard"><i>📊</i> <span>Dashboard</span></button>
-            <button onclick="window.mudarSecao('categorias')" id="nav-categorias"><i>🏷️</i> <span>Categorias (Novo)</span></button>
+            <button onclick="window.mudarSecao('categorias')" id="nav-categorias"><i>🏷️</i> <span>Categorias</span></button>
             <button onclick="window.mudarSecao('produtos')" id="nav-produtos"><i>📦</i> <span>Catálogo</span></button>
             <button onclick="window.mudarSecao('precos')" id="nav-precos"><i>💲</i> <span>Preços e Vínculos</span></button>
             <button onclick="window.mudarSecao('lojas')" id="nav-lojas"><i>🏪</i> <span>Gestão de Lojas</span></button>
@@ -239,8 +239,9 @@
         <div class="modal-content" onclick="event.stopPropagation()">
             <h2 style="margin-bottom: 20px;" id="titModalLoja">Loja / Usuário</h2>
             <input type="hidden" id="lojaEditIsNew">
-            <label>Login (Usuário)</label><input type="text" id="lojaEditId">
-            <div class="grid-2" style="gap: 15px;">
+            <input type="hidden" id="lojaEditOriginalId">
+            <label>Login (Usuário)</label><input type="text" id="lojaEditId" placeholder="O login pode ser editado!">
+            <div class="grid-2" style="gap: 15px; margin-top: 10px;">
                 <div><label>Nova Senha</label><input type="password" id="lojaEditSenha" placeholder="Deixe em branco para manter"></div>
                 <div style="display: flex; align-items: flex-end; padding-bottom: 16px;"><button type="button" onclick="window.resetarSenhaPadrao()" class="btn-secundario" style="width: 100%; font-size: 13px;">🔄 Senha Padrão</button></div>
             </div>
@@ -267,7 +268,7 @@
             
             <div class="grid-2" style="gap: 15px; margin-top: 25px;">
                 <button type="button" onclick="window.fecharModal('modalLoja')" class="btn-secundario" style="width:100%;">Cancelar</button>
-                <button type="button" onclick="window.salvarLoja()" class="btn-primario" style="width:100%;">💾 Salvar Loja</button>
+                <button type="button" id="btnSalvarLoj" onclick="window.salvarLoja()" class="btn-primario" style="width:100%;">💾 Salvar Loja</button>
             </div>
         </div>
     </div>
