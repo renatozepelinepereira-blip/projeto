@@ -193,7 +193,7 @@
                 <div><label>Nome Exato da Aba Venda (Excel)</label><input type="text" id="catEditVenda" placeholder="Ex: SORVETE"></div>
                 <div><label>Nome Exato da Aba Transf. (Excel)</label><input type="text" id="catEditTransf" placeholder="Ex: PROD"></div>
             </div>
-            <div class="grid-2" style="gap: 15px; margin-top: 25px;"><button onclick="window.fecharModal('modalCategoria')" class="btn-secundario" style="width:100%;">Cancelar</button><button onclick="window.salvarCategoria()" class="btn-primario" style="width:100%;">💾 Salvar Categoria</button></div>
+            <div class="grid-2" style="gap: 15px; margin-top: 25px;"><button onclick="window.fecharModal('modalCategoria')" class="btn-secundario" style="width:100%;">Cancelar</button><button id="btnSalvarCat" onclick="window.salvarCategoria()" class="btn-primario" style="width:100%;">💾 Salvar Categoria</button></div>
         </div>
     </div>
 
@@ -215,7 +215,7 @@
             <label style="margin-top: 15px; display: block;">Link da Foto (URL da internet)</label>
             <input type="text" id="prodEditImagemUrl" placeholder="Ex: https://i.imgur.com/foto.png" oninput="window.previewImagemURL()">
             <div style="text-align:center;"><img id="previewFoto" src="" style="width:140px; height:140px; object-fit:cover; display:none; border-radius:12px; margin:10px auto; border:1px solid var(--border);"></div>
-            <div class="grid-2" style="gap: 15px; margin-top: 20px;"><button onclick="window.fecharModal('modalProduto')" class="btn-secundario" style="width:100%;">Cancelar</button><button onclick="window.salvarProduto()" id="btnSalvarProd" class="btn-primario" style="width:100%;">Salvar Produto</button></div>
+            <div class="grid-2" style="gap: 15px; margin-top: 20px;"><button onclick="window.fecharModal('modalProduto')" class="btn-secundario" style="width:100%;">Cancelar</button><button id="btnSalvarProd" onclick="window.salvarProduto()" class="btn-primario" style="width:100%;">Salvar Produto</button></div>
         </div>
     </div>
 
