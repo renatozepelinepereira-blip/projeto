@@ -1,7 +1,7 @@
 import { db } from "./api/firebase.js";
 import { processarExcelVenda } from "./utils/excel.js";
 import { iniciarInterfaceGlobais } from "./utils/interface.js";
-import { doc, getDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import { doc, getDoc, getDocs, setDoc, collection } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
 const userId = localStorage.getItem('user'); 
 const nomeLoja = localStorage.getItem('nome') || userId;
@@ -57,12 +57,41 @@ document.getElementById('cliFormaPagamento').addEventListener('change', (e) => {
     else { prazo.disabled = false; prazo.style.background = '#f8fafc'; prazo.style.cursor = 'text'; }
 });
 
+// ==========================================
+// TRAVA DE SEGURANÇA OBRIGATÓRIA DA SENHA
+// ==========================================
+window.salvarNovaSenhaObrigatoria = async () => {
+    const senha = document.getElementById('novaSenhaForcada').value.trim();
+    if(senha.length < 4) return alert("A senha deve ter no mínimo 4 caracteres.");
+    
+    const btn = document.querySelector('#modalForcarSenha button');
+    btn.innerText = "⏳ Salvando..."; btn.disabled = true;
+    
+    try {
+        await setDoc(doc(db, "usuarios", userId), { senha: senha, precisaTrocarSenha: false }, { merge: true });
+        alert("✅ Senha atualizada com sucesso! Bem-vindo(a).");
+        document.getElementById('modalForcarSenha').style.display = 'none';
+    } catch(e) {
+        alert("Erro ao salvar: " + e.message);
+        btn.innerText = "💾 Salvar Senha e Acessar"; btn.disabled = false;
+    }
+};
+
 async function iniciar() {
     const isAdmin = userId === 'admin';
-    // Lê as categorias do mesmo lugar seguro
     const [userSnap, adminSnap] = await Promise.all([getDoc(doc(db, "usuarios", userId)), getDoc(doc(db, "usuarios", "admin"))]);
     
     const dadosUsuario = userSnap.data() || {};
+
+    // VERIFICA SE PRECISA TROCAR A SENHA
+    if(dadosUsuario.precisaTrocarSenha && !isAdmin) {
+        document.getElementById('modalForcarSenha').style.display = 'flex';
+    }
+    
+    if (dadosUsuario.planilhas?.venda === false && !isAdmin) { 
+        window.location.replace('transferencia.html'); return; 
+    }
+
     window.categoriasGlobais = adminSnap.exists() && adminSnap.data().categorias ? adminSnap.data().categorias : DEFAULT_CATS;
 
     window.categoriasPermitidas = window.categoriasGlobais.filter(c => {
@@ -202,7 +231,6 @@ window.calcularTudo = () => {
     let desc = {};
     window.categoriasPermitidas.forEach(c => {
         let el = document.getElementById(`desc_${c.id}`);
-        // Força a ser inteiro, ignorando qualquer trambique do usuário
         desc[c.id] = el && el.value !== "" ? parseInt(el.value) : 0;
 
         let max = window.descontosMaxGlobais[c.id];
