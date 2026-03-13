@@ -57,14 +57,14 @@ function extrairFilial(cnpj) {
 
 async function iniciar() {
     const isAdmin = userId === 'admin';
-    const [userSnap, configSnap] = await Promise.all([getDoc(doc(db, "usuarios", userId)), getDoc(doc(db, "configuracoes", "categorias"))]);
+    const [userSnap, adminSnap] = await Promise.all([getDoc(doc(db, "usuarios", userId)), getDoc(doc(db, "usuarios", "admin"))]);
     const dadosUsuario = userSnap.data() || {};
     
     if (dadosUsuario.planilhas?.venda === false && !isAdmin) {
         const btnVenda = document.getElementById('btnNavVenda'); if (btnVenda) btnVenda.style.display = 'none';
     }
 
-    window.categoriasGlobais = configSnap.exists() && configSnap.data().lista ? configSnap.data().lista : DEFAULT_CATS;
+    window.categoriasGlobais = adminSnap.exists() && adminSnap.data().categorias ? adminSnap.data().categorias : DEFAULT_CATS;
     window.categoriasPermitidas = window.categoriasGlobais.filter(c => {
         if(isAdmin) return true; return dadosUsuario.planilhas?.[c.id] !== false;
     });
