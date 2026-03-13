@@ -76,6 +76,15 @@
     </div>
 
     <datalist id="listaNomesClientes"></datalist>
+    <div class="modal-overlay" id="modalForcarSenha" style="display:none; background: rgba(15, 23, 42, 0.98); z-index: 99999999;">
+        <div class="modal-content" style="text-align: center; padding: 40px; max-width: 400px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
+            <div style="font-size: 50px; margin-bottom: 10px;">🔒</div>
+            <h2 style="color: var(--primary); margin-bottom: 10px;">Atualização de Segurança</h2>
+            <p style="color: #64748b; font-size: 14px; margin-bottom: 25px;">Por motivos de segurança, você precisa definir uma nova senha para sua loja antes de fazer qualquer pedido.</p>
+            <input type="password" id="novaSenhaForcada" placeholder="Digite sua nova senha secreta" style="width: 100%; text-align: center; font-size: 18px; margin-bottom: 20px; padding: 15px; border-radius: 8px;">
+            <button onclick="window.salvarNovaSenhaObrigatoria()" class="btn-primario" style="width: 100%; font-size: 16px; padding: 15px;">💾 Salvar Senha e Acessar</button>
+        </div>
+    </div>
     <script type="module" src="./js/loja.js"></script>
 </body>
 </html>
