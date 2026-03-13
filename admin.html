@@ -19,6 +19,7 @@
         </div>
         <div class="nav-links">
             <button onclick="window.mudarSecao('dashboard')" class="active" id="nav-dashboard"><i>📊</i> <span>Dashboard</span></button>
+            <button onclick="window.mudarSecao('categorias')" id="nav-categorias"><i>🏷️</i> <span>Categorias (Novo)</span></button>
             <button onclick="window.mudarSecao('produtos')" id="nav-produtos"><i>📦</i> <span>Catálogo</span></button>
             <button onclick="window.mudarSecao('precos')" id="nav-precos"><i>💲</i> <span>Preços e Vínculos</span></button>
             <button onclick="window.mudarSecao('lojas')" id="nav-lojas"><i>🏪</i> <span>Gestão de Lojas</span></button>
@@ -64,15 +65,28 @@
             </div>
         </div>
 
+        <div id="sec-categorias" class="secao">
+            <h2 class="section-title">Gerenciador de Categorias e Planilhas</h2>
+            <div class="card-panel">
+                <button onclick="window.abrirNovaCategoria()" class="btn-primario" style="margin-bottom: 20px;">+ Nova Categoria</button>
+                <div style="max-height: 500px; overflow-y: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;">
+                            <tr><th style="width: 60px; text-align: center;">Ícone</th><th>Nome da Categoria</th><th>Aba Venda (Excel)</th><th>Aba Transf. (Excel)</th><th style="text-align: center; width: 100px;">Ações</th></tr>
+                        </thead>
+                        <tbody id="corpoTabelaCategorias"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <div id="sec-produtos" class="secao">
             <h2 class="section-title">Catálogo e Preços</h2>
             <div class="card-panel">
                 
                 <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; align-items: center; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
                     <button onclick="window.abrirNovoProduto()" class="btn-primario" style="white-space: nowrap; margin: 0; flex-shrink: 0;">+ Novo Produto</button>
-                    
                     <input type="text" id="buscaCatalogoAdmin" placeholder="🔍 Buscar código ou descrição..." oninput="window.filtrarCatalogo()" style="margin: 0; flex-grow: 1; min-width: 200px;">
-                    
                     <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
                         <label style="margin: 0; font-size: 14px; font-weight: 700; white-space: nowrap;">✏️ Editar Preços:</label>
                         <select id="selectFiltroTabelaCat" onchange="window.carregarProdutos()" style="width: auto; min-width: 200px; margin: 0; padding: 10px; border-radius: 8px; border: 2px solid var(--primary); font-weight: bold; background: white; color: var(--primary);">
@@ -81,46 +95,11 @@
                     </div>
                 </div>
 
-                <div style="display: flex; gap: 8px; margin-bottom: 15px; background: #e2e8f0; padding: 6px; border-radius: 12px; display: inline-flex; overflow-x: auto;">
-                    <button class="admin-cat-tab active" id="btnAdminTabSorvete" onclick="window.mudarAbaAdminCat('sorvete')" style="padding: 10px 20px; border: none; background: white; border-radius: 8px; cursor: pointer; font-weight: bold; color: var(--primary); box-shadow: var(--shadow-sm);">Sorvetes</button>
-                    <button class="admin-cat-tab" id="btnAdminTabAcai" onclick="window.mudarAbaAdminCat('acai')" style="padding: 10px 20px; border: none; background: transparent; border-radius: 8px; cursor: pointer; font-weight: bold; color: #64748b;">Açaí</button>
-                    <button class="admin-cat-tab" id="btnAdminTabSeco" onclick="window.mudarAbaAdminCat('seco')" style="padding: 10px 20px; border: none; background: transparent; border-radius: 8px; cursor: pointer; font-weight: bold; color: #64748b;">Secos</button>
-                    <button class="admin-cat-tab" id="btnAdminTabBalde" onclick="window.mudarAbaAdminCat('balde')" style="padding: 10px 20px; border: none; background: transparent; border-radius: 8px; cursor: pointer; font-weight: bold; color: #64748b;">Baldes</button>
-                    <button class="admin-cat-tab" id="btnAdminTabPromo" onclick="window.mudarAbaAdminCat('promo')" style="padding: 10px 20px; border: none; background: transparent; border-radius: 8px; cursor: pointer; font-weight: bold; color: #64748b;">Promoções</button>
-                </div>
+                <div id="containerTabsAdmin" style="display: flex; gap: 8px; margin-bottom: 15px; background: #e2e8f0; padding: 6px; border-radius: 12px; display: inline-flex; overflow-x: auto;">
+                    </div>
 
-                <div style="max-height: 500px; overflow-y: auto;">
-                    <div id="content_admin_sorvete" class="admin-cat-content" style="display: block;">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th style="width: 60px; text-align: center;">Foto</th><th style="width: 100px; text-align: left;">Cód</th><th style="text-align: left;">Descrição</th><th style="width: 80px; text-align: center;">Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary); text-align: center; width: 120px;">Preço</th><th style="width: 100px; text-align: center;">Ações</th></tr></thead>
-                            <tbody id="corpoAdminSorvete"></tbody>
-                        </table>
+                <div id="containerTabelasAdmin" style="max-height: 500px; overflow-y: auto;">
                     </div>
-                    <div id="content_admin_acai" class="admin-cat-content" style="display: none;">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th style="width: 60px; text-align: center;">Foto</th><th style="width: 100px; text-align: left;">Cód</th><th style="text-align: left;">Descrição</th><th style="width: 80px; text-align: center;">Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary); text-align: center; width: 120px;">Preço</th><th style="width: 100px; text-align: center;">Ações</th></tr></thead>
-                            <tbody id="corpoAdminAcai"></tbody>
-                        </table>
-                    </div>
-                    <div id="content_admin_seco" class="admin-cat-content" style="display: none;">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th style="width: 60px; text-align: center;">Foto</th><th style="width: 100px; text-align: left;">Cód</th><th style="text-align: left;">Descrição</th><th style="width: 80px; text-align: center;">Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary); text-align: center; width: 120px;">Preço</th><th style="width: 100px; text-align: center;">Ações</th></tr></thead>
-                            <tbody id="corpoAdminSeco"></tbody>
-                        </table>
-                    </div>
-                    <div id="content_admin_balde" class="admin-cat-content" style="display: none;">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th style="width: 60px; text-align: center;">Foto</th><th style="width: 100px; text-align: left;">Cód</th><th style="text-align: left;">Descrição</th><th style="width: 80px; text-align: center;">Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary); text-align: center; width: 120px;">Preço</th><th style="width: 100px; text-align: center;">Ações</th></tr></thead>
-                            <tbody id="corpoAdminBalde"></tbody>
-                        </table>
-                    </div>
-                    <div id="content_admin_promo" class="admin-cat-content" style="display: none;">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th style="width: 60px; text-align: center;">Foto</th><th style="width: 100px; text-align: left;">Cód</th><th style="text-align: left;">Descrição</th><th style="width: 80px; text-align: center;">Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary); text-align: center; width: 120px;">Preço</th><th style="width: 100px; text-align: center;">Ações</th></tr></thead>
-                            <tbody id="corpoAdminPromo"></tbody>
-                        </table>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -149,7 +128,7 @@
                         <div>
                             <label>1. Finalidade (Módulo)</label>
                             <select id="tipoVinculoTabela" style="border: 2px solid var(--primary); width: 100%; margin-top: 6px;" onchange="window.aoSelecionarTabela()">
-                                <option value="venda">🛒 Venda (Sorvetes/Secos/Açaí)</option>
+                                <option value="venda">🛒 Venda (Todos os Módulos)</option>
                                 <option value="transferencia">🔄 Transferência</option>
                                 <option value="promocao">🌟 Promoções</option>
                                 <option value="balde">🪣 Baldes</option>
@@ -202,6 +181,22 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="modalCategoria">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 20px; color: var(--primary);" id="titModalCat">Categoria</h2>
+            <input type="hidden" id="catEditId">
+            <div class="grid-2" style="gap: 15px;">
+                <div><label>Nome da Categoria (Ex: Picolés)</label><input type="text" id="catEditNome"></div>
+                <div><label>Ícone (Copie e cole um Emoji)</label><input type="text" id="catEditIcone" placeholder="Ex: 🍦"></div>
+            </div>
+            <div class="grid-2" style="gap: 15px; margin-top: 15px;">
+                <div><label>Nome Exato da Aba Venda (Excel)</label><input type="text" id="catEditVenda" placeholder="Ex: SORVETE"></div>
+                <div><label>Nome Exato da Aba Transf. (Excel)</label><input type="text" id="catEditTransf" placeholder="Ex: PROD"></div>
+            </div>
+            <div class="grid-2" style="gap: 15px; margin-top: 25px;"><button onclick="window.fecharModal('modalCategoria')" class="btn-secundario" style="width:100%;">Cancelar</button><button onclick="window.salvarCategoria()" class="btn-primario" style="width:100%;">💾 Salvar Categoria</button></div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="modalProduto">
         <div class="modal-content">
             <h2 style="margin-bottom: 20px; color: var(--primary);" id="titModalProduto">Produto</h2>
@@ -211,7 +206,7 @@
             </div>
             <div class="grid-2" style="gap: 15px;">
                 <div><label>Descrição</label><input type="text" id="prodEditDescricao"></div>
-                <div><label>Categoria</label><input type="text" id="prodEditCategoria" placeholder="Ex: sorvete, acai, seco, balde, promo"></div>
+                <div><label>Categoria</label><select id="prodEditCategoria" style="width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 12px;"></select></div>
             </div>
             <div id="divPrecoEdit" style="display: none; margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
                 <label style="color: var(--text-main);">Preço na Tabela <span id="lblNomeTabelaEdit" style="color:var(--primary); font-weight:900; background: #fef2f2; padding: 4px 8px; border-radius: 4px;"></span> (R$)</label>
@@ -239,29 +234,21 @@
             </div>
 
             <label style="margin-top: 20px; display: block; border-bottom: 2px solid var(--border); padding-bottom: 8px; font-size: 14px; font-weight: bold;">Limites de Desconto Máximo (%)</label>
-            <div class="grid-2" style="gap: 10px; margin-top: 15px; background: #fef2f2; padding: 15px; border-radius: 12px; border: 1px solid #fca5a5;">
-                <div><label style="color:#b91c1c;">Sorvetes (%)</label><input type="number" id="descMaxSorvete" placeholder="Ex: 10" min="0" max="100"></div>
-                <div><label style="color:#b91c1c;">Açaí (%)</label><input type="number" id="descMaxAcai" placeholder="Ex: 5" min="0" max="100"></div>
-                <div><label style="color:#b91c1c;">Secos (%)</label><input type="number" id="descMaxSeco" placeholder="Ex: 0" min="0" max="100"></div>
-                <div><label style="color:#b91c1c;">Baldes (%)</label><input type="number" id="descMaxBalde" placeholder="Ex: 15" min="0" max="100"></div>
-                <div><label style="color:#b91c1c;">Promoções (%)</label><input type="number" id="descMaxPromo" placeholder="Ex: 0" min="0" max="100"></div>
-            </div>
+            <div class="grid-2" id="containerLojaDescontos" style="gap: 10px; margin-top: 15px; background: #fef2f2; padding: 15px; border-radius: 12px; border: 1px solid #fca5a5;">
+                </div>
 
             <label style="margin-top: 20px; display: block; border-bottom: 2px solid var(--border); padding-bottom: 8px; font-size: 14px;">Tabelas de Preço Vinculadas</label>
             <div class="grid-2" style="gap: 10px; margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
-                <div><label>Venda (Sorv/Açaí/Seco)</label><select id="lojaEditTabVenda" class="sel-tabelas-loja" style="margin-top:4px;"></select></div>
+                <div><label>Venda Base</label><select id="lojaEditTabVenda" class="sel-tabelas-loja" style="margin-top:4px;"></select></div>
                 <div><label>Transferência</label><select id="lojaEditTabTransf" class="sel-tabelas-loja" style="margin-top:4px;"></select></div>
                 <div><label>Promoções</label><select id="lojaEditTabPromo" class="sel-tabelas-loja" style="margin-top:4px;"></select></div>
                 <div><label>Baldes</label><select id="lojaEditTabBalde" class="sel-tabelas-loja" style="margin-top:4px;"></select></div>
             </div>
 
-            <label style="margin-top: 20px; display: block; border-bottom: 2px solid var(--border); padding-bottom: 8px; font-size: 14px;">Controle de Acessos</label>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
-                <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="permVenda" style="width:18px;height:18px;margin:0;"> Módulo Vendas</label>
-                <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="permTransf" style="width:18px;height:18px;margin:0;"> Transferência</label>
-                <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="permPromo" style="width:18px;height:18px;margin:0;"> Aba Promoções</label>
-                <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="permBalde" style="width:18px;height:18px;margin:0;"> Aba Baldes</label>
-            </div>
+            <label style="margin-top: 20px; display: block; border-bottom: 2px solid var(--border); padding-bottom: 8px; font-size: 14px;">Permissões de Abas do Prestador</label>
+            <div id="containerLojaPermissoes" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
+                </div>
+            
             <div class="grid-2" style="gap: 15px; margin-top: 25px;"><button onclick="window.fecharModal('modalLoja')" class="btn-secundario" style="width:100%;">Cancelar</button><button onclick="window.salvarLoja()" class="btn-primario" style="width:100%;">💾 Salvar Loja</button></div>
         </div>
     </div>
