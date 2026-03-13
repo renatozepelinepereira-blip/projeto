@@ -10,6 +10,15 @@ let historicoGlobal = {};
 window.listaProdutosAdmin = []; 
 let listaLojasAdmin = []; 
 let carregandoDash = false;
+window.categoriasGlobais = [];
+
+const DEFAULT_CATS = [
+    { id: 'sorvete', nome: 'Sorvetes', icone: '🍦', abaVenda: 'SORVETE', abaTransf: 'PROD' },
+    { id: 'acai', nome: 'Açaí', icone: '🍇', abaVenda: 'ACAI', abaTransf: 'ACAI' },
+    { id: 'seco', nome: 'Secos', icone: '📦', abaVenda: 'SECO', abaTransf: 'SECO' },
+    { id: 'balde', nome: 'Baldes', icone: '🪣', abaVenda: 'BALDE', abaTransf: 'PROD' },
+    { id: 'promo', nome: 'Promoções', icone: '🌟', abaVenda: 'SORVETE', abaTransf: 'PROD' }
+];
 
 // ==========================================
 // MOTOR DE ZOOM 100% CENTRO E À PROVA DE CORTE
@@ -23,7 +32,6 @@ if (!document.getElementById('zoomOverlay')) {
 }
 window.mostrarZoom = (imgSrc) => { if(!imgSrc) return; document.getElementById('zoomImg').src = imgSrc; document.getElementById('zoomOverlay').style.display = 'flex'; };
 window.esconderZoom = () => { document.getElementById('zoomOverlay').style.display = 'none'; };
-// ==========================================
 
 function extrairFilial(cnpj) {
     if (!cnpj) return "";
@@ -38,6 +46,7 @@ window.mudarSecao = async (id) => {
     document.getElementById('nav-' + id)?.classList.add('active');
     
     if(id === 'dashboard') window.carregarDashboard();
+    if(id === 'categorias') window.renderizarCategorias();
     if(id === 'produtos') { await window.carregarTabelasPrecos(); await window.carregarProdutos(); } 
     if(id === 'precos') window.carregarTabelasPrecos();
     if(id === 'lojas') window.carregarLojas();
@@ -45,6 +54,119 @@ window.mudarSecao = async (id) => {
 
 window.toggleTabelaHistorico = () => { const w = document.getElementById('wrapperHistorico'); const b = document.getElementById('btnToggleHist'); const isH = w.style.display === 'none'; w.style.display = isH ? 'block' : 'none'; b.innerText = isH ? '👁️ Esconder' : '👁️ Mostrar'; };
 window.filtrarLogDash = () => { const t = document.getElementById('pesquisaLogAdmin').value.toLowerCase(); document.querySelectorAll('.linha-hist-admin').forEach(i => { i.style.display = i.innerText.toLowerCase().includes(t) ? '' : 'none'; }); };
+
+// ==============================================================
+// GESTÃO DE CATEGORIAS DINÂMICAS
+// ==============================================================
+window.carregarCategoriasBase = async () => {
+    const snap = await getDoc(doc(db, "configuracoes", "categorias"));
+    window.categoriasGlobais = snap.exists() && snap.data().lista ? snap.data().lista : DEFAULT_CATS;
+    
+    let tabsHtml = ''; let tablesHtml = ''; let selectHtml = '<option value="">Selecione...</option>';
+    
+    window.categoriasGlobais.forEach((c, idx) => {
+        let act = idx === 0 ? 'active' : '';
+        let dis = idx === 0 ? 'block' : 'none';
+        
+        tabsHtml += `<button class="admin-cat-tab ${act}" id="btnAdminTab_${c.id}" onclick="window.mudarAbaAdminCat('${c.id}')" style="padding: 10px 20px; border: none; background: ${idx===0?'white':'transparent'}; border-radius: 8px; cursor: pointer; font-weight: bold; color: ${idx===0?'var(--primary)':'#64748b'}; box-shadow: ${idx===0?'var(--shadow-sm)':'none'};">${c.icone} ${c.nome}</button>`;
+        
+        tablesHtml += `
+        <div id="content_admin_${c.id}" class="admin-cat-content" style="display: ${dis};">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;"><tr><th style="width: 60px; text-align: center;">Foto</th><th style="width: 100px; text-align: left;">Cód</th><th style="text-align: left;">Descrição</th><th style="width: 80px; text-align: center;">Engr.</th><th class="thPrecoCat" style="display: none; color: var(--primary); text-align: center; width: 120px;">Preço</th><th style="width: 100px; text-align: center;">Ações</th></tr></thead>
+                <tbody id="corpoAdmin_${c.id}"></tbody>
+            </table>
+        </div>`;
+        
+        selectHtml += `<option value="${c.id}">${c.icone} ${c.nome}</option>`;
+    });
+    
+    if(document.getElementById('containerTabsAdmin')) document.getElementById('containerTabsAdmin').innerHTML = tabsHtml;
+    if(document.getElementById('containerTabelasAdmin')) document.getElementById('containerTabelasAdmin').innerHTML = tablesHtml;
+    if(document.getElementById('prodEditCategoria')) document.getElementById('prodEditCategoria').innerHTML = selectHtml;
+};
+
+window.renderizarCategorias = () => {
+    let html = "";
+    window.categoriasGlobais.forEach(c => {
+        html += `<tr>
+            <td style="text-align:center; font-size:20px;">${c.icone}</td>
+            <td><b>${c.nome}</b></td>
+            <td>${c.abaVenda}</td>
+            <td>${c.abaTransf}</td>
+            <td>
+                <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
+                    <button class="btn-small" style="background:#3b82f6; color:white; margin:0;" onclick="window.abrirEdicaoCategoria('${c.id}')">✏️</button>
+                    <button class="btn-small" style="background:#ef4444; color:white; margin:0;" onclick="window.excluirCategoria('${c.id}')">🗑️</button>
+                </div>
+            </td>
+        </tr>`;
+    });
+    document.getElementById('corpoTabelaCategorias').innerHTML = html;
+};
+
+window.abrirNovaCategoria = () => {
+    document.getElementById('catEditId').value = '';
+    document.getElementById('catEditNome').value = '';
+    document.getElementById('catEditIcone').value = '';
+    document.getElementById('catEditVenda').value = '';
+    document.getElementById('catEditTransf').value = '';
+    document.getElementById('modalCategoria').style.display = 'flex';
+};
+
+window.abrirEdicaoCategoria = (id) => {
+    const c = window.categoriasGlobais.find(x => x.id === id); if(!c) return;
+    document.getElementById('catEditId').value = c.id;
+    document.getElementById('catEditNome').value = c.nome;
+    document.getElementById('catEditIcone').value = c.icone;
+    document.getElementById('catEditVenda').value = c.abaVenda;
+    document.getElementById('catEditTransf').value = c.abaTransf;
+    document.getElementById('modalCategoria').style.display = 'flex';
+};
+
+window.salvarCategoria = async () => {
+    let id = document.getElementById('catEditId').value.trim();
+    let nome = document.getElementById('catEditNome').value.trim();
+    let icone = document.getElementById('catEditIcone').value.trim() || '📦';
+    let abaVenda = document.getElementById('catEditVenda').value.trim().toUpperCase();
+    let abaTransf = document.getElementById('catEditTransf').value.trim().toUpperCase();
+
+    if(!nome || !abaVenda) return alert("Nome e Aba Venda são obrigatórios.");
+    if(!id) id = nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+
+    let novaLista = [...window.categoriasGlobais];
+    let idx = novaLista.findIndex(c => c.id === id);
+    let obj = { id, nome, icone, abaVenda, abaTransf };
+    
+    if(idx >= 0) novaLista[idx] = obj; else novaLista.push(obj);
+
+    try {
+        document.getElementById('btnSalvarCat').innerText = "⏳...";
+        await setDoc(doc(db, "configuracoes", "categorias"), { lista: novaLista }, { merge: true });
+        alert("Categoria salva com sucesso!");
+        location.reload(); 
+    } catch(e) { alert("Erro: " + e.message); document.getElementById('btnSalvarCat').innerText = "💾 Salvar Categoria"; }
+};
+
+window.excluirCategoria = async (id) => {
+    if(confirm("🚨 ATENÇÃO: Excluir esta categoria fará com que os produtos vinculados a ela não apareçam nas telas de vendas até serem movidos. Confirmar?")) {
+        let novaLista = window.categoriasGlobais.filter(c => c.id !== id);
+        await setDoc(doc(db, "configuracoes", "categorias"), { lista: novaLista }, { merge: true });
+        location.reload();
+    }
+};
+
+window.mudarAbaAdminCat = (idCat) => {
+    document.querySelectorAll('.admin-cat-tab').forEach(b => { b.style.background = 'transparent'; b.style.color = '#64748b'; b.style.boxShadow = 'none'; b.classList.remove('active'); });
+    document.querySelectorAll('.admin-cat-content').forEach(c => c.style.display = 'none');
+    const btn = document.getElementById('btnAdminTab_' + idCat);
+    if(btn) { btn.style.background = 'white'; btn.style.color = 'var(--primary)'; btn.style.boxShadow = 'var(--shadow-sm)'; btn.classList.add('active');}
+    const content = document.getElementById('content_admin_' + idCat);
+    if(content) content.style.display = 'block';
+    
+    document.getElementById('buscaCatalogoAdmin').value = "";
+    window.filtrarCatalogo();
+};
 
 window.carregarDashboard = async () => {
     if(carregandoDash) return; carregandoDash = true;
@@ -76,12 +198,6 @@ window.carregarDashboard = async () => {
     } finally { carregandoDash = false; }
 };
 
-window.excluirHistorico = async (id) => {
-    if(confirm("🚨 ATENÇÃO: Tem certeza que deseja apagar este registro do histórico? Ele não poderá ser recuperado.")) {
-        try { await deleteDoc(doc(db, "historico", id)); window.carregarDashboard(); } catch (e) { alert("Erro ao excluir o histórico: " + e.message); }
-    }
-};
-
 window.visualizarLog = (id) => {
     const log = historicoGlobal[id]; if(!log) return;
     let html = `<div style="margin-bottom: 15px;"><b>Data:</b> ${log.dataHora?.toDate ? log.dataHora.toDate().toLocaleString('pt-BR') : 'N/A'}<br><b>Loja:</b> ${log.nomeLoja || log.lojaId}<br><b>Ação:</b> ${log.acao}<br><b>Destino:</b> ${log.destino || log.dadosPlanilha?.razao || '-'}</div>`;
@@ -92,18 +208,6 @@ window.visualizarLog = (id) => {
         if(log.dadosPlanilha.totalV) html += `<div style="text-align:right; margin-top:15px; font-size:18px;">Total Líquido: <b style="color:var(--primary);">R$ ${log.dadosPlanilha.totalV.toFixed(2)}</b></div>`;
     } else { html += `<div style="padding:15px; background:#f1f5f9; text-align:center;">Sem itens detalhados.</div>`; }
     document.getElementById('conteudoDetalhesLog').innerHTML = html; document.getElementById('btnRegerarPlanilhaModal').onclick = () => window.regerar(id); document.getElementById('modalDetalhesLog').style.display = 'flex';
-};
-
-window.mudarAbaAdminCat = (cat) => {
-    document.querySelectorAll('.admin-cat-tab').forEach(b => { b.style.background = 'transparent'; b.style.color = '#64748b'; b.style.boxShadow = 'none'; });
-    document.querySelectorAll('.admin-cat-content').forEach(c => c.style.display = 'none');
-    const btn = document.getElementById('btnAdminTab' + cat.charAt(0).toUpperCase() + cat.slice(1));
-    if(btn) { btn.style.background = 'white'; btn.style.color = 'var(--primary)'; btn.style.boxShadow = 'var(--shadow-sm)'; }
-    const content = document.getElementById('content_admin_' + cat);
-    if(content) content.style.display = 'block';
-    
-    document.getElementById('buscaCatalogoAdmin').value = "";
-    window.filtrarCatalogo();
 };
 
 window.previewImagemURL = () => {
@@ -133,7 +237,11 @@ window.carregarProdutos = async () => {
     ]);
 
     let precosTabela = snapPrecos.exists() ? snapPrecos.data() : {};
-    let htmlBuffers = { sorvete: "", acai: "", seco: "", balde: "", promo: "" };
+    
+    // Configura os buffers para as categorias dinâmicas
+    let htmlBuffers = {};
+    window.categoriasGlobais.forEach(c => htmlBuffers[c.id] = '');
+    
     window.listaProdutosAdmin = [];
     
     snapProd.forEach(d => {
@@ -141,13 +249,8 @@ window.carregarProdutos = async () => {
         if (tabelaSelecionada) p.precoAtual = precosTabela[p.codigo] !== undefined ? precosTabela[p.codigo] : null;
         window.listaProdutosAdmin.push(p);
         
-        let rawCat = (p.categoria || 'sorvete').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        
-        let cat = 'sorvete'; 
-        if (rawCat.includes('acai') || rawCat.includes('açaí')) cat = 'acai';
-        else if (rawCat.includes('seco')) cat = 'seco'; 
-        else if (rawCat.includes('balde')) cat = 'balde'; 
-        else if (rawCat.includes('promo')) cat = 'promo';
+        let cat = p.categoria || window.categoriasGlobais[0].id;
+        if(htmlBuffers[cat] === undefined) cat = window.categoriasGlobais[0].id; // Fallback se apagaram a categoria
 
         let htmlPreco = '';
         if (tabelaSelecionada) {
@@ -155,7 +258,6 @@ window.carregarProdutos = async () => {
             htmlPreco = `<td style="font-weight:900; color:var(--primary); font-size:15px; text-align: center;">${val}</td>`;
         }
         
-        // CONSTRUÇÃO BLINDADA CONTRA O CSS ANTIGO
         let hasImg = (p.imagem && p.imagem.trim() !== "");
         let imgHtml = hasImg 
             ? `<img src="${p.imagem}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; cursor: zoom-in;" loading="lazy" onmouseenter="window.mostrarZoom('${p.imagem}')" onmouseleave="window.esconderZoom()">`
@@ -176,18 +278,17 @@ window.carregarProdutos = async () => {
         </tr>`;
     });
 
-    if (document.getElementById('corpoAdminSorvete')) document.getElementById('corpoAdminSorvete').innerHTML = htmlBuffers.sorvete || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
-    if (document.getElementById('corpoAdminAcai')) document.getElementById('corpoAdminAcai').innerHTML = htmlBuffers.acai || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
-    if (document.getElementById('corpoAdminSeco')) document.getElementById('corpoAdminSeco').innerHTML = htmlBuffers.seco || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
-    if (document.getElementById('corpoAdminBalde')) document.getElementById('corpoAdminBalde').innerHTML = htmlBuffers.balde || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
-    if (document.getElementById('corpoAdminPromo')) document.getElementById('corpoAdminPromo').innerHTML = htmlBuffers.promo || '<tr><td colspan="6" style="text-align:center;">Nenhum produto.</td></tr>';
+    window.categoriasGlobais.forEach(c => {
+        let el = document.getElementById('corpoAdmin_' + c.id);
+        if(el) el.innerHTML = htmlBuffers[c.id] || '<tr><td colspan="6" style="text-align:center;">Nenhum produto nesta categoria.</td></tr>';
+    });
     
     window.filtrarCatalogo();
 };
 
 window.abrirEdicaoProduto = (cod) => { 
     const p = window.listaProdutosAdmin.find(x => x.codigo === cod); if(!p) return; 
-    document.getElementById('prodEditCodigo').value = p.codigo; document.getElementById('prodEditCodigo').disabled = true; document.getElementById('prodEditDescricao').value = p.descricao || ''; document.getElementById('prodEditCategoria').value = p.categoria || ''; document.getElementById('prodEditEngradado').value = p.engradado || ''; document.getElementById('prodEditImagemUrl').value = p.imagem || ''; 
+    document.getElementById('prodEditCodigo').value = p.codigo; document.getElementById('prodEditCodigo').disabled = true; document.getElementById('prodEditDescricao').value = p.descricao || ''; document.getElementById('prodEditCategoria').value = p.categoria || window.categoriasGlobais[0].id; document.getElementById('prodEditEngradado').value = p.engradado || ''; document.getElementById('prodEditImagemUrl').value = p.imagem || ''; 
     const tabelaSelecionada = document.getElementById('selectFiltroTabelaCat').value;
     const divPreco = document.getElementById('divPrecoEdit');
     if (tabelaSelecionada) { document.getElementById('lblNomeTabelaEdit').innerText = tabelaSelecionada.toUpperCase(); document.getElementById('prodEditPreco').value = p.precoAtual !== null ? p.precoAtual : ''; divPreco.style.display = 'block'; } else { divPreco.style.display = 'none'; document.getElementById('prodEditPreco').value = ''; }
@@ -297,40 +398,69 @@ window.carregarLojas = async () => {
     document.getElementById('corpoTabelaLojas').innerHTML = html;
 };
 
+// ==========================================
+// MODAL DE LOJA DINÂMICO PARA CATEGORIAS
+// ==========================================
 window.abrirNovaLoja = () => { 
     document.getElementById('lojaEditId').disabled = false; document.getElementById('lojaEditIsNew').value = 'sim'; document.querySelectorAll('#modalLoja input[type="text"], #modalLoja input[type="password"], #modalLoja input[type="number"]').forEach(i => i.value = ''); 
-    document.getElementById('permVenda').checked = true; document.getElementById('permTransf').checked = true; document.getElementById('permPromo').checked = true; document.getElementById('permBalde').checked = true; document.querySelectorAll('.sel-tabelas-loja').forEach(sel => sel.value = ''); document.getElementById('modalLoja').style.display = 'flex'; 
+    
+    let descHtml = ''; let permHtml = '';
+    window.categoriasGlobais.forEach(c => {
+        descHtml += `<div><label style="color:#b91c1c;">${c.nome} (%)</label><input type="number" id="descMax_${c.id}" placeholder="Livre"></div>`;
+        permHtml += `<label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="perm_${c.id}" style="width:18px;height:18px;margin:0;" checked> ${c.nome}</label>`;
+    });
+    document.getElementById('containerLojaDescontos').innerHTML = descHtml;
+    document.getElementById('containerLojaPermissoes').innerHTML = permHtml;
+    document.querySelectorAll('.sel-tabelas-loja').forEach(sel => sel.value = ''); 
+    document.getElementById('modalLoja').style.display = 'flex'; 
 };
+
 window.abrirEdicaoLoja = (id) => { 
     const u = listaLojasAdmin.find(x => x.id === id); if(!u) return; 
     document.getElementById('lojaEditId').value = u.id; document.getElementById('lojaEditId').disabled = true; document.getElementById('lojaEditIsNew').value = 'nao'; document.getElementById('lojaEditNome').value = u.nomeLoja || ''; document.getElementById('lojaEditCnpj').value = u.cnpj || ''; document.getElementById('lojaEditSenha').value = ''; 
-    const p = u.planilhas || {}; document.getElementById('permVenda').checked = p.venda !== false; document.getElementById('permTransf').checked = p.transferencia !== false; document.getElementById('permPromo').checked = p.promocao !== false; document.getElementById('permBalde').checked = p.balde !== false; 
-    const tp = u.tabelasPreco || {}; document.getElementById('lojaEditTabVenda').value = tp.venda || u.tabelaPreco || ''; document.getElementById('lojaEditTabTransf').value = tp.transferencia || ''; document.getElementById('lojaEditTabPromo').value = tp.promocao || ''; document.getElementById('lojaEditTabBalde').value = tp.balde || ''; 
+    
+    const p = u.planilhas || {}; 
     const dmax = u.descontosMax || {}; 
-    document.getElementById('descMaxSorvete').value = dmax.sorvete !== undefined ? dmax.sorvete : ''; 
-    document.getElementById('descMaxAcai').value = dmax.acai !== undefined ? dmax.acai : ''; 
-    document.getElementById('descMaxSeco').value = dmax.seco !== undefined ? dmax.seco : ''; 
-    document.getElementById('descMaxBalde').value = dmax.balde !== undefined ? dmax.balde : ''; 
-    document.getElementById('descMaxPromo').value = dmax.promo !== undefined ? dmax.promo : '';
+    
+    let descHtml = ''; let permHtml = '';
+    window.categoriasGlobais.forEach(c => {
+        let vDesc = dmax[c.id] !== undefined ? dmax[c.id] : '';
+        descHtml += `<div><label style="color:#b91c1c;">${c.nome} (%)</label><input type="number" id="descMax_${c.id}" placeholder="Livre" value="${vDesc}"></div>`;
+        let isChecked = p[c.id] !== false ? 'checked' : '';
+        permHtml += `<label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="perm_${c.id}" style="width:18px;height:18px;margin:0;" ${isChecked}> ${c.nome}</label>`;
+    });
+    document.getElementById('containerLojaDescontos').innerHTML = descHtml;
+    document.getElementById('containerLojaPermissoes').innerHTML = permHtml;
+
+    const tp = u.tabelasPreco || {}; document.getElementById('lojaEditTabVenda').value = tp.venda || u.tabelaPreco || ''; document.getElementById('lojaEditTabTransf').value = tp.transferencia || ''; document.getElementById('lojaEditTabPromo').value = tp.promocao || ''; document.getElementById('lojaEditTabBalde').value = tp.balde || ''; 
+    
     document.getElementById('modalLoja').style.display = 'flex'; 
 };
 
 window.salvarLoja = async () => { 
     const id = document.getElementById('lojaEditId').value.trim(); if(!id) return alert("Preencha o Login!"); 
-    const getDesc = (idField) => { const val = document.getElementById(idField).value; return val === "" ? "" : parseFloat(val); };
     
+    let planilhas = {}; let descontosMax = {};
+    window.categoriasGlobais.forEach(c => {
+        let permCheck = document.getElementById('perm_' + c.id);
+        if(permCheck) planilhas[c.id] = permCheck.checked;
+        
+        let descVal = document.getElementById('descMax_' + c.id).value;
+        descontosMax[c.id] = descVal === "" ? "" : parseFloat(descVal);
+    });
+
     const d = { 
         nomeLoja: document.getElementById('lojaEditNome').value, cnpj: document.getElementById('lojaEditCnpj').value, 
-        planilhas: { venda: document.getElementById('permVenda').checked, transferencia: document.getElementById('permTransf').checked, promocao: document.getElementById('permPromo').checked, balde: document.getElementById('permBalde').checked }, 
+        planilhas: planilhas, 
         tabelasPreco: { venda: document.getElementById('lojaEditTabVenda').value, transferencia: document.getElementById('lojaEditTabTransf').value, promocao: document.getElementById('lojaEditTabPromo').value, balde: document.getElementById('lojaEditTabBalde').value },
-        descontosMax: { sorvete: getDesc('descMaxSorvete'), acai: getDesc('descMaxAcai'), seco: getDesc('descMaxSeco'), balde: getDesc('descMaxBalde'), promo: getDesc('descMaxPromo') }
+        descontosMax: descontosMax
     }; 
     const s = document.getElementById('lojaEditSenha').value.trim(); if(s) d.senha = s; await setDoc(doc(db, "usuarios", id), d, { merge: true }); alert("Loja Salva com Sucesso!"); window.fecharModal('modalLoja'); window.carregarLojas(); window.carregarTabelasPrecos(); 
 };
 
 window.resetarSenhaPadrao = () => { document.getElementById('lojaEditSenha').value = '123456'; alert("Senha definida para '123456'. Clique em 'Salvar Loja' para aplicar."); };
 
-window.gerarBackupCompleto = async () => { const btn = document.getElementById('btnGerarBackup'); btn.innerText = "⏳ Compactando..."; try { const zip = new JSZip(); const cols = ["usuarios", "produtos", "precos", "clientes", "historico"]; for(let c of cols) { const s = await getDocs(collection(db, c)); let d = []; s.forEach(doc => d.push({id: doc.id, ...doc.data()})); zip.file(`${c}.json`, JSON.stringify(d)); } const blob = await zip.generateAsync({type:"blob"}); saveAs(blob, `BACKUP_ESKIMO_${new Date().toLocaleDateString().replace(/\//g, '-')}.zip`); } catch(e) { alert(e.message); } finally { btn.innerText = "⬇️ Baixar Backup (.zip)"; } };
+window.gerarBackupCompleto = async () => { const btn = document.getElementById('btnGerarBackup'); btn.innerText = "⏳ Compactando..."; try { const zip = new JSZip(); const cols = ["usuarios", "produtos", "precos", "clientes", "historico", "configuracoes"]; for(let c of cols) { const s = await getDocs(collection(db, c)); let d = []; s.forEach(doc => d.push({id: doc.id, ...doc.data()})); zip.file(`${c}.json`, JSON.stringify(d)); } const blob = await zip.generateAsync({type:"blob"}); saveAs(blob, `BACKUP_ESKIMO_${new Date().toLocaleDateString().replace(/\//g, '-')}.zip`); } catch(e) { alert(e.message); } finally { btn.innerText = "⬇️ Baixar Backup (.zip)"; } };
 window.restaurarBackupCompleto = async () => { const f = document.getElementById('fileRestoreZip').files[0]; if(!f || !confirm("Isso apagará/sobrescreverá os dados atuais. Continuar?")) return; const btn = document.getElementById('btnRestaurarBackup'); btn.innerText = "⏳ Restaurando..."; try { const zip = await JSZip.loadAsync(f); for(let n in zip.files) { const c = n.replace('.json', ''); const cont = await zip.files[n].async("string"); const l = JSON.parse(cont); for(let i of l) { const id = i.id; delete i.id; await setDoc(doc(db, c, id), i, {merge: true}); } } alert("Restaurado com sucesso!"); location.reload(); } catch(e) { alert(e.message); btn.innerText = "⚡ Restaurar Dados"; } };
 window.regerar = async (id) => { await regenerarPlanilhaExcel(historicoGlobal[id]); };
-document.addEventListener('DOMContentLoaded', () => window.carregarDashboard());
+document.addEventListener('DOMContentLoaded', () => window.carregarConfiguracoesIniciais());
