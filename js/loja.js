@@ -62,17 +62,14 @@ document.getElementById('cliFormaPagamento').addEventListener('change', (e) => {
 
 async function iniciar() {
     const isAdmin = userId === 'admin';
-    const [userSnap, configSnap] = await Promise.all([
-        getDoc(doc(db, "usuarios", userId)),
-        getDoc(doc(db, "configuracoes", "categorias"))
-    ]);
+    const [userSnap, configSnap] = await Promise.all([getDoc(doc(db, "usuarios", userId)), getDoc(doc(db, "configuracoes", "categorias"))]);
     
     const dadosUsuario = userSnap.data() || {};
     window.categoriasGlobais = configSnap.exists() && configSnap.data().lista ? configSnap.data().lista : DEFAULT_CATS;
 
     window.categoriasPermitidas = window.categoriasGlobais.filter(c => {
         if(isAdmin) return true;
-        return dadosUsuario.planilhas?.[c.id] !== false; // Só bloqueia se for explicitamente falso
+        return dadosUsuario.planilhas?.[c.id] !== false; 
     });
 
     if (window.categoriasPermitidas.length === 0) { 
@@ -87,17 +84,19 @@ async function iniciar() {
         window.descontosMaxGlobais[c.id] = isAdmin ? 100 : getLimit(dmax[c.id]);
     });
 
-    // GERADOR DE HTML DINÂMICO
     let tabsHtml = ''; let tablesHtml = '';
     window.categoriasPermitidas.forEach((c, idx) => {
         let isAct = idx === 0 ? 'active' : '';
         tabsHtml += `<button class="tab-btn ${isAct}" id="btnTab_${c.id}" onclick="window.mudarAba('${c.id}')">${c.icone} ${c.nome}</button>`;
         
-        let labelDesconto = "";
+        let tagMax = "";
+        let displayMax = "none";
         let maxVal = window.descontosMaxGlobais[c.id];
-        // ESCONDE O "LIVRE" DEFINITIVAMENTE! SÓ MOSTRA SE TIVER LIMITE REAL
+        
+        // SE FOR 100 (LIVRE), FICA INVISÍVEL. SE TIVER LIMITE, APARECE A ETIQUETA
         if(maxVal < 100) {
-            labelDesconto = `<span id="max_desc_${c.id}" style="margin-left: 10px; font-size: 12px; font-weight: bold; background: #fee2e2; color: #ef4444; padding: 4px 8px; border-radius: 6px;">Máx: ${maxVal}%</span>`;
+            displayMax = "inline-block";
+            tagMax = `Máx: ${maxVal}%`;
         }
 
         tablesHtml += `
@@ -107,7 +106,7 @@ async function iniciar() {
                 <div style="display: flex; align-items: center;">
                     <label style="margin: 0; font-weight: 900; color: var(--text-main); margin-right: 10px; font-size: 14px;">🎯 Desconto (%):</label>
                     <input type="number" id="desc_${c.id}" value="0" min="0" step="1" style="width: 80px; margin: 0; font-size: 16px; font-weight: bold; color: var(--primary); border: 2px solid var(--primary); border-radius: 6px; text-align: center;" onkeydown="if(['.', ',', '-', '+'].includes(event.key)) event.preventDefault();" oninput="this.value=this.value.replace(/[^0-9]/g,''); window.calcularTudo();">
-                    ${labelDesconto}
+                    <span id="max_desc_${c.id}" style="margin-left: 10px; font-size: 12px; font-weight: bold; background: #fee2e2; color: #ef4444; padding: 4px 8px; border-radius: 6px; display: ${displayMax};">${tagMax}</span>
                 </div>
             </div>
             <table id="tbl_${c.id}"><thead style="position: sticky; top: 0; z-index: 1;"><tr><th style="width:60px;">Foto</th><th>Cód</th><th>Descrição</th><th>Engr.</th><th>Preço un.</th><th>Caixas</th><th>Unid.</th><th>Subtotal</th></tr></thead><tbody id="tbody_${c.id}"></tbody></table>
@@ -120,7 +119,6 @@ async function iniciar() {
     const tabelas = dadosUsuario.tabelasPreco || {};
     let tabVenda = (tabelas.venda || dadosUsuario.tabelaPreco || 'padrao').toLowerCase();
     
-    // Antigamente liam tabelas fixas, agora todas leem da base de Vendas para simplificar ou do específico (se vc quiser separar). Para não quebrar sua estrutura, usaremos a tabela de venda principal para todas
     const cliSnap = await getDocs(collection(db, "clientes"));
     const listaNomes = document.getElementById('listaNomesClientes');
     cliSnap.forEach(c => { clientesSalvos.push(c.data()); listaNomes.innerHTML += `<option value="${c.data().razao}">`; });
@@ -130,7 +128,6 @@ async function iniciar() {
         if(cliente) document.getElementById('cliCnpj').value = cliente.cnpj || '';
     });
 
-    // Pega preços
     const [snapVenda, prodSnap] = await Promise.all([ getDoc(doc(db, "precos", tabVenda)), getDocs(collection(db, "produtos")) ]);
     const precosVenda = snapVenda.exists() ? snapVenda.data() : {};
 
@@ -139,11 +136,14 @@ async function iniciar() {
 
     prodSnap.forEach(d => {
         const item = d.data(); 
-        let rawCat = (item.categoria || window.categoriasGlobais[0].id).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        let cat = rawCat;
-
-        // Se a categoria deste produto não for permitida para o lojista, ignora e não carrega na tela
-        if(htmlBuffers[cat] === undefined) return; 
+        let cat = (item.categoria || window.categoriasGlobais[0].id).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        
+        // Se não tiver essa categoria ou ela não for permitida, tenta o fallback
+        if(htmlBuffers[cat] === undefined) {
+            let existsGlobal = window.categoriasGlobais.find(x => x.id === cat);
+            if(!existsGlobal) cat = window.categoriasGlobais[0].id;
+            if(htmlBuffers[cat] === undefined) return; // Se ainda não tem, pula o produto.
+        }
 
         let precoCru = precosVenda[item.codigo]; 
         let precoSeguro = parseFloat(precoCru);
