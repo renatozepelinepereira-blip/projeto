@@ -57,9 +57,6 @@ document.getElementById('cliFormaPagamento').addEventListener('change', (e) => {
     else { prazo.disabled = false; prazo.style.background = '#f8fafc'; prazo.style.cursor = 'text'; }
 });
 
-// ==========================================
-// TRAVA DE SEGURANÇA OBRIGATÓRIA DA SENHA
-// ==========================================
 window.salvarNovaSenhaObrigatoria = async () => {
     const senha = document.getElementById('novaSenhaForcada').value.trim();
     if(senha.length < 4) return alert("A senha deve ter no mínimo 4 caracteres.");
@@ -83,7 +80,6 @@ async function iniciar() {
     
     const dadosUsuario = userSnap.data() || {};
 
-    // VERIFICA SE PRECISA TROCAR A SENHA
     if(dadosUsuario.precisaTrocarSenha && !isAdmin) {
         document.getElementById('modalForcarSenha').style.display = 'flex';
     }
@@ -142,8 +138,11 @@ async function iniciar() {
     document.getElementById('containerTabsLoja').innerHTML = tabsHtml;
     document.getElementById('containerTabelasLoja').innerHTML = tablesHtml;
 
+    // DEFINIÇÃO DAS TABELAS VINCULADAS
     const tabelas = dadosUsuario.tabelasPreco || {};
     let tabVenda = (tabelas.venda || dadosUsuario.tabelaPreco || 'padrao').toLowerCase();
+    let tabPromo = (tabelas.promocao || tabVenda).toLowerCase(); 
+    let tabBalde = (tabelas.balde || tabVenda).toLowerCase(); 
     
     const cliSnap = await getDocs(collection(db, "clientes"));
     const listaNomes = document.getElementById('listaNomesClientes');
@@ -154,8 +153,17 @@ async function iniciar() {
         if(cliente) document.getElementById('cliCnpj').value = cliente.cnpj || '';
     });
 
-    const [snapVenda, prodSnap] = await Promise.all([ getDoc(doc(db, "precos", tabVenda)), getDocs(collection(db, "produtos")) ]);
+    // CARREGA AS TRÊS TABELAS ESPECÍFICAS
+    const [snapVenda, snapPromo, snapBalde, prodSnap] = await Promise.all([ 
+        getDoc(doc(db, "precos", tabVenda)), 
+        getDoc(doc(db, "precos", tabPromo)), 
+        getDoc(doc(db, "precos", tabBalde)), 
+        getDocs(collection(db, "produtos")) 
+    ]);
+    
     const precosVenda = snapVenda.exists() ? snapVenda.data() : {};
+    const precosPromo = snapPromo.exists() ? snapPromo.data() : {};
+    const precosBalde = snapBalde.exists() ? snapBalde.data() : {};
 
     let htmlBuffers = {};
     window.categoriasPermitidas.forEach(c => htmlBuffers[c.id] = '');
@@ -170,7 +178,16 @@ async function iniciar() {
             if(htmlBuffers[cat] === undefined) return; 
         }
 
-        let precoCru = precosVenda[item.codigo]; 
+        // ESCOLHE A TABELA CORRETA BASEADO NO ID DA CATEGORIA
+        let precoCru;
+        if (cat === 'promo' || cat.includes('promo')) {
+            precoCru = precosPromo[item.codigo];
+        } else if (cat === 'balde' || cat.includes('balde')) {
+            precoCru = precosBalde[item.codigo];
+        } else {
+            precoCru = precosVenda[item.codigo]; 
+        }
+        
         let precoSeguro = parseFloat(precoCru);
         if (isNaN(precoSeguro)) precoSeguro = 0;
         
