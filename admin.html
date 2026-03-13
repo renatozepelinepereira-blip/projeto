@@ -156,9 +156,19 @@
 
         <div id="sec-lojas" class="secao">
             <h2 class="section-title">Gestão de Lojas</h2>
+            
+            <div class="card-panel" style="margin-bottom: 20px; background: #f0fdfa; border: 1px solid #5eead4;">
+                <h3 style="margin-bottom: 10px; color: #115e59; display: flex; align-items: center; gap: 8px;"><span>⚡</span> Importar Lojas Simplificado</h3>
+                <p style="font-size: 13px; color: #0f766e; margin-bottom: 15px;">Crie um arquivo Excel com 2 colunas: <b>A = Nome da Loja</b>, <b>B = CNPJ</b>. O sistema vai criar um Login curto automaticamente, definir a senha como <b>123456</b> e obrigar a loja a trocar a senha no primeiro acesso!</p>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <input type="file" id="fileCsvLojas" accept=".xlsx, .csv" style="margin: 0; flex-grow: 1; border-color: #5eead4;">
+                    <button onclick="window.importarLojasMassa()" class="btn-sucesso" id="btnImportarLojas" style="white-space: nowrap;">📥 Enviar Lojas</button>
+                </div>
+            </div>
+
             <div class="card-panel">
                 <div style="display: flex; justify-content: space-between; gap: 15px; align-items: center; margin-bottom: 20px;">
-                    <button onclick="window.abrirNovaLoja()" class="btn-primario">+ Nova Loja</button>
+                    <button onclick="window.abrirNovaLoja()" class="btn-primario">+ Nova Loja Manual</button>
                     <input type="text" id="buscaGestaoLojas" placeholder="🔍 Buscar por Nº Filial, Nome ou CNPJ..." oninput="window.filtrarGestaoLojas()" style="width: 100%; max-width: 400px; margin: 0;">
                 </div>
                 <div style="max-height: 600px; overflow-y: auto;">
