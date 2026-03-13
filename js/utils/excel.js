@@ -33,34 +33,21 @@ export async function processarExcelVenda(dados) {
             linhaAtual++;
         });
     } else {
-        let hasAcaiSheet = false;
-        workbook.worksheets.forEach(s => { if (s.name.toUpperCase().includes('ACAI') || s.name.toUpperCase().includes('AÇAI')) hasAcaiSheet = true; });
+        const categoriasDB = dados.categorias || [];
 
         workbook.worksheets.forEach(sheet => {
             const sheetName = sheet.name.toUpperCase();
-            let allowedCats = [];
-            let abaType = '';
+            
+            // Procura quais categorias configuradas no Admin pertencem a esta aba específica
+            let mappedCats = categoriasDB.filter(c => {
+                let targetSheet = dados.isTransferencia ? c.abaTransf : c.abaVenda;
+                return targetSheet && sheetName.includes(targetSheet.toUpperCase());
+            });
 
-            if (dados.isTransferencia) {
-                if (sheetName.includes('ACAI') || sheetName.includes('AÇAI')) { allowedCats = ['acai']; abaType = 'acai'; }
-                else if (sheetName.includes('PROD') || sheetName.includes('SORVETE')) { 
-                    allowedCats = hasAcaiSheet ? ['sorvete', 'promo', 'balde'] : ['sorvete', 'promo', 'balde', 'acai']; 
-                    abaType = 'sorvete'; 
-                }
-                else if (sheetName.includes('SECO')) { allowedCats = ['seco']; abaType = 'seco'; }
-                else return;
-            } else {
-                if (sheetName.includes('ACAI') || sheetName.includes('AÇAI')) { allowedCats = ['acai']; abaType = 'acai'; }
-                else if (sheetName.includes('SORVETE')) { 
-                    allowedCats = hasAcaiSheet ? ['sorvete', 'promo'] : ['sorvete', 'promo', 'acai']; 
-                    abaType = 'sorvete'; 
-                }
-                else if (sheetName.includes('BALDE')) { allowedCats = ['balde']; abaType = 'balde'; }
-                else if (sheetName.includes('SECO')) { allowedCats = ['seco']; abaType = 'seco'; }
-                else return; 
-            }
+            if (mappedCats.length === 0) return; // Nenhuma categoria configurada para esta aba
 
-            const sheetItems = dados.itens.filter(i => allowedCats.includes(i.catReal));
+            let allowedCatIds = mappedCats.map(c => c.id);
+            const sheetItems = dados.itens.filter(i => allowedCatIds.includes(i.catReal));
             
             let sheetQtdTotal = 0; let sheetValorTotal = 0;
             sheetItems.forEach(i => { sheetQtdTotal += i.calcTotalUnidades; sheetValorTotal += i.calcSubtotal; });
@@ -83,16 +70,19 @@ export async function processarExcelVenda(dados) {
                 });
 
             } else {
-                // REGRA DA VENDA
                 sheet.getCell('E6').value = dados.razao;
-                sheet.getCell('J6').value = dados.cnpj || '';
+                sheet.getCell('I6').value = dados.cnpj || '';
                 sheet.getCell('F7').value = sheetQtdTotal;
-                sheet.getCell('L7').value = sheetValorTotal;
+                sheet.getCell('K7').value = sheetValorTotal;
                 sheet.getCell('F8').value = `${dados.formaPagamento} ${dados.prazo && dados.prazo !== '-' ? '- ' + dados.prazo : ''}`;
                 
-                // INJETA O DESCONTO EXATO DAQUELA ABA NA CÉLULA L8 (Somente se houver desconto inserido)
-                if (dados.descontos && dados.descontos[abaType] !== undefined) {
-                    sheet.getCell('L8').value = dados.descontos[abaType];
+                // INJETA O DESCONTO DINÂMICO
+                // Pega o desconto configurado para a primeira categoria que mapeou nessa aba
+                if (dados.descontos) {
+                    let descontoAba = dados.descontos[allowedCatIds[0]];
+                    if (descontoAba !== undefined && descontoAba > 0) {
+                        sheet.getCell('L8').value = descontoAba;
+                    }
                 }
 
                 let linhaAtual = 10;
